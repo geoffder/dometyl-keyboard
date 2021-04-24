@@ -62,13 +62,17 @@ module Column = struct
     }
 
   let n_keys = 3
+  let centre_idx = 1
   let angle = Math.pi /. 12.
   let radius = 85.
 
   let place_keys keys i =
     let next =
       KeyHole.map
-        ~f:(Util.rotate_about_pt (angle *. Int.to_float i, 0., 0.) (0., 0., -.radius))
+        ~f:
+          (Util.rotate_about_pt
+             (angle *. Int.to_float (i - centre_idx), 0., 0.)
+             (0., 0., -.radius) )
         KeyHole.t
     in
     Map.add_exn ~key:i ~data:next keys
