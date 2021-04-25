@@ -68,6 +68,21 @@ module Plate = struct
     List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
 
   let centre_offset = Map.find_exn col_offsets centre_col
+  let tented_z theta (x, _, z) = (z *. Float.cos theta) +. (-.x *. Float.sin theta)
+
+  (* TODO: this seems to work, but need to do the tougher task of getting the
+   * lowest thumb cluster position. Need to have a more complete rotation function
+   * than the simple tented_z which only handles rotation around the y axis *)
+  let lowest_z =
+    let f ~key:_ ~data:(x, y, z) low =
+      tented_z
+        tent
+        ( x +. (Col.Key.outer_w /. 2.) -. Util.get_x centre_offset
+        , y
+        , z -. (Col.Key.thickness /. 2.) )
+      |> Float.min low
+    in
+    Map.fold ~f ~init:Float.max_value col_offsets
 
   (* TODO: The x offset subtraction fixed an issue the keyhole crossing the xaxis
    * to be gimped, but I should probably shift the whole model over to avoid
@@ -89,7 +104,11 @@ module Plate = struct
 
   let scad =
     Model.union
-      (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
+      (Map.fold
+         ~f:(fun ~key:_ ~data l -> data.scad :: l)
+         ~init:
+           [ thumb.scad; Model.cube (1., 1., 1.) |> Model.translate (0., 0., lowest_z) ]
+         columns )
 
   let t = { scad; columns; thumb }
 end
