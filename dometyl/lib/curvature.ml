@@ -13,19 +13,23 @@ module type Config = sig
 end
 
 module type S = sig
+  include Config
+
   val place : int -> Model.t -> Model.t
 end
 
 module Make (C : Config) : S = struct
+  include C
+
   let point =
-    match C.style with
-    | Fan  -> -.C.radius, 0., 0.
-    | Well -> 0., 0., -.C.radius
+    match style with
+    | Fan  -> -.radius, 0., 0.
+    | Well -> 0., 0., -.radius
 
-  let angle =
-    match C.style with
-    | Well -> fun i -> C.angle *. Int.to_float (i - C.centre_idx), 0., 0.
-    | Fan  -> fun i -> 0., 0., -.C.angle *. Int.to_float (i - C.centre_idx)
+  let theta =
+    match style with
+    | Well -> fun i -> angle *. Int.to_float (i - centre_idx), 0., 0.
+    | Fan  -> fun i -> 0., 0., -.angle *. Int.to_float (i - centre_idx)
 
-  let place i = Util.rotate_about_pt (angle i) point
+  let place i = Util.rotate_about_pt (theta i) point
 end
