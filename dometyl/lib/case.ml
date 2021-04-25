@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open! Infix
 
 module Key = KeyHole.Make (struct
   let outer_w = 19.
@@ -32,3 +33,44 @@ module Thumb = Column.Make (struct
     let radius = 85.
   end)
 end)
+
+module Plate = struct
+  type t =
+    { scad : Model.t
+    ; columns : Col.t Map.M(Int).t
+    }
+
+  let n_cols = 5
+  let spacing = 1.
+  let centre_col = 2
+  let tent = Math.pi /. 12.
+
+  (* TODO: tune, these are placeholders *)
+  let offsets =
+    let space = Col.Key.outer_w +. spacing in
+    let lookup = function
+      | 2 -> 0., 2.82, -4.5
+      | 3 -> 0., 1.5, -2.
+      | i when i >= 4 -> 0., 12., 5.64
+      | _ -> 0., 0., 0.
+    in
+    let f m i =
+      let data = Util.(lookup i <+> (space *. Float.of_int i, 0., 0.)) in
+      Map.add_exn ~key:i ~data m
+    in
+    List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
+
+  let centre_offset = Map.find_exn offsets centre_col
+
+  let place_col off =
+    Col.map
+      ~f:(Model.translate off >> Util.rotate_about_pt (0., tent, 0.) centre_offset)
+      Col.t
+
+  let columns = Map.map ~f:place_col offsets
+
+  let scad =
+    Model.union (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[] columns)
+
+  let t = { scad; columns }
+end
