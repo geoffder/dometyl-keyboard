@@ -13,9 +13,10 @@ module Col = Column.Make (struct
   module Key = Key
 
   module Curve = Curvature.Make (struct
+    let style = Curvature.Well
     let centre_idx = 1
-    let angle = Curvature.X, Math.pi /. 12.
-    let radius = Curvature.Z, -85.
+    let angle = Math.pi /. 12.
+    let radius = 85.
   end)
 end)
 
@@ -25,8 +26,9 @@ module Thumb = Column.Make (struct
   module Key = Key
 
   module Curve = Curvature.Make (struct
+    let style = Curvature.Fan
     let centre_idx = 1
-    let angle = Curvature.Z, Math.pi /. 12.
-    let radius = Curvature.X, 85.
+    let angle = Math.pi /. 12.
+    let radius = 85.
   end)
 end)
