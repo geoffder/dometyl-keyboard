@@ -51,7 +51,7 @@ module Plate = struct
     let lookup = function
       | 2 -> 0., 2.82, -4.5
       | 3 -> 0., 1.5, -2.
-      | i when i >= 4 -> 0., 12., 5.64
+      | i when i >= 4 -> 0., -12., 5.64
       | _ -> 0., 0., 0.
     in
     let f m i =
@@ -62,9 +62,16 @@ module Plate = struct
 
   let centre_offset = Map.find_exn offsets centre_col
 
+  (* TODO: The x offset subtraction fixed an issue the keyhole crossing the xaxis
+   * to be gimped, but I should probably shift the whole model over to avoid
+   * any rotation problems all together. (Though this fix is fine to stay in place
+   * I think. ) *)
   let place_col off =
     Col.map
-      ~f:(Model.translate off >> Util.rotate_about_pt (0., tent, 0.) centre_offset)
+      ~f:
+        ( Model.translate off
+        >> Util.(
+             rotate_about_pt (0., tent, 0.) (get_x off -. get_x centre_offset, 0., 0.)) )
       Col.t
 
   let columns = Map.map ~f:place_col offsets
