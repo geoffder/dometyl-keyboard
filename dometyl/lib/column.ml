@@ -33,9 +33,9 @@ module Make (C : Config) = struct
   let map ~f t =
     { scad = f t.scad; keys = Map.map ~f:(Key.map ~f) t.keys; joins = Map.map ~f t.joins }
 
-  let place_keys keys i = Map.add_exn ~key:i ~data:(Key.map ~f:(Curve.place i) Key.t) keys
+  let place_key keys i = Map.add_exn ~key:i ~data:(Key.map ~f:(Curve.place i) Key.t) keys
   let join_keys (a : Key.t) (b : Key.t) = Model.hull [ a.north_face; b.south_face ]
-  let keys = List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_keys
+  let keys = List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
 
   let joins =
     Map.fold

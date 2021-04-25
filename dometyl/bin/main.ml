@@ -5,4 +5,5 @@ let () =
   Scad_ml.Util.write (open_out "keyhole.scad") Case.Key.t.scad;
   Scad_ml.Util.write (open_out "column.scad") Case.Col.t.scad;
   Scad_ml.Util.write (open_out "thumb.scad") Case.Thumb.t.scad;
+  Scad_ml.Util.write (open_out "plate.scad") Case.Plate.t.scad;
   print_endline "Done!"
