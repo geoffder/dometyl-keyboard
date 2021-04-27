@@ -15,7 +15,7 @@ end
 module type S = sig
   include Config
 
-  val place : int -> Model.t -> Model.t
+  val place : rotater:(Core.rotate_t -> Core.pos_t -> 'a) -> int -> 'a
 end
 
 module Make (C : Config) : S = struct
@@ -31,5 +31,5 @@ module Make (C : Config) : S = struct
     | Well -> fun i -> angle *. Int.to_float (i - centre_idx), 0., 0.
     | Fan  -> fun i -> 0., 0., -.angle *. Int.to_float (i - centre_idx)
 
-  let place i = Model.rotate_about_pt (theta i) point
+  let place ~rotater i = rotater (theta i) point
 end

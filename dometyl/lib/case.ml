@@ -87,18 +87,12 @@ module Plate = struct
   let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
 
   let place_col off =
-    let f =
-      Model.translate off
-      >> Model.rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset)
-    in
-    Col.map ~f Col.t
+    Col.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) t |> translate off)
 
   let columns = Map.map ~f:place_col col_offsets
 
   let thumb =
-    Thumb.map
-      ~f:(fun t -> Util.(t |@> thumb_angle |>> (thumb_offset <+> (0., 0., rise))))
-      Thumb.t
+    Thumb.(rotate thumb_angle t |> translate Util.(thumb_offset <+> (0., 0., rise)))
 
   let scad =
     Model.union
@@ -108,10 +102,30 @@ module Plate = struct
          ~init:[ thumb.scad ]
          columns )
 
-  let base =
-    let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
-    Model.difference full [ Model.offset (`Delta (-10.)) full ]
+  let corners =
+    let mark p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
+    Model.union
+      (Map.fold
+         ~f:(fun ~key:_ ~data l ->
+           mark data.origin
+           ::
+           mark data.faces.south.points.bot_left
+           ::
+           mark data.faces.south.points.bot_right
+           ::
+           mark data.faces.south.points.top_left
+           ::
+           mark data.faces.south.points.centre
+           :: mark data.faces.south.points.top_right :: l )
+         ~init:[]
+         thumb.keys )
 
-  let scad = Model.union [ scad; base ]
+  let scad = Model.union [ scad; corners ]
+
+  (* let base =
+   *   let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
+   *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
+  (* let scad = Model.union [ scad; base ] *)
+
   let t = { scad; columns; thumb }
 end
