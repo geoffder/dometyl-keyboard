@@ -68,30 +68,28 @@ module Plate = struct
     List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
 
   let centre_offset = Map.find_exn col_offsets centre_col
-  let tented_z theta (x, _, z) = (z *. Float.cos theta) +. (-.x *. Float.sin theta)
 
-  (* TODO: this seems to work, but need to do the tougher task of getting the
-   * lowest thumb cluster position. Need to have a more complete rotation function
-   * than the simple tented_z which only handles rotation around the y axis *)
+  (* TODO: Consider best way to use this info. Use to set a clearance? Or simply
+   * add a warning to the user if this value is too low? *)
   let lowest_z =
     let f ~key:_ ~data:(x, y, z) low =
-      tented_z
+      Math.rotate_y
         tent
-        ( x +. (Col.Key.outer_w /. 2.) -. Util.get_x centre_offset
-        , y
-        , z -. (Col.Key.thickness /. 2.) )
+        Util.(
+          (x +. (Col.Key.outer_w /. 2.), y, z -. (Col.Key.thickness /. 2.))
+          <-> centre_offset)
+      |> Util.( <+> ) centre_offset
+      |> Util.get_z
       |> Float.min low
     in
     Map.fold ~f ~init:Float.max_value col_offsets
 
-  (* TODO: The x offset subtraction fixed an issue the keyhole crossing the xaxis
-   * to be gimped, but I should probably shift the whole model over to avoid
-   * any rotation problems all together. (Though this fix is fine to stay in place
-   * I think. ) *)
+  let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
+
   let place_col off =
     let f =
       Model.translate off
-      >> Util.(rotate_about_pt (0., tent, 0.) (get_x off -. get_x centre_offset, 0., 0.))
+      >> Model.rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset)
     in
     Col.map ~f Col.t
 
@@ -105,10 +103,15 @@ module Plate = struct
   let scad =
     Model.union
       (Map.fold
-         ~f:(fun ~key:_ ~data l -> data.scad :: l)
-         ~init:
-           [ thumb.scad; Model.cube (1., 1., 1.) |> Model.translate (0., 0., lowest_z) ]
+         ~f:(fun ~key:_ ~data l -> data.scad :: l )
+           (* ~init:[ thumb.scad; bottom_marker ] *)
+         ~init:[ thumb.scad ]
          columns )
 
+  let base =
+    let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
+    Model.difference full [ Model.offset (`Delta (-10.)) full ]
+
+  let scad = Model.union [ scad; base ]
   let t = { scad; columns; thumb }
 end

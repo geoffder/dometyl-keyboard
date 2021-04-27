@@ -31,5 +31,5 @@ module Make (C : Config) : S = struct
     | Well -> fun i -> angle *. Int.to_float (i - centre_idx), 0., 0.
     | Fan  -> fun i -> 0., 0., -.angle *. Int.to_float (i - centre_idx)
 
-  let place i = Util.rotate_about_pt (theta i) point
+  let place i = Model.rotate_about_pt (theta i) point
 end
