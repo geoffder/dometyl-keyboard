@@ -1,3 +1,3 @@
 open Base
 
-let (>>) = Fn.compose
+let ( >> ) f g x = g (f x)
