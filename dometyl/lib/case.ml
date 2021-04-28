@@ -6,6 +6,7 @@ module Key = KeyHole.Make (struct
   let outer_w = 19.
   let inner_w = 14.
   let thickness = 4.
+  let clips = `Niz
 end)
 
 module Col = Column.Make (struct
@@ -24,7 +25,7 @@ end)
 module Thumb = Column.Make (struct
   let n_keys = 3
 
-  module Key = Key
+  module Key = KeyHole.RotateClips (Key)
 
   module Curve = Curvature.Make (struct
     let style = Curvature.Fan
@@ -42,7 +43,7 @@ module Plate = struct
     }
 
   let n_cols = 5
-  let spacing = 1.
+  let spacing = 2.
   let centre_col = 2
   let tent = Math.pi /. 12.
   let thumb_offset = -10., -45., 5.
@@ -52,15 +53,15 @@ module Plate = struct
    *  total plate depth, tenting, and required guts clearance into account. *)
   let rise = 18.
 
+  let lookup = function
+    | 2 -> 0., 6., -6. (* middle *)
+    | 3 -> 0., 3., -2. (* ring *)
+    | i when i >= 4 -> 0., -12., 6. (* pinky *)
+    | _ -> 0., 0., 0.
+
   (* TODO: tune, these are placeholders *)
   let col_offsets =
     let space = Col.Key.outer_w +. spacing in
-    let lookup = function
-      | 2 -> 0., 6., -6. (* middle *)
-      | 3 -> 0., 3., -2. (* ring *)
-      | i when i >= 4 -> 0., -12., 6. (* pinky *)
-      | _ -> 0., 0., 0.
-    in
     let f m i =
       let data = Util.(lookup i <+> (space *. Float.of_int i, 0., rise)) in
       Map.add_exn ~key:i ~data m
@@ -120,7 +121,7 @@ module Plate = struct
          ~init:[]
          thumb.keys )
 
-  let scad = Model.union [ scad; corners ]
+  (* let scad = Model.union [ scad; corners ] *)
 
   (* let base =
    *   let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in

@@ -6,6 +6,7 @@ module type Config = sig
   val outer_w : float
   val inner_w : float
   val thickness : float
+  val clips : [ `Mx | `Niz ]
 end
 
 module type S = sig
@@ -166,10 +167,41 @@ module Make (C : Config) : S = struct
     |> Face.rotate (0., 0., Math.pi /. 2.)
     |> Face.translate (outer_w /. 2., 0., 0.)
 
-  let scad =
+  let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
     let inner = Model.cube ~center:true (inner_w, inner_w, thickness +. 0.1) in
     Model.difference outer [ inner ]
 
+  let scad =
+    match clips with
+    | `Mx  ->
+      let clip =
+        Model.rotate
+          (Math.pi /. 2., 0., 0.)
+          (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
+      in
+      Model.difference
+        hole
+        [ Model.translate (0., inner_w /. 2., -1.3) clip
+        ; Model.translate (0., inner_w /. -2., -1.3) clip
+        ]
+    | `Niz ->
+      let height = thickness /. 2. in
+      let nub = Model.circle 1.5 |> Model.linear_extrude ~height in
+      Model.union
+        [ hole
+        ; Model.translate (inner_w /. 2., 0., -.height) nub
+        ; Model.translate (inner_w /. -2., 0., -.height) nub
+        ]
+
   let t = { scad; origin = 0., 0., 0.; faces = { north; south; east; west } }
+end
+
+module RotateClips (K : S) : S = struct
+  include K
+
+  let t =
+    let t' = rotate (0., 0., Math.pi /. 2.) t in
+    let { faces = { north; south; east; west }; _ } = t' in
+    { t' with faces = { north = east; south = west; east = south; west = north } }
 end
