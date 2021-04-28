@@ -122,6 +122,16 @@ module Make (C : Config) : S = struct
     let map ~f t =
       { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
 
+    let make width depth =
+      let half_w = width /. 2. in
+      let rot_lat = Face.rotate (0., 0., Math.pi /. 2.) in
+      let base = Face.rotate (Math.pi /. 2., 0., 0.) (Face.make (width, depth, 0.1)) in
+      { north = Face.translate (0., half_w, 0.) base
+      ; south = Face.translate (0., -.half_w, 0.) base
+      ; west = base |> rot_lat |> Face.translate (-.half_w, 0., 0.)
+      ; east = base |> rot_lat |> Face.translate (half_w, 0., 0.)
+      }
+
     let translate p = map ~f:(Face.translate p)
     let rotate r = map ~f:(Face.rotate r)
     let rotate_about_pt r p = map ~f:(Face.rotate_about_pt r p)
@@ -151,22 +161,6 @@ module Make (C : Config) : S = struct
     ; faces = Faces.rotate_about_pt r p t.faces
     }
 
-  let side_face =
-    Face.rotate (Math.pi /. 2., 0., 0.) (Face.make (outer_w, thickness, 0.1))
-
-  let north = Face.translate (0., outer_w /. 2., 0.) side_face
-  let south = Face.translate (0., outer_w /. -2., 0.) side_face
-
-  let west =
-    side_face
-    |> Face.rotate (0., 0., Math.pi /. 2.)
-    |> Face.translate (outer_w /. -2., 0., 0.)
-
-  let east =
-    side_face
-    |> Face.rotate (0., 0., Math.pi /. 2.)
-    |> Face.translate (outer_w /. 2., 0., 0.)
-
   let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
     let inner = Model.cube ~center:true (inner_w, inner_w, thickness +. 0.1) in
@@ -194,7 +188,7 @@ module Make (C : Config) : S = struct
         ; Model.translate (inner_w /. -2., 0., -.height) nub
         ]
 
-  let t = { scad; origin = 0., 0., 0.; faces = { north; south; east; west } }
+  let t = { scad; origin = 0., 0., 0.; faces = Faces.make outer_w thickness }
 end
 
 module RotateClips (K : S) : S = struct
