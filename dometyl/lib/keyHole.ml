@@ -167,13 +167,13 @@ module Make (C : Config) : S = struct
     Model.difference outer [ inner ]
 
   let scad =
+    let clip =
+      Model.rotate
+        (Math.pi /. 2., 0., 0.)
+        (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
+    in
     match clips with
     | `Mx  ->
-      let clip =
-        Model.rotate
-          (Math.pi /. 2., 0., 0.)
-          (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
-      in
       Model.difference
         hole
         [ Model.translate (0., inner_w /. 2., -1.3) clip
@@ -181,10 +181,26 @@ module Make (C : Config) : S = struct
         ]
     | `Niz ->
       let height = thickness /. 2. in
-      let nub = Model.circle 1.5 |> Model.linear_extrude ~height in
+      let rad = 1.5 in
+      let nub =
+        Model.difference
+          (Model.circle rad |> Model.linear_extrude ~height)
+          [ Model.cube ~center:true (rad, rad *. 2., thickness +. 0.1)
+            |> Model.translate (rad, 0., 0.)
+          ]
+      in
+      let clipped =
+        Model.difference
+          hole
+          [ Model.translate (0., inner_w /. 2., 1.3) clip
+          ; Model.translate (0., inner_w /. -2., 1.3) clip
+          ]
+      in
       Model.union
-        [ hole
-        ; Model.translate (inner_w /. 2., 0., -.height) nub
+        [ clipped
+        ; Model.translate
+            (inner_w /. 2., 0., -.height)
+            (Model.rotate (0., 0., Math.pi) nub)
         ; Model.translate (inner_w /. -2., 0., -.height) nub
         ]
 
