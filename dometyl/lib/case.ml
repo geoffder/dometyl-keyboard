@@ -119,14 +119,54 @@ module Plate = struct
            mark data.faces.south.points.centre
            :: mark data.faces.south.points.top_right :: l )
          ~init:[]
-         thumb.keys )
+         (* thumb.keys ) *)
+         (Map.find_exn columns (centre_col + 1)).keys )
 
   (* let scad = Model.union [ scad; corners ] *)
 
-  (* let base =
+  (* let jank_base =
    *   let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
    *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
-  (* let scad = Model.union [ scad; base ] *)
+  (* let scad = Model.union [ scad; jank_base ] *)
 
+  let jank_wall =
+    let c = Map.find_exn columns centre_col in
+    let k = Map.find_exn c.keys 0 in
+    let Key.Face.{ scad = fs; points = { centre; _ } } = k.faces.south in
+    let tilt = Model.rotate_about_pt (Math.pi /. 4., 0., 0.) (Math.negate centre) fs in
+    let base =
+      Model.cube ~center:true (Key.outer_w, Key.thickness, 0.1)
+      |> Model.translate Util.(centre <*> (1., 1., 0.) <+> (0., -5., 0.))
+    in
+    Model.union [ Model.hull [ fs; tilt ]; Model.hull [ tilt; base ] ]
+
+  let bez_wall i =
+    let c = Map.find_exn columns i in
+    let k = Map.find_exn c.keys 0 in
+    let Key.Face.{ points = { centre; _ }; _ } = k.faces.south in
+    let bez =
+      Util.(
+        Bezier.quad
+          ~p1:(0., 0., 0.)
+          ~p2:(0., -5., -.Key.thickness)
+          ~p3:(0., -8., -1. *. get_z centre))
+    in
+    let ps = Bezier.curve bez 0.1 in
+    let chunk =
+      Model.cylinder ~center:true (Key.thickness /. 2.) Key.outer_w
+      |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
+      |> Model.translate centre
+    in
+    let _, hulls =
+      List.fold
+        ~init:(chunk, [])
+        ~f:(fun (last, acc) p ->
+          let next = Model.translate p chunk in
+          next, Model.hull [ last; next ] :: acc )
+        ps
+    in
+    Model.union hulls
+
+  let scad = Model.union [ scad; bez_wall 2; bez_wall 3; bez_wall 4 ]
   let t = { scad; columns; thumb }
 end
