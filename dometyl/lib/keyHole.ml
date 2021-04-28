@@ -184,7 +184,7 @@ module Make (C : Config) : S = struct
       let rad = 1.5 in
       let nub =
         Model.difference
-          (Model.circle rad |> Model.linear_extrude ~height)
+          (Model.circle ~fn:32 rad |> Model.linear_extrude ~height)
           [ Model.cube ~center:true (rad, rad *. 2., thickness +. 0.1)
             |> Model.translate (rad, 0., 0.)
           ]
