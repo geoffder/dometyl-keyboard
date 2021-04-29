@@ -31,11 +31,13 @@ module Make (Key : KeyHole.S) : S = struct
         ]
       |> Model.linear_extrude ~height:arm_height
     in
-    let notch =
-      Model.cube ~center:true (arm_radius, arm_radius *. 2., notch_height)
-      |> Model.translate (-.arm_radius, 0., notch_z +. (notch_height /. 2.))
+    let cutter = Model.cube ~center:true (arm_radius, arm_radius *. 2., notch_height) in
+    let notch = Model.translate (0., 0., notch_z +. (notch_height /. 2.)) cutter in
+    let chamfer =
+      Model.rotate (0., Math.pi /. 3., Math.pi) cutter
+      |> Model.translate (0., 0., arm_height +. 0.25)
     in
-    Model.difference pole [ notch ]
+    Model.difference pole [ notch; chamfer ]
 
   let t =
     { scad =
