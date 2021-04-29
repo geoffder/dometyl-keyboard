@@ -143,13 +143,9 @@ module Plate = struct
   let bez_wall i =
     let c = Map.find_exn columns i in
     let k = Map.find_exn c.keys 0 in
-    let Key.Face.{ points = { centre; _ }; _ } = k.faces.south in
+    let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = k.faces.south in
     let bez =
-      Util.(
-        Bezier.quad
-          ~p1:(0., 0., 0.)
-          ~p2:(0., -5., -.Key.thickness)
-          ~p3:(0., -8., -1. *. get_z centre))
+      Bezier.quad ~p1:(0., 0., 0.) ~p2:(0., -5., -.Key.thickness) ~p3:(0., -8., -1.5 *. cz)
     in
     let ps = Bezier.curve bez 0.1 in
     let chunk =
@@ -157,15 +153,21 @@ module Plate = struct
       |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
       |> Model.translate centre
     in
-    let _, hulls =
+    let hulls =
       List.fold
         ~init:(chunk, [])
         ~f:(fun (last, acc) p ->
           let next = Model.translate p chunk in
           next, Model.hull [ last; next ] :: acc )
         ps
+      |> fun (_, hs) -> Model.union hs
     in
-    Model.union hulls
+    Model.difference
+      hulls
+      [ Model.projection hulls
+        |> Model.linear_extrude ~height:cz
+        |> Model.translate (0., 0., -.cz)
+      ]
 
   let scad = Model.union [ scad; bez_wall 2; bez_wall 3; bez_wall 4 ]
   let t = { scad; columns; thumb }
