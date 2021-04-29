@@ -172,3 +172,5 @@ module Plate = struct
   let scad = Model.union [ scad; bez_wall 2; bez_wall 3; bez_wall 4 ]
   let t = { scad; columns; thumb }
 end
+
+module NizBot = NizBottom.Make (Key)

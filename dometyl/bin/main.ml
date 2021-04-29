@@ -6,4 +6,5 @@ let () =
   Scad_ml.Util.write (open_out "column.scad") Case.Col.t.scad;
   Scad_ml.Util.write (open_out "thumb.scad") Case.Thumb.t.scad;
   Scad_ml.Util.write (open_out "plate.scad") Case.Plate.t.scad;
+  Scad_ml.Util.write (open_out "niz_bot.scad") Case.NizBot.t.scad;
   print_endline "Done!"
