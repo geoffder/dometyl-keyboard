@@ -1,13 +1,7 @@
 open! Base
 open! Scad_ml
 open! Infix
-
-module Key = KeyHole.Make (struct
-  let outer_w = 19.
-  let inner_w = 14.
-  let thickness = 4.
-  let clips = `Niz
-end)
+module Key = KeyHole.Make (Niz.HoleConfig)
 
 module Col = Column.Make (struct
   let n_keys = 3
