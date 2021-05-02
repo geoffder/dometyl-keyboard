@@ -22,8 +22,8 @@ module Bottom = struct
     |> Model.translate (x /. 2., 0., 0.)
 
   let bulge =
-    Model.cube (bulge_length, bulge_thickness, bulge_height)
-    |> Model.translate (bulge_length /. -2., y /. 2., 0.)
+    Model.cube (bulge_length, bulge_thickness +. 0.1, bulge_height)
+    |> Model.translate (bulge_length /. -2., (y /. 2.) -. 0.1, 0.)
 
   let cutter =
     Model.circle corner_cut_rad
@@ -44,7 +44,7 @@ module Bottom = struct
 end
 
 module HoleConfig : KeyHole.Config = struct
-  let outer_w = 19.
+  let outer_w = 19.5
   let inner_w = 14.
   let thickness = 4.
 
@@ -55,5 +55,121 @@ module HoleConfig : KeyHole.Config = struct
       |> Model.linear_extrude ~height:(inset_depth +. 0.1)
       |> Model.translate (0., 0., (thickness /. -2.) -. 0.1)
     in
-    Model.union [ Model.difference hole [ inset ] ]
+    let bot =
+      Model.translate (0., 0., (Bottom.z /. -2.) -. Top.clip_height) Bottom.scad
+    in
+    Model.difference hole [ inset; bot ]
+end
+
+module Platform = struct
+  let w = 21.
+  let dome_w = 18.8
+  let dome_thickness = 1.15
+  let base_thickness = 1.5
+  let bottom_scale_factor = 1. (* downsize for tighter fit? *)
+
+  let base =
+    Model.cube ~center:true (w, w, base_thickness)
+    |> Model.translate (0., 0., base_thickness /. -2.)
+
+  let wall_height = Bottom.z -. 4. +. Top.clip_height +. dome_thickness
+  let lug_height = 1.5
+
+  let dome_cut =
+    (* let poly_x = dome_thickness in
+     * let poly_y = dome_thickness in *)
+    let dt = dome_thickness in
+    let poly = Model.polygon [ dt /. 2., 0.; dt, 0.; dt, dt; dt /. 2., dt /. 2. ] in
+    (* let poly = Model.polygon [ 0.5, 0.; 1., 0.; 1., 1.; 0.5, 0.5 ] in *)
+    let prism =
+      poly
+      |> Model.linear_extrude ~height:dome_w
+      |> Model.translate (dt /. -2., dt /. -2., -.dome_w /. 2.)
+      |> Model.rotate (Math.pi /. 2., 0., 0.)
+      |> Model.translate ((-.dome_w /. 2.) -. (dt /. 2.), 0., dt /. 2.)
+    in
+    let corner =
+      let face =
+        poly
+        |> Model.linear_extrude ~height:0.1
+        |> Model.translate (-.dt, dt /. -2., 0.)
+        |> Model.rotate (Math.pi /. 2., 0., 0.)
+      in
+      Model.hull [ face; Model.rotate (0., 0., Math.pi /. -2.) face ]
+      |> Model.translate (dome_w /. -2., dome_w /. 2., dt /. 2.)
+    in
+    let fudged_w = dome_w +. 0.01 in
+    (* ensure overlap *)
+    Model.union
+      [ prism
+      ; Model.mirror (1, 0, 0) prism
+      ; Model.mirror (1, 1, 0) prism |> Model.mirror (0, 1, 0)
+      ; Model.mirror (1, 1, 0) prism
+      ; corner
+      ; Model.mirror (1, 0, 0) corner
+      ; Model.mirror (0, 1, 0) corner
+      ; Model.mirror (0, 1, 0) corner |> Model.mirror (1, 0, 0)
+      ; Model.cube (fudged_w, fudged_w, dome_thickness)
+        |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
+      ]
+
+  let ramp_cut =
+    let cut_l = 5.7 in
+    let cut_h = 4. in
+    (* let cut_l = 4. in
+     * let cut_h = 4. in *)
+    let half_l = cut_l /. 2. in
+    let half_h = cut_h /. 2. in
+    let poly = Model.polygon [ 0., 0.; cut_h, 0.; cut_h, cut_l ] in
+    let x_prism =
+      Model.linear_extrude ~height:Bottom.x poly
+      |> Model.translate (-.half_h, -.half_l, Bottom.x /. -2.)
+      |> Model.rotate (Math.pi /. 2., Math.pi /. 2., Math.pi /. 2.)
+      |> Model.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
+    in
+    let y_prism =
+      Model.linear_extrude ~height:Bottom.y poly
+      |> Model.translate (-.half_h, -.half_l, Bottom.y /. -2.)
+      |> Model.rotate (Math.pi /. 2., Math.pi /. 2., 0.)
+      |> Model.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness)
+    in
+    Model.union
+      [ x_prism; Model.mirror (0, 1, 0) x_prism; y_prism; Model.mirror (1, 0, 0) y_prism ]
+
+  let lugs =
+    Model.difference
+      (Model.cube ~center:true (Bottom.x -. 0.001, Bottom.y -. 0.001, lug_height))
+      [ Model.translate (0., 0., -1.) Bottom.scad ]
+    |> Model.translate (0., 0., (lug_height /. 2.) +. wall_height -. 0.001)
+
+  let walls =
+    let block =
+      Model.union
+        [ Model.cube ~center:true (w, w, wall_height)
+          |> Model.translate (0., 0., wall_height /. 2.)
+        ; lugs
+        ]
+    in
+    Model.difference
+      block
+      [ Model.translate (0., 0., -0.1) Bottom.scad
+      ; Model.translate (0., 0., 0.01) dome_cut
+      ; ramp_cut
+      ]
+
+  let scad =
+    Model.union
+      [ base
+      ; walls
+        (* ; Model.translate (30., 0., 0.) dome_cut *)
+        (* ; Model.translate (30., 0., 0.) ramp_cut *)
+      ]
+
+  (* let scad =
+   *   Model.difference
+   *     scad
+   *     [ Model.translate (0., 20., 0.) (Model.cube ~center:true (30., 30., 10.))
+   *     ; Model.translate (-20., 0., 0.) (Model.cube ~center:true (30., 30., 10.))
+   *     ] *)
+  (* let scad = base *)
 end
