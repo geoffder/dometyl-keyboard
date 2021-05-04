@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 module Top = struct
-  let clip_height = 1.35
+  let clip_height = 1.30
 end
 
 module Bottom = struct
@@ -64,6 +64,12 @@ end
 module Platform = struct
   let w = 21.
   let dome_w = 18.8
+
+  (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm
+   *  A value of 1.15 fits the BKE domes fine, though, may be able to get tighter.
+   * Since DES are thinner, the tightness of fit between the platform and case plate may
+   * suffer and make clipping with a generic value difficult. Should paramaterize so that
+   * it can be easily adjusted for the the chosen brand of dome. *)
   let dome_thickness = 1.15
   let base_thickness = 1.5
   let bottom_scale_factor = 1. (* downsize for tighter fit? *)
@@ -72,15 +78,17 @@ module Platform = struct
     Model.cube ~center:true (w, w, base_thickness)
     |> Model.translate (0., 0., base_thickness /. -2.)
 
-  let wall_height = Bottom.z -. 4. +. Top.clip_height +. dome_thickness
+  (* NOTE: Don't know why these config values on their own are resulting in a bit
+   * of a gap between walls and plate. Possibly settle on a magic fudge value if the
+   * issue persists / I don't find a better solution or the bug causing it. *)
+  let wall_height =
+    Bottom.z -. HoleConfig.thickness +. Top.clip_height +. dome_thickness +. 0.25
+
   let lug_height = 1.5
 
   let dome_cut =
-    (* let poly_x = dome_thickness in
-     * let poly_y = dome_thickness in *)
     let dt = dome_thickness in
     let poly = Model.polygon [ dt /. 2., 0.; dt, 0.; dt, dt; dt /. 2., dt /. 2. ] in
-    (* let poly = Model.polygon [ 0.5, 0.; 1., 0.; 1., 1.; 0.5, 0.5 ] in *)
     let prism =
       poly
       |> Model.linear_extrude ~height:dome_w
@@ -98,8 +106,8 @@ module Platform = struct
       Model.hull [ face; Model.rotate (0., 0., Math.pi /. -2.) face ]
       |> Model.translate (dome_w /. -2., dome_w /. 2., dt /. 2.)
     in
-    let fudged_w = dome_w +. 0.01 in
     (* ensure overlap *)
+    let fudged_w = dome_w +. 0.01 in
     Model.union
       [ prism
       ; Model.mirror (1, 0, 0) prism
@@ -133,8 +141,41 @@ module Platform = struct
       |> Model.rotate (Math.pi /. 2., Math.pi /. 2., 0.)
       |> Model.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness)
     in
+    let corners =
+      let block =
+        Model.cube ~center:true (dome_w, cut_l, cut_h)
+        |> Model.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
+      in
+      let intersect =
+        let x =
+          Model.difference
+            x_prism
+            [ Model.translate (0., (Bottom.y -. dome_w) /. 2., 0.) block ]
+          |> Model.translate ((dome_w -. Bottom.x) /. 2., 0., 0.)
+        and y =
+          Model.difference
+            y_prism
+            [ Model.rotate (0., 0., Math.pi /. -2.) block
+              |> Model.translate ((Bottom.x -. dome_w) /. 2., 0., 0.)
+            ]
+          |> Model.translate (0., (dome_w -. Bottom.y) /. 2., 0.)
+        in
+        Model.intersection [ x; y ]
+      in
+      Model.union
+        [ intersect
+        ; Model.mirror (0, 1, 0) intersect
+        ; Model.mirror (1, 0, 0) intersect
+        ; Model.mirror (1, 0, 0) intersect |> Model.mirror (0, 1, 0)
+        ]
+    in
     Model.union
-      [ x_prism; Model.mirror (0, 1, 0) x_prism; y_prism; Model.mirror (1, 0, 0) y_prism ]
+      [ x_prism
+      ; Model.mirror (0, 1, 0) x_prism
+      ; y_prism
+      ; Model.mirror (1, 0, 0) y_prism
+      ; corners
+      ]
 
   let lugs =
     Model.difference
@@ -145,24 +186,24 @@ module Platform = struct
   let walls =
     let block =
       Model.union
-        [ Model.cube ~center:true (w, w, wall_height)
+        [ Model.cube ~center:true (w, w, wall_height +. 0.001)
           |> Model.translate (0., 0., wall_height /. 2.)
         ; lugs
         ]
     in
     Model.difference
       block
-      [ Model.translate (0., 0., -0.1) Bottom.scad
-      ; Model.translate (0., 0., 0.01) dome_cut
-      ; ramp_cut
-      ]
+      [ Model.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
 
+  (* FIXME: does this union overlap (previously missing) fix the issue with
+   * the gap in the print? Note that the keyhole also has bit of an overhang with
+   * the clips. Should I make those angled, or not bother? *)
   let scad =
     Model.union
       [ base
-      ; walls
-        (* ; Model.translate (30., 0., 0.) dome_cut *)
-        (* ; Model.translate (30., 0., 0.) ramp_cut *)
+      ; Model.translate (0., 0., -0.001) walls
+        (* ; Model.translate (30., 0., 0.) dome_cut
+         * ; Model.translate (30., 0., 0.) ramp_cut *)
       ]
 
   (* let scad =
@@ -171,5 +212,4 @@ module Platform = struct
    *     [ Model.translate (0., 20., 0.) (Model.cube ~center:true (30., 30., 10.))
    *     ; Model.translate (-20., 0., 0.) (Model.cube ~center:true (30., 30., 10.))
    *     ] *)
-  (* let scad = base *)
 end
