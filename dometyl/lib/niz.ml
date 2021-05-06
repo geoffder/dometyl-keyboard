@@ -51,14 +51,29 @@ module HoleConfig : KeyHole.Config = struct
   let clip hole =
     let inset_depth = thickness -. Top.clip_height in
     let inset =
-      Model.square ~center:true (inner_w +. 3.15, inner_w +. 3.5)
-      |> Model.linear_extrude ~height:(inset_depth +. 0.1)
-      |> Model.translate (0., 0., (thickness /. -2.) -. 0.1)
+      Model.square ~center:true (Bottom.x, Bottom.y)
+      |> Model.linear_extrude ~height:(inset_depth +. 0.01)
+      |> Model.translate (0., 0., (thickness /. -2.) -. 0.01)
     in
     let bot =
       Model.translate (0., 0., (Bottom.z /. -2.) -. Top.clip_height) Bottom.scad
     in
-    Model.difference hole [ inset; bot ]
+    let snap =
+      let w = Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale *. 2.
+      and h = 1. in
+      let slot =
+        Model.cube ~center:true (outer_w -. inner_w, w, h)
+        |> Model.translate (outer_w /. 2., 0., ((thickness -. h) /. 2.) -. Top.clip_height)
+      and ramp =
+        let z = thickness -. Top.clip_height in
+        Model.polygon [ 0., z /. -2.; 1., z /. -2.; 0., z /. 2. ]
+        |> Model.linear_extrude ~height:w
+        |> Model.rotate (Math.pi /. 2., 0., 0.)
+        |> Model.translate (Bottom.x /. 2., w /. 2., z /. -2.)
+      in
+      Model.union [ slot; ramp ]
+    in
+    Model.difference hole [ inset; bot; snap; Model.mirror (1, 0, 0) snap ]
 end
 
 module Platform = struct
@@ -85,6 +100,10 @@ module Platform = struct
     Bottom.z -. HoleConfig.thickness +. Top.clip_height +. dome_thickness +. 0.25
 
   let lug_height = 1.5
+
+  let pillars =
+    let cyl = Bottom.ellipse |> Model.linear_extrude ~height:wall_height in
+    Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]
 
   let dome_cut =
     let dt = dome_thickness in
@@ -195,6 +214,25 @@ module Platform = struct
       block
       [ Model.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
 
+  let snap_heads =
+    let h = 1. in
+    let len = 1. in
+    let width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale in
+    let z = wall_height +. HoleConfig.thickness -. Top.clip_height -. h in
+    let tab =
+      Model.cube (len, width, h) |> Model.translate (Bottom.x /. 2., width /. -2., z)
+    in
+    let neck =
+      Model.difference
+        Bottom.ellipse
+        [ Model.square (Bottom.ellipse_inset_x_rad, width)
+          |> Model.translate (Bottom.x /. 2., width /. -2., 0.)
+        ]
+      |> Model.linear_extrude ~height:(z -. wall_height)
+      |> Model.translate (0., 0., wall_height +. h)
+    in
+    Model.union [ tab; Model.mirror (1, 0, 0) tab; neck; Model.mirror (1, 0, 0) neck ]
+
   (* FIXME: does this union overlap (previously missing) fix the issue with
    * the gap in the print? Note that the keyhole also has bit of an overhang with
    * the clips. Should I make those angled, or not bother? *)
@@ -202,6 +240,8 @@ module Platform = struct
     Model.union
       [ base
       ; Model.translate (0., 0., -0.001) walls
+      ; pillars
+      ; snap_heads
         (* ; Model.translate (30., 0., 0.) dome_cut
          * ; Model.translate (30., 0., 0.) ramp_cut *)
       ]
