@@ -43,6 +43,8 @@ module Bottom = struct
     |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
 end
 
+let snap_slot_h = 1. (* TODO: better organization? *)
+
 module HoleConfig : KeyHole.Config = struct
   let outer_w = 19.5
   let inner_w = 14.
@@ -59,14 +61,14 @@ module HoleConfig : KeyHole.Config = struct
       Model.translate (0., 0., (Bottom.z /. -2.) -. Top.clip_height) Bottom.scad
     in
     let snap =
-      let w = Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale *. 2.
-      and h = 1. in
+      let w = Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale *. 2. in
       let slot =
-        Model.cube ~center:true (outer_w -. inner_w, w, h)
-        |> Model.translate (outer_w /. 2., 0., ((thickness -. h) /. 2.) -. Top.clip_height)
+        Model.cube ~center:true (outer_w -. inner_w, w, snap_slot_h)
+        |> Model.translate
+             (outer_w /. 2., 0., ((thickness -. snap_slot_h) /. 2.) -. Top.clip_height)
       and ramp =
         let z = thickness -. Top.clip_height in
-        Model.polygon [ 0., z /. -2.; 1., z /. -2.; 0., z /. 2. ]
+        Model.polygon [ 0., z /. -2.; snap_slot_h, z /. -2.; 0., z /. 2. ]
         |> Model.linear_extrude ~height:w
         |> Model.rotate (Math.pi /. 2., 0., 0.)
         |> Model.translate (Bottom.x /. 2., w /. 2., z /. -2.)
@@ -141,10 +143,9 @@ module Platform = struct
       ]
 
   let ramp_cut =
+    (* ~30 degrees *)
     let cut_l = 5.7 in
     let cut_h = 4. in
-    (* let cut_l = 4. in
-     * let cut_h = 4. in *)
     let half_l = cut_l /. 2. in
     let half_h = cut_h /. 2. in
     let poly = Model.polygon [ 0., 0.; cut_h, 0.; cut_h, cut_l ] in
@@ -215,12 +216,15 @@ module Platform = struct
       [ Model.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
 
   let snap_heads =
-    let h = 1. in
-    let len = 1. in
-    let width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale in
-    let z = wall_height +. HoleConfig.thickness -. Top.clip_height -. h in
+    let clearance = 0.2 in
+    let len = 0.8
+    and width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale
+    and z =
+      wall_height +. HoleConfig.thickness -. Top.clip_height -. snap_slot_h +. clearance
+    in
     let tab =
-      Model.cube (len, width, h) |> Model.translate (Bottom.x /. 2., width /. -2., z)
+      Model.cube (len, width, snap_slot_h -. clearance)
+      |> Model.translate (Bottom.x /. 2., width /. -2., z)
     in
     let neck =
       Model.difference
@@ -229,7 +233,7 @@ module Platform = struct
           |> Model.translate (Bottom.x /. 2., width /. -2., 0.)
         ]
       |> Model.linear_extrude ~height:(z -. wall_height)
-      |> Model.translate (0., 0., wall_height +. h)
+      |> Model.translate (0., 0., wall_height +. snap_slot_h -. clearance)
     in
     Model.union [ tab; Model.mirror (1, 0, 0) tab; neck; Model.mirror (1, 0, 0) neck ]
 
@@ -249,7 +253,7 @@ module Platform = struct
   (* let scad =
    *   Model.difference
    *     scad
-   *     [ Model.translate (0., 20., 0.) (Model.cube ~center:true (30., 30., 10.))
-   *     ; Model.translate (-20., 0., 0.) (Model.cube ~center:true (30., 30., 10.))
+   *     [ Model.translate (0., 20., 0.) (Model.cube ~center:true (30., 30., 20.))
+   *     ; Model.translate (-20., 0., 0.) (Model.cube ~center:true (30., 30., 20.))
    *     ] *)
 end
