@@ -79,12 +79,13 @@ module HoleConfig : KeyHole.Config = struct
 end
 
 module Sensor = struct
-  let leg_w = 0.4
+  let leg_w = 0.5
   let leg_l = 20.
   let leg_gap = 0.8
   let leg_bend = 4.
   let leg_z_offset = -0.25 (* from body centre *)
 
+  let merge_legs = true
   let body_w = 4.
   let body_l = 3.
   let thickness = 1.5
@@ -100,16 +101,27 @@ module Sensor = struct
     in
     Model.union [ start; rest ] |> Model.translate (0., 0., leg_z_offset)
 
-  let body = Model.cube ~center:true (body_w, body_l, thickness)
+  let legs =
+    let side_offset = leg_gap +. (leg_w /. 2.) in
+    if not merge_legs
+    then
+      Model.union
+        [ bent_leg
+        ; Model.translate (-.side_offset, 0., 0.) bent_leg
+        ; Model.translate (side_offset, 0., 0.) bent_leg
+        ]
+    else
+      Model.union
+        (Model.translate (side_offset, 0., 0.) bent_leg
+         ::
+         List.init
+           (Int.of_float (Float.round_down (leg_gap *. 2. /. leg_w) +. 2.))
+           ~f:(fun i ->
+             Model.translate ((Float.of_int i *. leg_w) -. side_offset, 0., 0.) bent_leg
+             ) )
 
-  let scad =
-    Model.union
-      [ body
-      ; bent_leg
-      ; Model.translate (-.leg_gap -. (leg_w /. 2.), 0., 0.) bent_leg
-      ; Model.translate (leg_gap +. (leg_w /. 2.), 0., 0.) bent_leg
-      ]
-    |> Model.translate (0., 0., thickness /. 2.)
+  let body = Model.cube ~center:true (body_w, body_l, thickness)
+  let scad = Model.union [ body; legs ] |> Model.translate (0., 0., thickness /. 2.)
 
   let sink depth =
     let f i = Model.translate (0., 0., Float.of_int i *. -.leg_w) scad in
@@ -127,10 +139,10 @@ module Platform = struct
    * suffer and make clipping with a generic value difficult. Should paramaterize so that
    * it can be easily adjusted for the the chosen brand of dome. *)
   let dome_thickness = 1.15
-  let base_thickness = 1.5
+  let base_thickness = 1.75
   let bottom_scale_factor = 1. (* downsize for tighter fit? *)
 
-  let sensor_depth = 1.
+  let sensor_depth = 1.25
 
   let base =
     let slab =
@@ -204,10 +216,12 @@ module Platform = struct
       |> Model.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
     in
     let y_prism =
-      Model.linear_extrude ~height:Bottom.y poly
-      |> Model.translate (-.half_h, -.half_l, Bottom.y /. -2.)
-      |> Model.rotate (Math.pi /. 2., Math.pi /. 2., 0.)
-      |> Model.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness)
+      Model.difference
+        ( Model.linear_extrude ~height:Bottom.y poly
+        |> Model.translate (-.half_h, -.half_l, Bottom.y /. -2.)
+        |> Model.rotate (Math.pi /. 2., Math.pi /. 2., 0.)
+        |> Model.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness) )
+        [ Model.scale (1., 1., 1.2) pillars ]
     in
     let corners =
       let block =
