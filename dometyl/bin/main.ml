@@ -9,4 +9,6 @@ let () =
   Scad_ml.Util.write (open_out "niz_bot.scad") Case.NizBot.t.scad;
   Scad_ml.Util.write (open_out "niz_bottom.scad") Niz.Bottom.scad;
   Scad_ml.Util.write (open_out "niz_platform.scad") Niz.Platform.scad;
+  Scad_ml.Util.write (open_out "niz_combo.scad") Case.niz_combo;
+  Scad_ml.Util.write (open_out "niz_sensor.scad") Niz.Sensor.scad;
   print_endline "Done!"

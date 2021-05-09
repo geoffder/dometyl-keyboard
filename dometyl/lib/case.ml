@@ -168,3 +168,13 @@ module Plate = struct
 end
 
 module NizBot = NizBottom.Make (Key)
+
+let niz_combo =
+  Model.difference
+    (Model.union
+       [ Model.translate
+           (0., 0., Niz.Platform.wall_height +. (Key.thickness /. 2.))
+           Key.t.scad
+       ; Niz.Platform.scad
+       ] )
+    [ Model.cube ~center:true (25., 15., 20.) |> Model.translate (0., -7.5, 0.) ]

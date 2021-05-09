@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 module Top = struct
-  let clip_height = 1.30
+  let clip_height = 1.2
 end
 
 module Bottom = struct
@@ -12,7 +12,7 @@ module Bottom = struct
   let bulge_thickness = 0.5
   let bulge_length = 6.5
   let bulge_height = 3.2
-  let ellipse_inset_x_rad = 1.5
+  let ellipse_inset_x_rad = 1.4
   let circle_inset_y_scale = 1.2
   let corner_cut_rad = 5.
   let corner_cut_off = 2.75
@@ -43,7 +43,7 @@ module Bottom = struct
     |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
 end
 
-let snap_slot_h = 1. (* TODO: better organization? *)
+let snap_slot_h = 1.2 (* TODO: better organization? *)
 
 module HoleConfig : KeyHole.Config = struct
   let outer_w = 19.5
@@ -78,8 +78,47 @@ module HoleConfig : KeyHole.Config = struct
     Model.difference hole [ inset; bot; snap; Model.mirror (1, 0, 0) snap ]
 end
 
+module Sensor = struct
+  let leg_w = 0.4
+  let leg_l = 20.
+  let leg_gap = 0.8
+  let leg_bend = 4.
+  let leg_z_offset = -0.25 (* from body centre *)
+
+  let body_w = 4.
+  let body_l = 3.
+  let thickness = 1.5
+
+  let bent_leg =
+    let start =
+      Model.cube ~center:true (leg_w, leg_bend, leg_w)
+      |> Model.translate (0., (leg_bend +. body_l) /. 2., 0.)
+    and rest =
+      Model.cube ~center:true (leg_w, leg_w, leg_l -. leg_bend)
+      |> Model.translate
+           (0., leg_bend +. ((body_l -. leg_w) /. 2.), (leg_l -. leg_bend -. leg_w) /. -2.)
+    in
+    Model.union [ start; rest ] |> Model.translate (0., 0., leg_z_offset)
+
+  let body = Model.cube ~center:true (body_w, body_l, thickness)
+
+  let scad =
+    Model.union
+      [ body
+      ; bent_leg
+      ; Model.translate (-.leg_gap -. (leg_w /. 2.), 0., 0.) bent_leg
+      ; Model.translate (leg_gap +. (leg_w /. 2.), 0., 0.) bent_leg
+      ]
+    |> Model.translate (0., 0., thickness /. 2.)
+
+  let sink depth =
+    let f i = Model.translate (0., 0., Float.of_int i *. -.leg_w) scad in
+    List.init (Int.of_float (depth /. leg_w)) ~f
+end
+
 module Platform = struct
-  let w = 21.
+  (* let w = 21. *)
+  let w = 20.
   let dome_w = 18.8
 
   (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm
@@ -91,9 +130,14 @@ module Platform = struct
   let base_thickness = 1.5
   let bottom_scale_factor = 1. (* downsize for tighter fit? *)
 
+  let sensor_depth = 1.
+
   let base =
-    Model.cube ~center:true (w, w, base_thickness)
-    |> Model.translate (0., 0., base_thickness /. -2.)
+    let slab =
+      Model.cube ~center:true (w, w, base_thickness)
+      |> Model.translate (0., 0., base_thickness /. -2.)
+    in
+    Model.difference slab (Sensor.sink sensor_depth)
 
   (* NOTE: Don't know why these config values on their own are resulting in a bit
    * of a gap between walls and plate. Possibly settle on a magic fudge value if the
@@ -108,39 +152,43 @@ module Platform = struct
     Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]
 
   let dome_cut =
-    let dt = dome_thickness in
-    let poly = Model.polygon [ dt /. 2., 0.; dt, 0.; dt, dt; dt /. 2., dt /. 2. ] in
-    let prism =
-      poly
-      |> Model.linear_extrude ~height:dome_w
-      |> Model.translate (dt /. -2., dt /. -2., -.dome_w /. 2.)
-      |> Model.rotate (Math.pi /. 2., 0., 0.)
-      |> Model.translate ((-.dome_w /. 2.) -. (dt /. 2.), 0., dt /. 2.)
-    in
-    let corner =
-      let face =
-        poly
-        |> Model.linear_extrude ~height:0.1
-        |> Model.translate (-.dt, dt /. -2., 0.)
-        |> Model.rotate (Math.pi /. 2., 0., 0.)
-      in
-      Model.hull [ face; Model.rotate (0., 0., Math.pi /. -2.) face ]
-      |> Model.translate (dome_w /. -2., dome_w /. 2., dt /. 2.)
-    in
+    (* NOTE: See if domes fit fine without the additional cut out.
+     * This is accompanied by a 1mm decrease in the width as well. *)
+    (* let dt = dome_thickness in *)
+    (* let poly = Model.polygon [ dt /. 2., 0.; dt, 0.; dt, dt; dt /. 2., dt /. 2. ] in
+     * let prism =
+     *   poly
+     *   |> Model.linear_extrude ~height:dome_w
+     *   |> Model.translate (dt /. -2., dt /. -2., -.dome_w /. 2.)
+     *   |> Model.rotate (Math.pi /. 2., 0., 0.)
+     *   |> Model.translate ((-.dome_w /. 2.) -. (dt /. 2.), 0., dt /. 2.)
+     * in
+     * let corner =
+     *   let face =
+     *     poly
+     *     |> Model.linear_extrude ~height:0.1
+     *     |> Model.translate (-.dt, dt /. -2., 0.)
+     *     |> Model.rotate (Math.pi /. 2., 0., 0.)
+     *   in
+     *   Model.hull [ face; Model.rotate (0., 0., Math.pi /. -2.) face ]
+     *   |> Model.translate (dome_w /. -2., dome_w /. 2., dt /. 2.)
+     * in *)
     (* ensure overlap *)
     let fudged_w = dome_w +. 0.01 in
-    Model.union
-      [ prism
-      ; Model.mirror (1, 0, 0) prism
-      ; Model.mirror (1, 1, 0) prism |> Model.mirror (0, 1, 0)
-      ; Model.mirror (1, 1, 0) prism
-      ; corner
-      ; Model.mirror (1, 0, 0) corner
-      ; Model.mirror (0, 1, 0) corner
-      ; Model.mirror (0, 1, 0) corner |> Model.mirror (1, 0, 0)
-      ; Model.cube (fudged_w, fudged_w, dome_thickness)
-        |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
-      ]
+    Model.cube (fudged_w, fudged_w, dome_thickness)
+    |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
+  (* Model.union
+   *   [ prism
+   *   ; Model.mirror (1, 0, 0) prism
+   *   ; Model.mirror (1, 1, 0) prism |> Model.mirror (0, 1, 0)
+   *   ; Model.mirror (1, 1, 0) prism
+   *   ; corner
+   *   ; Model.mirror (1, 0, 0) corner
+   *   ; Model.mirror (0, 1, 0) corner
+   *   ; Model.mirror (0, 1, 0) corner |> Model.mirror (1, 0, 0)
+   *   ; Model.cube (fudged_w, fudged_w, dome_thickness)
+   *     |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
+   *   ] *)
 
   let ramp_cut =
     (* ~30 degrees *)
@@ -216,11 +264,15 @@ module Platform = struct
       [ Model.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
 
   let snap_heads =
-    let clearance = 0.2 in
-    let len = 0.8
+    let clearance = 0.3 in
+    let len = 0.7 (* was 0.8 in first success *)
     and width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale
     and z =
-      wall_height +. HoleConfig.thickness -. Top.clip_height -. snap_slot_h +. clearance
+      wall_height
+      +. HoleConfig.thickness
+      -. Top.clip_height
+      -. snap_slot_h
+      +. (clearance /. 2.)
     in
     let tab =
       Model.cube (len, width, snap_slot_h -. clearance)
