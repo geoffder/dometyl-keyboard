@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 module Top = struct
-  let clip_height = 1.2
+  let clip_height = 1.1
 end
 
 module Bottom = struct
@@ -46,6 +46,12 @@ end
 let snap_slot_h = 1.2 (* TODO: better organization? *)
 
 module HoleConfig : KeyHole.Config = struct
+  (* TODO: Need to improve the way different switch types are handled, since the
+   * presence of the platform clips in the side will mean that the joining of
+   * columns etc will be different as well (clip holes not covered). To
+   * accomplish this, may want to have another way of generating the faces that
+   * are carried around with the KeyHole.t structs, so that they can be used
+   * generically with the functions that join parts of columns to eachother. *)
   let outer_w = 19.5
   let inner_w = 14.
   let thickness = 4.
@@ -79,30 +85,37 @@ module HoleConfig : KeyHole.Config = struct
 end
 
 module Sensor = struct
-  let leg_w = 0.5
+  let leg_w = 0.75
+  let leg_thickness = 0.85 (* very exaggerated to account for print tolerances *)
+
   let leg_l = 20.
-  let leg_gap = 0.8
+  let leg_spacing = 1.25
   let leg_bend = 4.
-  let leg_z_offset = -0.25 (* from body centre *)
+  let leg_z_offset = -0.2 (* from body centre *)
 
   let merge_legs = true
-  let body_w = 4.
-  let body_l = 3.
+
+  (* let body_w = 4.
+   * let body_l = 3. *)
+  let body_w = 4.25
+  let body_l = 3.25
   let thickness = 1.5
 
   let bent_leg =
     let start =
-      Model.cube ~center:true (leg_w, leg_bend, leg_w)
+      Model.cube ~center:true (leg_w, leg_bend, leg_thickness)
       |> Model.translate (0., (leg_bend +. body_l) /. 2., 0.)
     and rest =
-      Model.cube ~center:true (leg_w, leg_w, leg_l -. leg_bend)
+      Model.cube ~center:true (leg_w, leg_thickness, leg_l -. leg_bend)
       |> Model.translate
-           (0., leg_bend +. ((body_l -. leg_w) /. 2.), (leg_l -. leg_bend -. leg_w) /. -2.)
+           ( 0.
+           , leg_bend +. ((body_l -. leg_w) /. 2.)
+           , (leg_l -. leg_bend -. leg_thickness) /. -2. )
     in
     Model.union [ start; rest ] |> Model.translate (0., 0., leg_z_offset)
 
   let legs =
-    let side_offset = leg_gap +. (leg_w /. 2.) in
+    let side_offset = leg_spacing +. (leg_w /. 2.) in
     if not merge_legs
     then
       Model.union
@@ -115,34 +128,33 @@ module Sensor = struct
         (Model.translate (side_offset, 0., 0.) bent_leg
          ::
          List.init
-           (Int.of_float (Float.round_down (leg_gap *. 2. /. leg_w) +. 2.))
+           ((Int.of_float (Float.round_down (leg_spacing *. 2. /. leg_w)) * 2) + 2)
            ~f:(fun i ->
-             Model.translate ((Float.of_int i *. leg_w) -. side_offset, 0., 0.) bent_leg
-             ) )
+             Model.translate
+               ((Float.of_int i *. (leg_w /. 2.)) -. side_offset, 0., 0.)
+               bent_leg ) )
 
   let body = Model.cube ~center:true (body_w, body_l, thickness)
   let scad = Model.union [ body; legs ] |> Model.translate (0., 0., thickness /. 2.)
 
   let sink depth =
-    let f i = Model.translate (0., 0., Float.of_int i *. -.leg_w) scad in
-    List.init (Int.of_float (depth /. leg_w)) ~f
+    let f i = Model.translate (0., 0., Float.of_int i *. leg_thickness /. -2.) scad in
+    List.init (Int.of_float (depth /. leg_w *. 2.) + 1) ~f
 end
 
 module Platform = struct
   (* let w = 21. *)
   let w = 20.
-  let dome_w = 18.8
+  let dome_w = 19.
+  let dome_waist = 15. (* width at narrow point, ensure enough space at centre *)
 
-  (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm
-   *  A value of 1.15 fits the BKE domes fine, though, may be able to get tighter.
-   * Since DES are thinner, the tightness of fit between the platform and case plate may
-   * suffer and make clipping with a generic value difficult. Should paramaterize so that
-   * it can be easily adjusted for the the chosen brand of dome. *)
+  (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm. A value of 1.15 seems to fit both without
+   * being too tight or loose on either. *)
   let dome_thickness = 1.15
-  let base_thickness = 1.75
+  let base_thickness = 2.25
   let bottom_scale_factor = 1. (* downsize for tighter fit? *)
 
-  let sensor_depth = 1.25
+  let sensor_depth = 1.5
 
   let base =
     let slab =
@@ -160,47 +172,37 @@ module Platform = struct
   let lug_height = 1.5
 
   let pillars =
-    let cyl = Bottom.ellipse |> Model.linear_extrude ~height:wall_height in
-    Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]
+    let waist_cut =
+      let width = Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale *. 2. in
+      Model.polygon
+        [ 0., 0.
+        ; dome_waist, 0.
+        ; dome_waist, dome_thickness
+        ; dome_waist -. 0.5, dome_thickness +. 0.5
+        ; 0.5, dome_thickness +. 0.5
+        ; 0., dome_thickness
+        ]
+      |> Model.linear_extrude ~height:width
+      |> Model.translate (dome_waist /. -2., 0., width /. -2.)
+      |> Model.rotate (Math.pi /. 2., 0., 0.)
+    in
+    let cyl =
+      Model.difference
+        (Bottom.ellipse |> Model.linear_extrude ~height:wall_height)
+        [ Model.cube
+            ~center:true
+            ( dome_waist
+            , Bottom.ellipse_inset_x_rad *. Bottom.circle_inset_y_scale *. 2.
+            , dome_thickness *. 2. )
+        ]
+    in
+    Model.difference (Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]) [ waist_cut ]
 
   let dome_cut =
-    (* NOTE: See if domes fit fine without the additional cut out.
-     * This is accompanied by a 1mm decrease in the width as well. *)
-    (* let dt = dome_thickness in *)
-    (* let poly = Model.polygon [ dt /. 2., 0.; dt, 0.; dt, dt; dt /. 2., dt /. 2. ] in
-     * let prism =
-     *   poly
-     *   |> Model.linear_extrude ~height:dome_w
-     *   |> Model.translate (dt /. -2., dt /. -2., -.dome_w /. 2.)
-     *   |> Model.rotate (Math.pi /. 2., 0., 0.)
-     *   |> Model.translate ((-.dome_w /. 2.) -. (dt /. 2.), 0., dt /. 2.)
-     * in
-     * let corner =
-     *   let face =
-     *     poly
-     *     |> Model.linear_extrude ~height:0.1
-     *     |> Model.translate (-.dt, dt /. -2., 0.)
-     *     |> Model.rotate (Math.pi /. 2., 0., 0.)
-     *   in
-     *   Model.hull [ face; Model.rotate (0., 0., Math.pi /. -2.) face ]
-     *   |> Model.translate (dome_w /. -2., dome_w /. 2., dt /. 2.)
-     * in *)
     (* ensure overlap *)
     let fudged_w = dome_w +. 0.01 in
     Model.cube (fudged_w, fudged_w, dome_thickness)
     |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
-  (* Model.union
-   *   [ prism
-   *   ; Model.mirror (1, 0, 0) prism
-   *   ; Model.mirror (1, 1, 0) prism |> Model.mirror (0, 1, 0)
-   *   ; Model.mirror (1, 1, 0) prism
-   *   ; corner
-   *   ; Model.mirror (1, 0, 0) corner
-   *   ; Model.mirror (0, 1, 0) corner
-   *   ; Model.mirror (0, 1, 0) corner |> Model.mirror (1, 0, 0)
-   *   ; Model.cube (fudged_w, fudged_w, dome_thickness)
-   *     |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
-   *   ] *)
 
   let ramp_cut =
     (* ~30 degrees *)
@@ -303,18 +305,8 @@ module Platform = struct
     in
     Model.union [ tab; Model.mirror (1, 0, 0) tab; neck; Model.mirror (1, 0, 0) neck ]
 
-  (* FIXME: does this union overlap (previously missing) fix the issue with
-   * the gap in the print? Note that the keyhole also has bit of an overhang with
-   * the clips. Should I make those angled, or not bother? *)
   let scad =
-    Model.union
-      [ base
-      ; Model.translate (0., 0., -0.001) walls
-      ; pillars
-      ; snap_heads
-        (* ; Model.translate (30., 0., 0.) dome_cut
-         * ; Model.translate (30., 0., 0.) ramp_cut *)
-      ]
+    Model.union [ base; Model.translate (0., 0., -0.001) walls; pillars; snap_heads ]
 
   (* let scad =
    *   Model.difference
