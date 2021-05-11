@@ -1,7 +1,11 @@
 open! Base
 open! Scad_ml
 
-module HoleConfig : KeyHole.Config = struct
+module HoleConfig : KeyHole.Config with type k = unit = struct
+  type k = unit
+  type spec = k KeyHole.Kind.t
+
+  let spec = KeyHole.Kind.Mx ()
   let outer_w = 19.
   let inner_w = 14.
   let thickness = 4.

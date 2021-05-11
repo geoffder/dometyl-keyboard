@@ -2,7 +2,22 @@ open Base
 open Scad_ml
 open Sigs
 
+module Kind = struct
+  type niz =
+    { clip_height : float
+    ; snap_slot_h : float
+    }
+
+  type _ t =
+    | Mx : unit -> unit t
+    | Niz : niz -> niz t
+end
+
 module type Config = sig
+  type k
+  type spec = k Kind.t
+
+  val spec : spec
   val outer_w : float
   val inner_w : float
   val thickness : float

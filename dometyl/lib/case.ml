@@ -167,14 +167,32 @@ module Plate = struct
   let t = { scad; columns; thumb }
 end
 
-module NizBot = NizBottom.Make (Key)
+module A3144Cutout = Sensor.Make (Sensor.A3144PrintConfig)
 
-let niz_combo =
+module NizPlatform = Niz.Platform.Make (struct
+  module HoleConfig = Niz.HoleConfig
+  module SensorCutout = A3144Cutout
+
+  let w = 20.
+  let dome_w = 19.
+  let dome_waist = 15. (* width at narrow point, ensure enough space at centre *)
+
+  (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm. A value of 1.15 seems to fit both without
+   * being too tight or loose on either. *)
+  let dome_thickness = 1.15
+  let base_thickness = 2.25
+  let sensor_depth = 1.5
+  let snap_clearance = 0.3
+  let snap_len = 0.7
+  let lug_height = 1.5
+end)
+
+let niz_cross_section =
   Model.difference
     (Model.union
        [ Model.translate
-           (0., 0., Niz.Platform.wall_height +. (Key.thickness /. 2.))
+           (0., 0., NizPlatform.wall_height +. (Key.thickness /. 2.))
            Key.t.scad
-       ; Niz.Platform.scad
+       ; NizPlatform.scad
        ] )
     [ Model.cube ~center:true (25., 15., 20.) |> Model.translate (0., -7.5, 0.) ]
