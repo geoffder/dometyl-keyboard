@@ -1,14 +1,18 @@
+open! Base
 open Dometyl
 
+let write_thing name scad =
+  let oc = Stdio.Out_channel.create (Printf.sprintf "../things/%s.scad" name) in
+  Scad_ml.Util.write oc scad
+
 let () =
-  print_endline "Building scads...";
-  Scad_ml.Util.write (open_out "keyhole.scad") Case.Key.t.scad;
-  Scad_ml.Util.write (open_out "column.scad") Case.Col.t.scad;
-  Scad_ml.Util.write (open_out "thumb.scad") Case.Thumb.t.scad;
-  Scad_ml.Util.write (open_out "plate.scad") Case.Plate.t.scad;
-  Scad_ml.Util.write (open_out "niz_bot.scad") Case.NizBot.t.scad;
-  Scad_ml.Util.write (open_out "niz_bottom.scad") Niz.Bottom.scad;
-  Scad_ml.Util.write (open_out "niz_platform.scad") Niz.Platform.scad;
-  Scad_ml.Util.write (open_out "niz_combo.scad") Case.niz_combo;
-  Scad_ml.Util.write (open_out "niz_sensor.scad") Niz.Sensor.scad;
-  print_endline "Done!"
+  Stdio.print_endline "Building scads...";
+  write_thing "keyhole" Case.Key.t.scad;
+  write_thing "column" Case.Col.t.scad;
+  write_thing "thumb" Case.Thumb.t.scad;
+  write_thing "plate" Case.Plate.t.scad;
+  write_thing "niz_bottom" Niz.Bottom.scad;
+  write_thing "niz_platform" Case.NizPlatform.scad;
+  write_thing "niz_cross_section" Case.niz_cross_section;
+  write_thing "niz_sensor" Case.A3144Cutout.scad;
+  Stdio.print_endline "Done!"
