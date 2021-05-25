@@ -74,28 +74,38 @@ module Plate = struct
 
   let centre_offset = Map.find_exn col_offsets centre_col
 
-  (* TODO: Consider best way to use this info. Use to set a clearance? Or simply
-   * add a warning to the user if this value is too low? *)
-  let lowest_z =
-    let f ~key:_ ~data:(x, y, z) low =
-      Math.rotate_y
-        tent
-        Util.(
-          (x +. (Col.Key.outer_w /. 2.), y, z -. (Col.Key.thickness /. 2.))
-          <-> centre_offset)
-      |> Util.( <+> ) centre_offset
-      |> Util.get_z
-      |> Float.min low
-    in
-    Map.fold ~f ~init:Float.max_value col_offsets
-
-  let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
-
   let apply_tent (type a) (module M : Transformable with type t = a) off col : a =
     M.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) col)
 
   let place_col off = apply_tent (module Col) off Col.t |> Col.translate off
   let columns = Map.map ~f:place_col col_offsets
+
+  let lowest_z =
+    let open Util in
+    let face_low ({ points = ps; _ } : Key.Face.t) =
+      Float.min (get_z ps.top_right) (get_z ps.top_left)
+      |> Float.min (get_z ps.bot_right)
+      |> Float.min (get_z ps.bot_left)
+      |> Float.min (get_z ps.centre)
+    in
+    let key_low ({ faces = fs; _ } : Key.t) =
+      face_low fs.north
+      |> Float.min (face_low fs.south)
+      |> Float.min (face_low fs.east)
+      |> Float.min (face_low fs.west)
+    in
+    let col_low ({ keys = ks; _ } : Col.t) =
+      Map.fold
+        ~f:(fun ~key:_ ~data m -> Float.min m (key_low data))
+        ~init:Float.max_value
+        ks
+    in
+    Map.fold
+      ~f:(fun ~key:_ ~data m -> Float.min m (col_low data))
+      ~init:Float.max_value
+      columns
+
+  let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
 
   let thumb =
     let off = Util.(thumb_offset <+> (0., 0., rise)) in
@@ -104,9 +114,9 @@ module Plate = struct
   let scad =
     Model.union
       (Map.fold
-         ~f:(fun ~key:_ ~data l -> data.scad :: l )
-           (* ~init:[ thumb.scad; bottom_marker ] *)
-         ~init:[ thumb.scad ]
+         ~f:(fun ~key:_ ~data l -> data.scad :: l)
+         ~init:[ thumb.scad; bottom_marker ]
+         (* ~init:[ thumb.scad ] *)
          columns )
 
   let corners =
