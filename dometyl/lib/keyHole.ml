@@ -38,6 +38,7 @@ module type S = sig
         }
 
       val make : float * float * float -> t
+      val map : f:(Core.pos_t -> Core.pos_t) -> t -> t
 
       include Transformable with type t := t
     end
