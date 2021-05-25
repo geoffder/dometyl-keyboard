@@ -21,16 +21,14 @@ let write_thing ?(export = false) name scad =
     with
     | _ -> Stdio.print_endline "Openscad export shell command failed." )
 
-let export = true
-
 let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
-  write_thing ~export "keyhole" Case.Key.t.scad;
-  write_thing ~export "column" Case.Col.t.scad;
-  write_thing ~export "thumb" Case.Thumb.t.scad;
-  write_thing ~export "plate" Case.Plate.t.scad;
-  write_thing ~export "niz_bottom" Niz.Bottom.scad;
-  write_thing ~export "niz_platform" Case.NizPlatform.scad;
-  write_thing ~export "niz_cross_section" Case.niz_cross_section;
-  write_thing ~export "niz_sensor" Case.A3144Cutout.scad;
+  write_thing "keyhole" Case.Key.t.scad;
+  write_thing "column" Case.Col.t.scad;
+  write_thing "thumb" Case.Thumb.t.scad;
+  write_thing ~export:true "plate" Case.Plate.t.scad;
+  write_thing "niz_bottom" Niz.Bottom.scad;
+  write_thing "niz_platform" Case.NizPlatform.scad;
+  write_thing "niz_cross_section" Case.niz_cross_section;
+  write_thing "niz_sensor" Case.A3144Cutout.scad;
   Stdio.print_endline "Done!"
