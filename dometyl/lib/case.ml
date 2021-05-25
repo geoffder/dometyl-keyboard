@@ -1,6 +1,7 @@
 open! Base
 open! Scad_ml
 open! Infix
+open! Sigs
 module Key = KeyHole.Make (Niz.HoleConfig)
 
 module Col = Column.Make (struct
@@ -16,18 +17,23 @@ module Col = Column.Make (struct
   end)
 end)
 
-module Thumb = Column.Make (struct
-  let n_keys = 3
+module Thumb = struct
+  include Column.Make (struct
+    let n_keys = 3
 
-  module Key = KeyHole.RotateClips (Key)
+    module Key = KeyHole.RotateClips (Key)
 
-  module Curve = Curvature.Make (struct
-    let style = Curvature.Fan
-    let centre_idx = 1
-    let angle = Math.pi /. 12.
-    let radius = 85.
+    module Curve = Curvature.Make (struct
+      let style = Curvature.Fan
+      let centre_idx = 1
+      let angle = Math.pi /. 12.
+      let radius = 85.
+    end)
   end)
-end)
+
+  (* orient along x-axis *)
+  let t = rotate (0., 0., Math.pi /. -2.) t
+end
 
 module Plate = struct
   type t =
@@ -40,20 +46,24 @@ module Plate = struct
   let spacing = 2.
   let centre_col = 2
   let tent = Math.pi /. 12.
-  let thumb_offset = -10., -45., 5.
-  let thumb_angle = Math.(pi /. 6., pi /. 5., pi /. -3.)
+  let thumb_offset = -5., -50., -8.
+  let thumb_angle = Math.(0., pi /. -4., pi /. 5.)
 
   (* TODO: would like to actually calculate this. Will need to take offsets,
-   *  total plate depth, tenting, and required guts clearance into account. *)
+   *  total plate depth, tenting, and required guts clearance into account.
+   *
+   *  Now that the points are carried by keyholes, should be able to do a proper
+   * job of this. Calculate the lowest point, then ensure that there is enough space
+   * below. Should thumb remain separate since the concerns are a bit different? *)
   let rise = 18.
 
+  (* TODO: tune *)
   let lookup = function
     | 2 -> 0., 6., -6. (* middle *)
     | 3 -> 0., 3., -2. (* ring *)
     | i when i >= 4 -> 0., -12., 6. (* pinky *)
     | _ -> 0., 0., 0.
 
-  (* TODO: tune, these are placeholders *)
   let col_offsets =
     let space = Col.Key.outer_w +. spacing in
     let f m i =
@@ -81,13 +91,15 @@ module Plate = struct
 
   let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
 
-  let place_col off =
-    Col.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) t |> translate off)
+  let apply_tent (type a) (module M : Transformable with type t = a) off col : a =
+    M.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) col)
 
+  let place_col off = apply_tent (module Col) off Col.t |> Col.translate off
   let columns = Map.map ~f:place_col col_offsets
 
   let thumb =
-    Thumb.(rotate thumb_angle t |> translate Util.(thumb_offset <+> (0., 0., rise)))
+    let off = Util.(thumb_offset <+> (0., 0., rise)) in
+    Thumb.(rotate thumb_angle t |> translate off |> apply_tent (module Thumb) off)
 
   let scad =
     Model.union
