@@ -46,16 +46,9 @@ module Plate = struct
   let spacing = 2.
   let centre_col = 2
   let tent = Math.pi /. 12.
-  let thumb_offset = -5., -50., -8.
+  let thumb_offset = -5., -50., 9.
   let thumb_angle = Math.(0., pi /. -4., pi /. 5.)
-
-  (* TODO: would like to actually calculate this. Will need to take offsets,
-   *  total plate depth, tenting, and required guts clearance into account.
-   *
-   *  Now that the points are carried by keyholes, should be able to do a proper
-   * job of this. Calculate the lowest point, then ensure that there is enough space
-   * below. Should thumb remain separate since the concerns are a bit different? *)
-  let rise = 18.
+  let clearance = 7.
 
   (* TODO: tune *)
   let lookup = function
@@ -67,7 +60,7 @@ module Plate = struct
   let col_offsets =
     let space = Col.Key.outer_w +. spacing in
     let f m i =
-      let data = Util.(lookup i <+> (space *. Float.of_int i, 0., rise)) in
+      let data = Util.(lookup i <+> (space *. Float.of_int i, 0., 0.)) in
       Map.add_exn ~key:i ~data m
     in
     List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
@@ -78,114 +71,108 @@ module Plate = struct
     M.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) col)
 
   let place_col off = apply_tent (module Col) off Col.t |> Col.translate off
-  let columns = Map.map ~f:place_col col_offsets
 
-  let lowest_z =
-    let open Util in
-    let face_low ({ points = ps; _ } : Key.Face.t) =
-      Float.min (get_z ps.top_right) (get_z ps.top_left)
-      |> Float.min (get_z ps.bot_right)
-      |> Float.min (get_z ps.bot_left)
-      |> Float.min (get_z ps.centre)
-    in
-    let key_low ({ faces = fs; _ } : Key.t) =
-      face_low fs.north
-      |> Float.min (face_low fs.south)
-      |> Float.min (face_low fs.east)
-      |> Float.min (face_low fs.west)
-    in
-    let col_low ({ keys = ks; _ } : Col.t) =
+  let columns =
+    let placed = Map.map ~f:place_col col_offsets in
+    let lowest_z =
+      let face_low ({ points = ps; _ } : Key.Face.t) =
+        let open Util in
+        Float.min (get_z ps.top_right) (get_z ps.top_left)
+        |> Float.min (get_z ps.bot_right)
+        |> Float.min (get_z ps.bot_left)
+        |> Float.min (get_z ps.centre)
+      in
+      let key_low ({ faces = fs; _ } : Key.t) =
+        face_low fs.north
+        |> Float.min (face_low fs.south)
+        |> Float.min (face_low fs.east)
+        |> Float.min (face_low fs.west)
+      in
+      let col_low ({ keys = ks; _ } : Col.t) =
+        Map.fold
+          ~f:(fun ~key:_ ~data m -> Float.min m (key_low data))
+          ~init:Float.max_value
+          ks
+      in
       Map.fold
-        ~f:(fun ~key:_ ~data m -> Float.min m (key_low data))
+        ~f:(fun ~key:_ ~data m -> Float.min m (col_low data))
         ~init:Float.max_value
-        ks
+        placed
     in
-    Map.fold
-      ~f:(fun ~key:_ ~data m -> Float.min m (col_low data))
-      ~init:Float.max_value
-      columns
-
-  let bottom_marker = Model.cube (100., 1., 1.) |> Model.translate (0., 0., lowest_z)
+    Map.map ~f:(Col.translate (0., 0., clearance -. lowest_z)) placed
 
   let thumb =
-    let off = Util.(thumb_offset <+> (0., 0., rise)) in
-    Thumb.(rotate thumb_angle t |> translate off |> apply_tent (module Thumb) off)
+    let open Thumb in
+    rotate thumb_angle t
+    |> translate thumb_offset
+    |> apply_tent (module Thumb) thumb_offset
 
   let scad =
     Model.union
-      (Map.fold
-         ~f:(fun ~key:_ ~data l -> data.scad :: l)
-         ~init:[ thumb.scad; bottom_marker ]
-         (* ~init:[ thumb.scad ] *)
-         columns )
-
-  let corners =
-    let mark p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
-    Model.union
-      (Map.fold
-         ~f:(fun ~key:_ ~data l ->
-           mark data.origin
-           ::
-           mark data.faces.south.points.bot_left
-           ::
-           mark data.faces.south.points.bot_right
-           ::
-           mark data.faces.south.points.top_left
-           ::
-           mark data.faces.south.points.centre
-           :: mark data.faces.south.points.top_right :: l )
-         ~init:[]
-         (* thumb.keys ) *)
-         (Map.find_exn columns (centre_col + 1)).keys )
-
-  (* let scad = Model.union [ scad; corners ] *)
+      (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
 
   (* let jank_base =
    *   let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
    *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
   (* let scad = Model.union [ scad; jank_base ] *)
 
-  let jank_wall =
-    let c = Map.find_exn columns centre_col in
-    let k = Map.find_exn c.keys 0 in
-    let Key.Face.{ scad = fs; points = { centre; _ } } = k.faces.south in
-    let tilt = Model.rotate_about_pt (Math.pi /. 4., 0., 0.) (Math.negate centre) fs in
-    let base =
-      Model.cube ~center:true (Key.outer_w, Key.thickness, 0.1)
-      |> Model.translate Util.(centre <*> (1., 1., 0.) <+> (0., -5., 0.))
-    in
-    Model.union [ Model.hull [ fs; tilt ]; Model.hull [ tilt; base ] ]
-
-  let bez_wall i =
+  (* TODO: should design the wall generation to be able to adjust to tenting
+   * better. Right now, the tent above 12deg leads to the higher index column to hang over
+   * the middle finger column, so, maybe the walls should be angled slightly, instead of
+   * dropping straight down. *)
+  let bez_wall side i =
     let c = Map.find_exn columns i in
-    let k = Map.find_exn c.keys 0 in
-    let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = k.faces.south in
-    let bez =
-      Bezier.quad ~p1:(0., 0., 0.) ~p2:(0., -5., -.Key.thickness) ~p3:(0., -8., -1.5 *. cz)
+    let face, y_sign =
+      match side with
+      | `North -> (snd @@ Map.max_elt_exn c.keys).faces.north, 1.
+      | `South -> (Map.find_exn c.keys 0).faces.south, -1.
     in
-    let ps = Bezier.curve bez 0.1 in
+    let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    let ps =
+      let bez =
+        Bezier.quad
+          ~p1:(0., 0., 0.)
+          ~p2:(0., y_sign *. 5., -.Key.thickness)
+          ~p3:(0., y_sign *. 8., -.cz +. (Key.thickness /. 2.))
+      in
+      Bezier.curve bez 0.1
+    in
+    let rs =
+      let bez = Bezier.quad ~p1:(0., 0., 0.) ~p2:(0., -.tent, 0.) ~p3:(0., -.tent, 0.) in
+      Bezier.curve bez 0.1
+    in
     let chunk =
       Model.cylinder ~center:true (Key.thickness /. 2.) Key.outer_w
       |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
       |> Model.translate centre
     in
     let hulls =
-      List.fold
+      List.fold2_exn
         ~init:(chunk, [])
-        ~f:(fun (last, acc) p ->
-          let next = Model.translate p chunk in
+        ~f:(fun (last, acc) p r ->
+          let next =
+            Model.rotate_about_pt r (Math.negate centre) chunk |> Model.translate p
+          in
           next, Model.hull [ last; next ] :: acc )
         ps
+        rs
       |> fun (_, hs) -> Model.union hs
     in
-    Model.difference
-      hulls
-      [ Model.projection hulls
-        |> Model.linear_extrude ~height:cz
-        |> Model.translate (0., 0., -.cz)
+    hulls
+
+  let scad =
+    Model.union
+      [ scad
+      ; bez_wall `South 2
+      ; bez_wall `South 3
+      ; bez_wall `South 4
+      ; bez_wall `North 0
+      ; bez_wall `North 1
+      ; bez_wall `North 2
+      ; bez_wall `North 3
+      ; bez_wall `North 4
       ]
 
-  let scad = Model.union [ scad; bez_wall 2; bez_wall 3; bez_wall 4 ]
   let t = { scad; columns; thumb }
 end
 
