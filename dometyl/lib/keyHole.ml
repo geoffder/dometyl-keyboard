@@ -39,6 +39,7 @@ module type S = sig
 
       val make : float * float * float -> t
       val map : f:(Core.pos_t -> Core.pos_t) -> t -> t
+      val fold : f:('a -> Core.pos_t -> 'a) -> init:'a -> t -> 'a
 
       include Transformable with type t := t
     end
@@ -60,6 +61,9 @@ module type S = sig
       ; east : Face.t
       ; west : Face.t
       }
+
+    val map : f:(Face.t -> Face.t) -> t -> t
+    val fold : f:('a -> Face.t -> 'a) -> init:'a -> t -> 'a
 
     include Transformable with type t := t
   end
@@ -104,6 +108,13 @@ module Make (C : Config) : S = struct
         ; centre = f t.centre
         }
 
+      let fold ~f ~init t =
+        let flipped = Fn.flip f in
+        f init t.top_left
+        |> flipped t.top_right
+        |> flipped t.bot_left
+        |> flipped t.bot_right
+
       let translate p = map ~f:(Math.add p)
       let rotate r = map ~f:(Math.rotate r)
       let rotate_about_pt r p = map ~f:(Math.rotate_about_pt r p)
@@ -137,6 +148,10 @@ module Make (C : Config) : S = struct
 
     let map ~f t =
       { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
+
+    let fold ~f ~init t =
+      let flipped = Fn.flip f in
+      f init t.north |> flipped t.south |> flipped t.east |> flipped t.west
 
     let make width depth =
       let half_w = width /. 2. in
