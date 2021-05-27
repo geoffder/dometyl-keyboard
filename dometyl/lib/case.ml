@@ -76,17 +76,16 @@ module Plate = struct
     let placed = Map.map ~f:place_col col_offsets in
     let lowest_z =
       let face_low ({ points = ps; _ } : Key.Face.t) =
-        let open Util in
-        Float.min (get_z ps.top_right) (get_z ps.top_left)
-        |> Float.min (get_z ps.bot_right)
-        |> Float.min (get_z ps.bot_left)
-        |> Float.min (get_z ps.centre)
+        Key.Face.Points.fold
+          ~f:(fun m p -> Float.min m (Util.get_z p))
+          ~init:Float.max_value
+          ps
       in
       let key_low ({ faces = fs; _ } : Key.t) =
-        face_low fs.north
-        |> Float.min (face_low fs.south)
-        |> Float.min (face_low fs.east)
-        |> Float.min (face_low fs.west)
+        Key.Faces.fold
+          ~f:(fun m face -> Float.min m (face_low face))
+          ~init:Float.max_value
+          fs
       in
       let col_low ({ keys = ks; _ } : Col.t) =
         Map.fold
@@ -120,6 +119,11 @@ module Plate = struct
    * better. Right now, the tent above 12deg leads to the higher index column to hang over
    * the middle finger column, so, maybe the walls should be angled slightly, instead of
    * dropping straight down. *)
+  (* TODO: need to paramaterize `North wall initial y span based on the radius of the
+   * column, and the number of keys per column (number of rows). Southern walls technically
+   * are still affected by the radius, but since it's only one key, worth it may not be a
+   * problem. I suppose for completeness I may as well implement the slightly different
+   * calculations. *)
   let bez_wall side i =
     let c = Map.find_exn columns i in
     let face, y_sign =
@@ -128,10 +132,28 @@ module Plate = struct
       | `South -> (Map.find_exn c.keys 0).faces.south, -1.
     in
     let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    (* TODO: to help avoid lower columns with tenting, use the offset lookup to
+     * compare the offsets of the current column `i` with the next `i+1`. If the
+     * next column is lower in z (and alongside in y, depending on the y-offsets and
+     * the North/South side of this wall), then the wall will need to jog over
+     * (in the direction towards the top of the tent) in order to avoid collision.
+     * To accomplish this, I could have the bezier dodge in x by the time the z
+     * distance is covered. Distance that needs to jogged in x can be obtained
+     * by comparing the central x coordinate of the current columns eastern face
+     * with the x coordinate of the next columns western face (plus spacing?). *)
     let ps =
       let bez =
         Bezier.quad
-          ~p1:(0., 0., 0.)
+          ~p1:
+            (0., 0., 0.)
+            (* ~p2:
+             *   ( -.Key.thickness *. Float.sin tent
+             *   , y_sign *. 5.
+             *   , -.Key.thickness *. Float.cos tent )
+             * ~p3:
+             *   ( -.Key.thickness *. Float.sin tent
+             *   , y_sign *. 8.
+             *   , -.cz +. (Key.thickness /. 2.) ) *)
           ~p2:(0., y_sign *. 5., -.Key.thickness)
           ~p3:(0., y_sign *. 8., -.cz +. (Key.thickness /. 2.))
       in
