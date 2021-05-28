@@ -115,10 +115,6 @@ module Plate = struct
    *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
   (* let scad = Model.union [ scad; jank_base ] *)
 
-  (* TODO: should design the wall generation to be able to adjust to tenting
-   * better. Right now, the tent above 12deg leads to the higher index column to hang over
-   * the middle finger column, so, maybe the walls should be angled slightly, instead of
-   * dropping straight down. *)
   (* TODO: need to paramaterize `North wall initial y span based on the radius of the
    * column, and the number of keys per column (number of rows). Southern walls technically
    * are still affected by the radius, but since it's only one key, worth it may not be a
@@ -131,31 +127,31 @@ module Plate = struct
       | `North -> (snd @@ Map.max_elt_exn c.keys).faces.north, 1.
       | `South -> (Map.find_exn c.keys 0).faces.south, -1.
     in
+    let jog_x =
+      let y_off = Util.get_y @@ Map.find_exn col_offsets i in
+      match Map.find columns (i + 1), Map.find col_offsets (i + 1) with
+      | Some next_c, Some next_offs ->
+        let right_x = Util.get_x face.points.top_right
+        and next_y = Util.get_y next_offs
+        and next_key = snd @@ Map.max_elt_exn next_c.keys in
+        let diff =
+          match side with
+          | `North when Float.(next_y >= y_off) ->
+            right_x -. Util.get_x next_key.faces.north.points.bot_left
+          | `South when Float.(next_y <= y_off) ->
+            right_x -. Util.get_x next_key.faces.south.points.bot_left
+          | _ -> -.spacing
+        in
+        if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
+      | _                           -> 0.
+    in
     let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
-    (* TODO: to help avoid lower columns with tenting, use the offset lookup to
-     * compare the offsets of the current column `i` with the next `i+1`. If the
-     * next column is lower in z (and alongside in y, depending on the y-offsets and
-     * the North/South side of this wall), then the wall will need to jog over
-     * (in the direction towards the top of the tent) in order to avoid collision.
-     * To accomplish this, I could have the bezier dodge in x by the time the z
-     * distance is covered. Distance that needs to jogged in x can be obtained
-     * by comparing the central x coordinate of the current columns eastern face
-     * with the x coordinate of the next columns western face (plus spacing?). *)
     let ps =
       let bez =
         Bezier.quad
-          ~p1:
-            (0., 0., 0.)
-            (* ~p2:
-             *   ( -.Key.thickness *. Float.sin tent
-             *   , y_sign *. 5.
-             *   , -.Key.thickness *. Float.cos tent )
-             * ~p3:
-             *   ( -.Key.thickness *. Float.sin tent
-             *   , y_sign *. 8.
-             *   , -.cz +. (Key.thickness /. 2.) ) *)
-          ~p2:(0., y_sign *. 5., -.Key.thickness)
-          ~p3:(0., y_sign *. 8., -.cz +. (Key.thickness /. 2.))
+          ~p1:(0., 0., 0.)
+          ~p2:(-.jog_x, y_sign *. 5., -.Key.thickness)
+          ~p3:(-.jog_x, y_sign *. 8., -.cz +. (Key.thickness /. 2.))
       in
       Bezier.curve bez 0.1
     in
@@ -168,19 +164,16 @@ module Plate = struct
       |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
       |> Model.translate centre
     in
-    let hulls =
-      List.fold2_exn
-        ~init:(chunk, [])
-        ~f:(fun (last, acc) p r ->
-          let next =
-            Model.rotate_about_pt r (Math.negate centre) chunk |> Model.translate p
-          in
-          next, Model.hull [ last; next ] :: acc )
-        ps
-        rs
-      |> fun (_, hs) -> Model.union hs
-    in
-    hulls
+    List.fold2_exn
+      ~init:(chunk, [])
+      ~f:(fun (last, acc) p r ->
+        let next =
+          Model.rotate_about_pt r (Math.negate centre) chunk |> Model.translate p
+        in
+        next, Model.hull [ last; next ] :: acc )
+      ps
+      rs
+    |> fun (_, hs) -> Model.union hs
 
   let scad =
     Model.union
