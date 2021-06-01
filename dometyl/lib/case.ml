@@ -5,6 +5,8 @@ open! Sigs
 module Key = KeyHole.Make (Niz.HoleConfig)
 
 module Col = Column.Make (struct
+  (* TODO: Update how modules / code is organized to make per column curavature
+   * settings a non-painful addition. *)
   let n_keys = 3
 
   module Key = Key
@@ -12,11 +14,10 @@ module Col = Column.Make (struct
   module Curve = Curvature.Make (struct
     let style = Curvature.Well
     let centre_idx = 1
-
-    (* let angle = Math.pi /. 12.
-     * let radius = 85. *)
-    let angle = Math.pi /. 8.
-    let radius = 60.
+    let angle = Math.pi /. 12.
+    let radius = 85.
+    (* let angle = Math.pi /. 9.
+     * let radius = 60. *)
   end)
 end)
 
