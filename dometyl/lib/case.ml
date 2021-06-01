@@ -12,8 +12,11 @@ module Col = Column.Make (struct
   module Curve = Curvature.Make (struct
     let style = Curvature.Well
     let centre_idx = 1
-    let angle = Math.pi /. 12.
-    let radius = 85.
+
+    (* let angle = Math.pi /. 12.
+     * let radius = 85. *)
+    let angle = Math.pi /. 8.
+    let radius = 60.
   end)
 end)
 
@@ -115,6 +118,19 @@ module Plate = struct
    *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
   (* let scad = Model.union [ scad; jank_base ] *)
 
+  (* this seems to work well. Now need to determine what the required adjustments
+   * to the bez points based on this angle. *)
+  let key_x_angle
+      Key.{ faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ }
+    =
+    let _, dy, dz = Util.(top_right <-> top_left) in
+    Float.atan (dz /. dy)
+  (* let x_tent_angle
+   *     Key.{ faces = { north = { points = { top_left; bot_left; _ }; _ }; _ }; _ }
+   *   =
+   *   let dx, _, dz = Util.(top_left <-> bot_left) in
+   *   Float.atan (dz /. dx) *)
+
   (* TODO: need to paramaterize `North wall initial y span based on the radius of the
    * column, and the number of keys per column (number of rows). Southern walls technically
    * are still affected by the radius, but since it's only one key, worth it may not be a
@@ -122,36 +138,42 @@ module Plate = struct
    * calculations. *)
   let bez_wall side i =
     let c = Map.find_exn columns i in
-    let face, y_sign =
+    let key, face, y_sign =
       match side with
-      | `North -> (snd @@ Map.max_elt_exn c.keys).faces.north, 1.
-      | `South -> (Map.find_exn c.keys 0).faces.south, -1.
+      | `North ->
+        let key = snd @@ Map.max_elt_exn c.keys in
+        key, key.faces.north, 1.
+      | `South ->
+        let key = Map.find_exn c.keys 0 in
+        key, key.faces.south, -1.
     in
+    let x_tent = key_x_angle key in
     let jog_x =
-      let y_off = Util.get_y @@ Map.find_exn col_offsets i in
-      match Map.find columns (i + 1), Map.find col_offsets (i + 1) with
-      | Some next_c, Some next_offs ->
+      let edge_y = Util.get_y face.points.centre in
+      match Map.find columns (i + 1) with
+      | Some next_c ->
         let right_x = Util.get_x face.points.top_right
-        and next_y = Util.get_y next_offs
         and next_key = snd @@ Map.max_elt_exn next_c.keys in
         let diff =
           match side with
-          | `North when Float.(next_y >= y_off) ->
+          | `North when Float.(Util.get_y next_key.faces.north.points.centre >= edge_y) ->
             right_x -. Util.get_x next_key.faces.north.points.bot_left
-          | `South when Float.(next_y <= y_off) ->
+          | `South when Float.(Util.get_y next_key.faces.south.points.centre <= edge_y) ->
             right_x -. Util.get_x next_key.faces.south.points.bot_left
           | _ -> -.spacing
         in
         if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
-      | _                           -> 0.
+      | _           -> 0.
     in
     let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    let jog_y = Float.cos x_tent *. (Key.thickness *. 1.5) in
+    (* Stdio.printf "col %i: x tent = %.3f; jog_y = %.3f\n" i x_tent jog_y; *)
     let ps =
       let bez =
         Bezier.quad
           ~p1:(0., 0., 0.)
-          ~p2:(-.jog_x, y_sign *. 5., -.Key.thickness)
-          ~p3:(-.jog_x, y_sign *. 8., -.cz +. (Key.thickness /. 2.))
+          ~p2:(-.jog_x, y_sign *. (3. +. jog_y), Float.sin x_tent *. (Key.thickness +. 2.))
+          ~p3:(-.jog_x, y_sign *. (5. +. jog_y), -.cz +. (Key.thickness /. 2.))
       in
       Bezier.curve bez 0.1
     in
@@ -162,10 +184,15 @@ module Plate = struct
     let chunk =
       Model.cylinder ~center:true (Key.thickness /. 2.) Key.outer_w
       |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
-      |> Model.translate centre
+      |> Model.translate
+           Util.(
+             centre
+             <+> ( 0.
+                 , ((Float.cos x_tent *. Key.thickness /. 2.) -. 0.001) *. y_sign
+                 , Float.sin x_tent *. Key.thickness /. 2. *. y_sign ))
     in
     List.fold2_exn
-      ~init:(chunk, [])
+      ~init:(Model.hull [ face.scad; chunk ], [])
       ~f:(fun (last, acc) p r ->
         let next =
           Model.rotate_about_pt r (Math.negate centre) chunk |> Model.translate p
@@ -186,6 +213,7 @@ module Plate = struct
       ; bez_wall `North 2
       ; bez_wall `North 3
       ; bez_wall `North 4
+        (* ; Model.cylinder ~center:true 3. 10. |> Model.rotate (-0.768, 0., 0.) *)
       ]
 
   let t = { scad; columns; thumb }
