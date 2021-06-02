@@ -114,11 +114,6 @@ module Plate = struct
     Model.union
       (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
 
-  (* let jank_base =
-   *   let full = Model.minkowski [ Model.projection scad; Model.circle 7. ] in
-   *   Model.difference full [ Model.offset (`Delta (-10.)) full ] *)
-  (* let scad = Model.union [ scad; jank_base ] *)
-
   (* this seems to work well. Now need to determine what the required adjustments
    * to the bez points based on this angle. *)
   let key_x_angle
@@ -126,11 +121,6 @@ module Plate = struct
     =
     let _, dy, dz = Util.(top_right <-> top_left) in
     Float.atan (dz /. dy)
-  (* let x_tent_angle
-   *     Key.{ faces = { north = { points = { top_left; bot_left; _ }; _ }; _ }; _ }
-   *   =
-   *   let dx, _, dz = Util.(top_left <-> bot_left) in
-   *   Float.atan (dz /. dx) *)
 
   (* TODO: need to paramaterize `North wall initial y span based on the radius of the
    * column, and the number of keys per column (number of rows). Southern walls technically
@@ -138,8 +128,8 @@ module Plate = struct
    * problem. I suppose for completeness I may as well implement the slightly different
    * calculations. *)
   let bez_wall side i =
-    let c = Map.find_exn columns i in
     let key, face, y_sign =
+      let c = Map.find_exn columns i in
       match side with
       | `North ->
         let key = snd @@ Map.max_elt_exn c.keys in
@@ -148,8 +138,10 @@ module Plate = struct
         let key = Map.find_exn c.keys 0 in
         key, key.faces.south, -1.
     in
-    let x_tent = key_x_angle key in
-    let jog_x =
+    let x_tent = key_x_angle key
+    and Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    let jog_y = Float.cos x_tent *. (Key.thickness *. 1.5)
+    and jog_x =
       let edge_y = Util.get_y face.points.centre in
       match Map.find columns (i + 1) with
       | Some next_c ->
@@ -165,43 +157,32 @@ module Plate = struct
         in
         if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
       | _           -> 0.
-    in
-    let Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
-    let jog_y = Float.cos x_tent *. (Key.thickness *. 1.5) in
-    (* Stdio.printf "col %i: x tent = %.3f; jog_y = %.3f\n" i x_tent jog_y; *)
-    let ps =
-      let bez =
-        Bezier.quad
-          ~p1:(0., 0., 0.)
-          ~p2:(-.jog_x, y_sign *. (3. +. jog_y), Float.sin x_tent *. (Key.thickness +. 2.))
-          ~p3:(-.jog_x, y_sign *. (5. +. jog_y), -.cz +. (Key.thickness /. 2.))
-      in
-      Bezier.curve bez 0.1
-    in
-    let rs =
-      let bez = Bezier.quad ~p1:(0., 0., 0.) ~p2:(0., -.tent, 0.) ~p3:(0., -.tent, 0.) in
-      Bezier.curve bez 0.1
-    in
-    let chunk =
+    and start =
+      (* move out of the key wall, parallel to the keys columnar tilt *)
+      Util.(
+        centre
+        <+> ( 0.
+            , ((Float.cos x_tent *. Key.thickness /. 2.) -. 0.001) *. y_sign
+            , Float.sin x_tent *. Key.thickness /. 2. *. y_sign ))
+    and chunk =
       Model.cylinder ~center:true (Key.thickness /. 2.) Key.outer_w
       |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
-      |> Model.translate
-           Util.(
-             centre
-             <+> ( 0.
-                 , ((Float.cos x_tent *. Key.thickness /. 2.) -. 0.001) *. y_sign
-                 , Float.sin x_tent *. Key.thickness /. 2. *. y_sign ))
     in
-    List.fold2_exn
-      ~init:(Model.hull [ face.scad; chunk ], [])
-      ~f:(fun (last, acc) p r ->
-        let next =
-          Model.rotate_about_pt r (Math.negate centre) chunk |> Model.translate p
-        in
-        next, Model.hull [ last; next ] :: acc )
-      ps
-      rs
-    |> fun (_, hs) -> Model.union hs
+    let wall =
+      Bezier.quad_hull
+        ~t1:(0., 0., 0.)
+        ~t2:(-.jog_x, y_sign *. (3. +. jog_y), Float.sin x_tent *. (Key.thickness +. 2.))
+        ~t3:(-.jog_x, y_sign *. (5. +. jog_y), -.cz +. (Key.thickness /. 2.))
+        ~r1:(0., 0., 0.)
+        ~r2:(0., -.tent, 0.)
+        ~r3:(0., -.tent, 0.)
+        ~step:0.1
+        chunk
+    in
+    Model.union
+      [ Model.hull [ Model.translate start chunk; face.scad ]
+      ; wall |> Model.translate start
+      ]
 
   let scad =
     Model.union
@@ -214,7 +195,6 @@ module Plate = struct
       ; bez_wall `North 2
       ; bez_wall `North 3
       ; bez_wall `North 4
-        (* ; Model.cylinder ~center:true 3. 10. |> Model.rotate (-0.768, 0., 0.) *)
       ]
 
   let t = { scad; columns; thumb }
