@@ -49,17 +49,17 @@ module Plate = struct
   let n_cols = 5
   let spacing = 2.
   let centre_col = 2
-  let tent = Math.pi /. 12.
-  let thumb_offset = -5., -50., 9.
+  let tent = Math.pi /. 6.
+  let thumb_offset = 30., -50., 9.
   let thumb_angle = Math.(0., pi /. -4., pi /. 5.)
   let clearance = 7.
 
   (* TODO: tune *)
   let lookup = function
-    | 2 -> 0., 6., -6. (* middle *)
-    | 3 -> 0., 3., -2. (* ring *)
-    | i when i >= 4 -> 0., -12., 6. (* pinky *)
-    | _ -> 0., 0., 0.
+    | 2 -> 35., 6., -6. (* middle *)
+    | 3 -> 35., 3., -2. (* ring *)
+    | i when i >= 4 -> 35., -12., 6. (* pinky *)
+    | _ -> 35., 0., 0.
 
   let col_offsets =
     let space = Col.Key.outer_w +. spacing in
@@ -102,13 +102,22 @@ module Plate = struct
         ~init:Float.max_value
         placed
     in
+    Stdio.printf "clearance lift = %.3f\n" (clearance -. lowest_z);
     Map.map ~f:(Col.translate (0., 0., clearance -. lowest_z)) placed
 
   let thumb =
+    (* TODO: This does not preserve the position and angle of the thumb relative
+     * to the index columns after tenting. It becomes worse with different offsets.
+     * Need to think of the correct way to achieve equivalent tenting.
+     *
+     * It may be the clearance bump that is part of the issue. That number changes
+     * a lot when tent is increased, and the thumb was not being adjusted by said number.
+     * Continue testing whether whether that fixes this issue. *)
     let open Thumb in
-    rotate thumb_angle t
-    |> translate thumb_offset
-    |> apply_tent (module Thumb) thumb_offset
+    let placed = rotate thumb_angle t |> translate thumb_offset in
+    apply_tent (module Thumb) (Map.find_exn placed.keys 0).origin placed
+    (* |> Thumb.translate (0., 0., 19.156) *)
+    |> Thumb.translate (0., 0., 30.715)
 
   let scad =
     Model.union
@@ -195,6 +204,12 @@ module Plate = struct
       ; bez_wall `North 2
       ; bez_wall `North 3
       ; bez_wall `North 4
+        (* ; Model.cube ~center:true (5., 5., 5.)
+         *   |> Model.translate (Map.find_exn thumb.keys 0).origin *)
+        (* |> Model.translate (Map.find_exn thumb.keys 2).faces.east.points.top_right *)
+        (* ; Model.translate
+         *     Util.((Map.find_exn thumb.keys 0).origin <-> centre_offset)
+         *     thumb.scad *)
       ]
 
   let t = { scad; columns; thumb }
