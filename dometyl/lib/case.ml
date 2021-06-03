@@ -12,10 +12,11 @@ module Col = Column.Make (struct
   module Key = Key
 
   module Curve = Curvature.Make (struct
-    let style = Curvature.Well
+    (* let style = Curvature.Well *)
     let centre_idx = 1
-    let angle = Math.pi /. 12.
-    let radius = 85.
+    let kinds = [ Curvature.Well { angle = Math.pi /. 12.; radius = 85. } ]
+    (* let angle = Math.pi /. 12.
+     * let radius = 85. *)
     (* let angle = Math.pi /. 9.
      * let radius = 60. *)
   end)
@@ -28,10 +29,19 @@ module Thumb = struct
     module Key = KeyHole.RotateClips (Key)
 
     module Curve = Curvature.Make (struct
-      let style = Curvature.Fan
+      (* let style = Curvature.Fan *)
       let centre_idx = 1
-      let angle = Math.pi /. 12.
-      let radius = 85.
+
+      (* let angle = Math.pi /. 12.
+       * let radius = 85. *)
+      (* let kinds = [ Curvature.Fan { angle = Math.pi /. 12.; radius = 85. } ] *)
+      let kinds =
+        [ Curvature.Well { angle = Math.pi /. 9.; radius = 60. }
+        ; Curvature.Fan { angle = Math.pi /. 12.; radius = 85. }
+        ]
+      (* [ Curvature.Fan { angle = Math.pi /. 12.; radius = 85. }
+       * ; Curvature.Well { angle = Math.pi /. 9.; radius = 60. }
+       * ] *)
     end)
   end)
 
@@ -80,14 +90,14 @@ module Plate = struct
     let placed_cols = Map.map ~f:place_col col_offsets in
     let lift =
       let lowest_z =
-        let face_low ({ points = ps; _ } : Key.Face.t) =
-          Key.Face.Points.fold
+        let face_low ({ points = ps; _ } : KeyHole.Face.t) =
+          KeyHole.Face.Points.fold
             ~f:(fun m p -> Float.min m (Util.get_z p))
             ~init:Float.max_value
             ps
         in
         let key_low ({ faces = fs; _ } : Key.t) =
-          Key.Faces.fold
+          KeyHole.Faces.fold
             ~f:(fun m face -> Float.min m (face_low face))
             ~init:Float.max_value
             fs
@@ -120,7 +130,7 @@ module Plate = struct
   (* this seems to work well. Now need to determine what the required adjustments
    * to the bez points based on this angle. *)
   let key_x_angle
-      Key.{ faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ }
+      KeyHole.{ faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ }
     =
     let _, dy, dz = Util.(top_right <-> top_left) in
     Float.atan (dz /. dy)
@@ -137,7 +147,7 @@ module Plate = struct
         key, key.faces.south, -1.
     in
     let x_tent = key_x_angle key
-    and Key.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
     let jog_y = Float.cos x_tent *. (Key.thickness *. 1.5)
     and jog_x =
       let edge_y = Util.get_y face.points.centre in

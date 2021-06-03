@@ -50,8 +50,7 @@ module Make (C : Config) = struct
     ; joins = Map.map ~f:(Model.rotate_about_pt r p) t.joins
     }
 
-  let place_key keys i =
-    Map.add_exn ~key:i ~data:(Curve.place ~rotater:Key.rotate_about_pt i Key.t) keys
+  let place_key keys i = Map.add_exn ~key:i ~data:(Curve.place (module Key) i Key.t) keys
 
   let join_keys (a : Key.t) (b : Key.t) =
     Model.hull [ a.faces.north.scad; b.faces.south.scad ]
