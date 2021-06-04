@@ -165,3 +165,14 @@ module RotateClips (K : S) : S = struct
     let { faces = { north; south; east; west }; _ } = t' in
     { t' with faces = { north = east; south = west; east = south; west = north } }
 end
+
+(* NOTE: These key angle finding functions assume that the key in question is a part
+ * of a column parallel to the y-axis *)
+let x_angle { faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ } =
+  let _, dy, dz = Util.(top_right <-> top_left) in
+  Float.atan (dz /. dy)
+
+(* TODO: untested. To be used with side walls. *)
+let y_angle { faces = { south = { points = { top_left; top_right; _ }; _ }; _ }; _ } =
+  let dx, _, dz = Util.(top_right <-> top_left) in
+  Float.atan (dz /. dx)

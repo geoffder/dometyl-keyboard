@@ -113,14 +113,6 @@ module Plate = struct
     Model.union
       (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
 
-  (* this seems to work well. Now need to determine what the required adjustments
-   * to the bez points based on this angle. *)
-  let key_x_angle
-      KeyHole.{ faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ }
-    =
-    let _, dy, dz = Util.(top_right <-> top_left) in
-    Float.atan (dz /. dy)
-
   let bez_wall side i =
     let key, face, y_sign =
       let c = Map.find_exn columns i in
@@ -132,7 +124,7 @@ module Plate = struct
         let key = Map.find_exn c.keys 0 in
         key, key.faces.south, -1.
     in
-    let x_tent = key_x_angle key
+    let x_tent = KeyHole.x_angle key
     and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
     let jog_y = Float.cos x_tent *. (Key.thickness *. 1.5)
     and jog_x =
