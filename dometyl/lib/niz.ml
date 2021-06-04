@@ -46,17 +46,8 @@ module HoleConfig : KeyHole.Config with type k = KeyHole.Kind.niz = struct
 
   let clip_height = 1.1
   let snap_slot_h = 1.2
+  let snap_outer_wall = 0.2
   let spec = KeyHole.Kind.Niz { clip_height; snap_slot_h }
-
-  (* TODO: Need to improve the way different switch types are handled, since the
-   * presence of the platform clips in the side will mean that the joining of
-   * columns etc will be different as well (clip holes not covered). To
-   * accomplish this, may want to have another way of generating the faces that
-   * are carried around with the KeyHole.t structs, so that they can be used
-   * generically with the functions that join parts of columns to eachother.
-   *
-   * NOTE: I've added the a GADT kind to the keyhole config, so I should be able
-   * to add the extra config info needed for altering the generated faces. *)
   let outer_w = 19.5
   let inner_w = 14.
   let thickness = 4.
@@ -72,9 +63,12 @@ module HoleConfig : KeyHole.Config with type k = KeyHole.Kind.niz = struct
     let snap =
       let w = Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2. in
       let slot =
-        Model.cube ~center:true (outer_w -. inner_w, w, snap_slot_h)
+        let len = outer_w -. inner_w in
+        Model.cube ~center:true (len, w, snap_slot_h)
         |> Model.translate
-             (outer_w /. 2., 0., ((thickness -. snap_slot_h) /. 2.) -. clip_height)
+             ( (outer_w /. 2.) -. (len /. 2.) -. snap_outer_wall
+             , 0.
+             , ((thickness -. snap_slot_h) /. 2.) -. clip_height )
       and ramp =
         let z = thickness -. clip_height in
         Model.polygon [ 0., z /. -2.; snap_slot_h, z /. -2.; 0., z /. 2. ]
