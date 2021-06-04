@@ -12,13 +12,9 @@ module Col = Column.Make (struct
   module Key = Key
 
   module Curve = Curvature.Make (struct
-    (* let style = Curvature.Well *)
     let centre_idx = 1
-    let kinds = [ Curvature.Well { angle = Math.pi /. 12.; radius = 85. } ]
-    (* let angle = Math.pi /. 12.
-     * let radius = 85. *)
-    (* let angle = Math.pi /. 9.
-     * let radius = 60. *)
+    let well = Some Curvature.{ angle = Math.pi /. 12.; radius = 85. }
+    let fan = None
   end)
 end)
 
@@ -29,19 +25,9 @@ module Thumb = struct
     module Key = KeyHole.RotateClips (Key)
 
     module Curve = Curvature.Make (struct
-      (* let style = Curvature.Fan *)
       let centre_idx = 1
-
-      (* let angle = Math.pi /. 12.
-       * let radius = 85. *)
-      (* let kinds = [ Curvature.Fan { angle = Math.pi /. 12.; radius = 85. } ] *)
-      let kinds =
-        [ Curvature.Well { angle = Math.pi /. 9.; radius = 60. }
-        ; Curvature.Fan { angle = Math.pi /. 12.; radius = 85. }
-        ]
-      (* [ Curvature.Fan { angle = Math.pi /. 12.; radius = 85. }
-       * ; Curvature.Well { angle = Math.pi /. 9.; radius = 60. }
-       * ] *)
+      let well = Some Curvature.{ angle = Math.pi /. 12.; radius = 85. }
+      let fan = Some Curvature.{ angle = Math.pi /. 12.; radius = 85. }
     end)
   end)
 
