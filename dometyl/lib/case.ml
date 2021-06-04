@@ -11,6 +11,15 @@ module Col = Column.Make (struct
 
   module Key = Key
 
+  (* TODO: consider how columns are basically assumed to be oriented along the y-axis,
+   * and how things like bez_wall would break if there were to be any fanning or
+   * splaying going on in the columns. Columns are never going to be fanned, so having
+   * to provide a configuration feels silly already. Can I avoid exposing fan where
+   * unneccesary while still reusing curvature code effectively? Think about it when
+   * designing the future type/module overhaul.
+   *
+   * Should consider how to make the wall attachments and their rotation/translation
+   * settings could be more robust to allow splaying as a future possibility. *)
   module Curve = Curvature.Make (struct
     let centre_idx = 1
     let well = Some Curvature.{ angle = Math.pi /. 12.; radius = 85. }
