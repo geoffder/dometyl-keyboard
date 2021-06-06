@@ -1,15 +1,10 @@
 open! Base
 open! Scad_ml
 
-module HoleConfig : KeyHole.Config with type k = unit = struct
-  type k = unit
-  type spec = k KeyHole.Kind.t
-
-  let spec = KeyHole.Kind.Mx ()
+let hole_config =
   let outer_w = 19.
-  let inner_w = 14.
-  let thickness = 4.
-
+  and inner_w = 14.
+  and thickness = 4. in
   let clip hole =
     let clip =
       Model.rotate
@@ -18,4 +13,5 @@ module HoleConfig : KeyHole.Config with type k = unit = struct
       |> Model.translate (0., inner_w /. 2., -1.3)
     in
     Model.difference hole [ clip; Model.mirror (0, 1, 0) clip ]
-end
+  in
+  KeyHole.{ spec = Kind.Mx (); outer_w; inner_w; thickness; clip }

@@ -1,62 +1,48 @@
 open Base
 open Scad_ml
-open Sigs
 
-module type Config = sig
-  val n_keys : int
+type 'k config =
+  { key : 'k KeyHole.t
+  ; n_keys : int
+  ; curve : int -> 'k KeyHole.t -> 'k KeyHole.t
+  }
 
-  module Key : KeyHole.S
-  module Curve : Curvature.S
-end
+type 'k t =
+  { config : 'k config
+  ; scad : Model.t
+  ; keys : 'k KeyHole.t Map.M(Int).t
+  ; joins : Model.t Map.M(Int).t
+  }
 
-module type S = sig
-  include Config
+let translate p t =
+  { t with
+    scad = Model.translate p t.scad
+  ; keys = Map.map ~f:(KeyHole.translate p) t.keys
+  ; joins = Map.map ~f:(Model.translate p) t.joins
+  }
 
-  type t =
-    { scad : Model.t
-    ; keys : Key.t Map.M(Int).t
-    ; joins : Model.t Map.M(Int).t
-    }
+let rotate r t =
+  { t with
+    scad = Model.rotate r t.scad
+  ; keys = Map.map ~f:(KeyHole.rotate r) t.keys
+  ; joins = Map.map ~f:(Model.rotate r) t.joins
+  }
 
-  include Transformable with type t := t
+let rotate_about_pt r p t =
+  { t with
+    scad = Model.rotate_about_pt r p t.scad
+  ; keys = Map.map ~f:(KeyHole.rotate_about_pt r p) t.keys
+  ; joins = Map.map ~f:(Model.rotate_about_pt r p) t.joins
+  }
 
-  val t : t
-end
-
-module Make (C : Config) = struct
-  include C
-
-  type t =
-    { scad : Model.t
-    ; keys : Key.t Map.M(Int).t
-    ; joins : Model.t Map.M(Int).t
-    }
-
-  let translate p t =
-    { scad = Model.translate p t.scad
-    ; keys = Map.map ~f:(Key.translate p) t.keys
-    ; joins = Map.map ~f:(Model.translate p) t.joins
-    }
-
-  let rotate r t =
-    { scad = Model.rotate r t.scad
-    ; keys = Map.map ~f:(Key.rotate r) t.keys
-    ; joins = Map.map ~f:(Model.rotate r) t.joins
-    }
-
-  let rotate_about_pt r p t =
-    { scad = Model.rotate_about_pt r p t.scad
-    ; keys = Map.map ~f:(Key.rotate_about_pt r p) t.keys
-    ; joins = Map.map ~f:(Model.rotate_about_pt r p) t.joins
-    }
-
-  let place_key keys i = Map.add_exn ~key:i ~data:(Curve.place (module Key) i Key.t) keys
-
-  let join_keys (a : Key.t) (b : Key.t) =
+let make ({ key; n_keys; curve; _ } as config) =
+  let place_key keys i = Map.add_exn ~key:i ~data:(curve i key) keys in
+  let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
     Model.hull [ a.faces.north.scad; b.faces.south.scad ]
-
-  let keys = List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
-
+  in
+  let keys =
+    List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
+  in
   let joins =
     Map.fold
       ~f:(fun ~key ~data:k1 m ->
@@ -65,10 +51,9 @@ module Make (C : Config) = struct
         | Some k2 -> Map.add_exn m ~key ~data:(join_keys k1 k2) )
       ~init:(Map.empty (module Int))
       keys
-
+  in
   let scad =
     Model.union
       (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:(Map.data joins) keys)
-
-  let t = { scad; keys; joins }
-end
+  in
+  { config; scad; keys; joins }

@@ -40,18 +40,13 @@ module Bottom = struct
     |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
 end
 
-module HoleConfig : KeyHole.Config with type k = KeyHole.Kind.niz = struct
-  type k = KeyHole.Kind.niz
-  type spec = k KeyHole.Kind.t
-
+let hole_config =
   let clip_height = 1.1
-  let snap_slot_h = 1.2
-  let snap_outer_wall = 0.2
-  let spec = KeyHole.Kind.Niz { clip_height; snap_slot_h }
-  let outer_w = 19.5
-  let inner_w = 14.
-  let thickness = 4.
-
+  and snap_slot_h = 1.2
+  and snap_outer_wall = 0.2
+  and outer_w = 19.5
+  and inner_w = 14.
+  and thickness = 4. in
   let clip hole =
     let inset_depth = thickness -. clip_height in
     let inset =
@@ -79,48 +74,57 @@ module HoleConfig : KeyHole.Config with type k = KeyHole.Kind.niz = struct
       Model.union [ slot; ramp ]
     in
     Model.difference hole [ inset; bot; snap; Model.mirror (1, 0, 0) snap ]
-end
+  in
+  KeyHole.
+    { spec = Kind.Niz { clip_height; snap_slot_h }; outer_w; inner_w; thickness; clip }
 
 module Platform = struct
-  module type Config = sig
-    module HoleConfig : KeyHole.Config with type k = KeyHole.Kind.niz
-    module SensorCutout : Sensor.S
+  type config =
+    { w : float
+    ; dome_w : float
+    ; dome_waist : float
+    ; dome_thickness : float
+    ; base_thickness : float
+    ; sensor_depth : float
+    ; lug_height : float
+    ; snap_clearance : float
+    ; snap_len : float
+    ; sensor_config : Sensor.Config.t
+    }
 
-    val w : float
-    val dome_w : float
-    val dome_waist : float
-    val dome_thickness : float
-    val base_thickness : float
-    val sensor_depth : float
-    val lug_height : float
-    val snap_clearance : float
-    val snap_len : float
-  end
+  type t =
+    { config : config
+    ; wall_height : float
+    ; scad : Model.t
+    }
 
-  module type S = sig
-    include Config
-
-    val scad : Model.t
-  end
-
-  module Make (C : Config) = struct
-    include C
-
-    let (KeyHole.Kind.Niz { clip_height; snap_slot_h }) = HoleConfig.spec
-
+  let make
+      ( { w
+        ; dome_w
+        ; dome_waist
+        ; dome_thickness
+        ; base_thickness
+        ; sensor_depth
+        ; lug_height
+        ; snap_clearance
+        ; snap_len
+        ; sensor_config
+        } as config )
+    =
+    let (KeyHole.Kind.Niz { clip_height; snap_slot_h }) = hole_config.spec in
     let base =
       let slab =
         Model.cube ~center:true (w, w, base_thickness)
         |> Model.translate (0., 0., base_thickness /. -2.)
       in
-      Model.difference slab (SensorCutout.sink sensor_depth)
-
+      Model.difference slab [ Sensor.(sink (make sensor_config) sensor_depth) ]
+    in
     (* NOTE: Don't know why these config values on their own are resulting in a bit
      * of a gap between walls and plate. Possibly settle on a magic fudge value if the
      * issue persists / I don't find a better solution or the bug causing it. *)
     let wall_height =
-      Bottom.z -. HoleConfig.thickness +. clip_height +. dome_thickness +. 0.25
-
+      Bottom.z -. hole_config.thickness +. clip_height +. dome_thickness +. 0.25
+    in
     let pillars =
       let waist_cut =
         let width = Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2. in
@@ -147,13 +151,12 @@ module Platform = struct
           ]
       in
       Model.difference (Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]) [ waist_cut ]
-
-    let dome_cut =
+    and dome_cut =
       (* ensure overlap *)
       let fudged_w = dome_w +. 0.01 in
       Model.cube (fudged_w, fudged_w, dome_thickness)
       |> Model.translate (fudged_w /. -2., fudged_w /. -2., 0.)
-
+    in
     let ramp_cut =
       (* ~30 degrees *)
       let cut_l = 5.7 in
@@ -210,13 +213,12 @@ module Platform = struct
         ; Model.mirror (1, 0, 0) y_prism
         ; corners
         ]
-
-    let lugs =
+    and lugs =
       Model.difference
         (Model.cube ~center:true (Bottom.x -. 0.001, Bottom.y -. 0.001, lug_height))
         [ Model.translate (0., 0., -1.) Bottom.scad ]
       |> Model.translate (0., 0., (lug_height /. 2.) +. wall_height -. 0.001)
-
+    in
     let walls =
       let block =
         Model.union
@@ -228,12 +230,11 @@ module Platform = struct
       Model.difference
         block
         [ Model.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
-
-    let snap_heads =
+    and snap_heads =
       let width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale
       and z =
         wall_height
-        +. HoleConfig.thickness
+        +. hole_config.thickness
         -. clip_height
         -. snap_slot_h
         +. (snap_clearance /. 2.)
@@ -252,8 +253,10 @@ module Platform = struct
         |> Model.translate (0., 0., wall_height +. snap_slot_h -. snap_clearance)
       in
       Model.union [ tab; Model.mirror (1, 0, 0) tab; neck; Model.mirror (1, 0, 0) neck ]
-
-    let scad =
-      Model.union [ base; Model.translate (0., 0., -0.001) walls; pillars; snap_heads ]
-  end
+    in
+    { config
+    ; wall_height
+    ; scad =
+        Model.union [ base; Model.translate (0., 0., -0.001) walls; pillars; snap_heads ]
+    }
 end
