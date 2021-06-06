@@ -35,7 +35,7 @@ let rotate_about_pt r p t =
   ; joins = Map.map ~f:(Model.rotate_about_pt r p) t.joins
   }
 
-let make ({ key; n_keys; curve; _ } as config) =
+let make ~key ~n_keys ~curve =
   let place_key keys i = Map.add_exn ~key:i ~data:(curve i key) keys in
   let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
     Model.hull [ a.faces.north.scad; b.faces.south.scad ]
@@ -56,4 +56,4 @@ let make ({ key; n_keys; curve; _ } as config) =
     Model.union
       (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:(Map.data joins) keys)
   in
-  { config; scad; keys; joins }
+  { config = { key; n_keys; curve }; scad; keys; joins }
