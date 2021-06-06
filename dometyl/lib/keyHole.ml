@@ -141,14 +141,18 @@ let rotate_clips t =
 
 (* NOTE: These key angle finding functions assume that the key in question is a part
  * of a column oriented along the y-axis *)
-let x_angle { faces = { west = { points = { top_left; top_right; _ }; _ }; _ }; _ } =
-  let _, dy, dz = Util.(top_right <-> top_left) in
-  Float.atan (dz /. dy)
-
-(* TODO: untested. To be used with side walls. *)
-let y_angle { faces = { south = { points = { top_left; top_right; _ }; _ }; _ }; _ } =
-  let dx, _, dz = Util.(top_right <-> top_left) in
-  Float.atan (dz /. dx)
+let angles { faces = { north; west; _ }; _ } =
+  let x =
+    let _, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
+    Float.atan (dz /. dy)
+  and y, z =
+    let dx, dy, dz = Util.(north.points.top_right <-> north.points.top_left) in
+    Float.atan (dz /. dx), Float.atan (dy /. dx)
+  in
+  (* Stdio.printf "x angle: %.2f \n" x;
+   * Stdio.printf "y angle: %.2f \n" y;
+   * Stdio.printf "z angle: %.2f \n" z; *)
+  x, y, z
 
 let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
   let hole =
