@@ -13,27 +13,29 @@ let keyhole = KeyHole.make Niz.hole_config
  *
  * Should consider how to make the wall attachments and their rotation/translation
  * settings could be more robust to allow splaying as a future possibility. *)
+let n_rows = 3
+let centre_idx = 1
+
 let column =
-  Column.(
-    make
-      { key = keyhole
-      ; n_keys = 3
-      ; curve =
-          Curvature.(place ~well:{ angle = Math.pi /. 12.; radius = 85. } ~centre_idx:1)
-      })
+  Column.make
+    ~key:keyhole
+    ~n_keys:n_rows
+    ~curve:Curvature.(place ~well:{ angle = Math.pi /. 12.; radius = 85. } ~centre_idx)
+
+let well_column spec =
+  Column.make ~key:keyhole ~n_keys:n_rows ~curve:Curvature.(place ~well:spec ~centre_idx)
 
 let thumb =
   Column.(
     make
-      { key = KeyHole.rotate_clips keyhole
-      ; n_keys = 3
-      ; curve =
-          Curvature.(
-            place
-              ~well:{ angle = Math.pi /. 12.; radius = 85. }
-              ~fan:{ angle = Math.pi /. 12.; radius = 85. }
-              ~centre_idx:1)
-      }
+      ~key:(KeyHole.rotate_clips keyhole)
+      ~n_keys:3
+      ~curve:
+        Curvature.(
+          place
+            ~well:{ angle = Math.pi /. 12.; radius = 85. }
+            ~fan:{ angle = Math.pi /. 12.; radius = 85. }
+            ~centre_idx:1)
     (* orient along x-axis *)
     |> rotate (0., 0., Math.pi /. -2.))
 
@@ -53,16 +55,20 @@ module Plate = struct
   let clearance = 7.
 
   (* TODO: tune *)
-  let lookup = function
+  let offset_lookup = function
     | 2 -> 0., 6., -6. (* middle *)
     | 3 -> 0., 3., -2. (* ring *)
     | i when i >= 4 -> 0., -12., 6. (* pinky *)
     | _ -> 0., 0., 0.
 
+  let well_lookup = function
+    (* | i when i >= 4 -> Curvature.{ angle = Math.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    | _ -> Curvature.{ angle = Math.pi /. 12.; radius = 85. }
+
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
     let f m i =
-      let data = Util.(lookup i <+> (space *. Float.of_int i, 0., 0.)) in
+      let data = Util.(offset_lookup i <+> (space *. Float.of_int i, 0., 0.)) in
       Map.add_exn ~key:i ~data m
     in
     List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
@@ -72,10 +78,11 @@ module Plate = struct
   let apply_tent off col =
     Column.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) col)
 
-  let place_col off = apply_tent off column |> Column.translate off
+  let place_col ~key:i ~data:off =
+    apply_tent off (well_column @@ well_lookup i) |> Column.translate off
 
   let columns, thumb =
-    let placed_cols = Map.map ~f:place_col col_offsets in
+    let placed_cols = Map.mapi ~f:place_col col_offsets in
     let lift =
       let lowest_z =
         let face_low ({ points = ps; _ } : KeyHole.Face.t) =
@@ -125,7 +132,7 @@ module Plate = struct
         let key = Map.find_exn c.keys 0 in
         key, key.faces.south, -1.
     in
-    let x_tent = KeyHole.x_angle key
+    let x_tent, y_tent, z_rot = KeyHole.angles key
     and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
     let jog_y = Float.cos x_tent *. (keyhole.config.thickness *. 1.5)
     and jog_x =
@@ -153,7 +160,7 @@ module Plate = struct
             , Float.sin x_tent *. keyhole.config.thickness /. 2. *. y_sign ))
     and chunk =
       Model.cylinder ~center:true (keyhole.config.thickness /. 2.) keyhole.config.outer_w
-      |> Model.rotate (0., (Math.pi /. 2.) +. tent, 0.)
+      |> Model.rotate (0., (Math.pi /. 2.) -. y_tent, z_rot)
     in
     let wall =
       Bezier.quad_hull
@@ -164,8 +171,8 @@ module Plate = struct
           , Float.sin x_tent *. (keyhole.config.thickness +. 2.) )
         ~t3:(-.jog_x, y_sign *. (5. +. jog_y), -.cz +. (keyhole.config.thickness /. 2.))
         ~r1:(0., 0., 0.)
-        ~r2:(0., -.tent, 0.)
-        ~r3:(0., -.tent, 0.)
+        ~r2:(0., y_tent, 0.)
+        ~r3:(0., y_tent, 0.)
         ~step:0.1
         chunk
     in
