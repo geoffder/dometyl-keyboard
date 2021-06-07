@@ -18,17 +18,17 @@ let centre_idx = 1
 
 let column =
   Column.make
-    ~key:keyhole
     ~n_keys:n_rows
     ~curve:Curvature.(place ~well:{ angle = Math.pi /. 12.; radius = 85. } ~centre_idx)
+    keyhole
 
 let well_column spec =
-  Column.make ~key:keyhole ~n_keys:n_rows ~curve:Curvature.(place ~well:spec ~centre_idx)
+  Column.make ~n_keys:n_rows ~curve:Curvature.(place ~well:spec ~centre_idx) keyhole
 
 let thumb =
   Column.(
     make
-      ~key:(KeyHole.rotate_clips keyhole)
+      ~join_ax:`EW
       ~n_keys:3
       ~curve:
         Curvature.(
@@ -36,6 +36,7 @@ let thumb =
             ~well:{ angle = Math.pi /. 12.; radius = 85. }
             ~fan:{ angle = Math.pi /. 12.; radius = 85. }
             ~centre_idx:1)
+      (KeyHole.rotate (0., 0., Math.pi /. 2.) keyhole)
     (* orient along x-axis *)
     |> rotate (0., 0., Math.pi /. -2.))
 
@@ -181,6 +182,92 @@ module Plate = struct
       ; wall |> Model.translate start
       ]
 
+  (* TODO:
+   * - this is working for North-South and East-West axis walls, which is good,
+   * and has a large amount of overlap with the bez_wall function, though this one
+   * lacks knowledge of the columns (since it just takes a key). May be able to calculate
+   * the x jogging for the N-S column walls and give that as an argument to this one.
+   * - the issue which I have to think about/resolve next is that the thumb cluster breaks the
+   * assumption that N-S of a key is niceley along Y and E-W along X. I thought I resolved
+   * this based on my simple splay test, but it seems like I wasn't really looking close enough.
+   * Much like how I calculate the distance to jog along the plane of the key, I need to
+   * to the same for the walls jut out for the bezier curve. Otherwise the walls do not
+   * flow naturally from the keys when they are at very rotated angles as they are in the thumb.
+   * - there is a slight issue with E-W walls not seeming to not make contact with the
+   * the keykole edge. Problem is not present on N-S walls. I think it has to do with the
+   * bowing of the radius. Need to figure out the correct angle calculations to correct it
+   * (likely will be an issue for the thumb walls as well) *)
+  let side_wall side d1 d2 (key : _ KeyHole.t) =
+    let face, sign =
+      match side with
+      | `North -> key.faces.north, 1.
+      | `South -> key.faces.south, -1.
+      | `West  -> key.faces.west, -1.
+      | `East  -> key.faces.east, 1.
+    in
+    let side_point ax z =
+      match side with
+      | `North | `South -> 0., ax, z
+      | `West | `East   -> ax, 0., z
+    in
+    let x_tent, y_tent, z_rot = KeyHole.angles key in
+    let ax_angle =
+      match side with
+      | `North | `South ->
+        (function
+        | `Trans -> x_tent
+        | `Rot   -> -.y_tent )
+      | `West | `East   ->
+        (function
+        | `Trans -> y_tent
+        | `Rot   -> x_tent )
+    and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
+    let jog =
+      (* Don't jog out further if already pointed downward (nothing to avoid). *)
+      let a = ax_angle `Trans in
+      match side with
+      | (`East | `North) when Float.(a < 0.) -> 0.
+      | (`South | `West) when Float.(a > 0.) -> 0.
+      | _ -> Float.cos a *. (keyhole.config.thickness *. 1.5) *. sign
+    and start =
+      (* move out of the key wall, parallel to the keys columnar tilt *)
+      let t =
+        match side with
+        | `North | `South ->
+          ( 0.
+          , ((Float.cos x_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. sign
+          , Float.sin x_tent *. keyhole.config.thickness /. 2. *. sign )
+        | `West | `East   ->
+          ( ((Float.cos y_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. sign
+          , 0.
+          , Float.sin y_tent *. keyhole.config.thickness /. 2. *. sign )
+      in
+      Util.(centre <+> t)
+    and chunk =
+      Model.cylinder ~center:true (keyhole.config.thickness /. 2.) keyhole.config.outer_w
+      |> Model.rotate
+           Util.(side_point (ax_angle `Rot) z_rot <+> side_point (Math.pi /. 2.) 0.)
+    in
+    let wall =
+      Bezier.quad_hull
+        ~t1:(0., 0., 0.)
+        ~t2:
+          (side_point
+             ((sign *. d1) +. jog)
+             (Float.sin (ax_angle `Trans) *. (keyhole.config.thickness +. 2.)) )
+        ~t3:(side_point ((sign *. d2) +. jog) (-.cz +. (keyhole.config.thickness /. 2.)))
+        ~r1:(0., 0., 0.)
+        ~r2:(side_point (-.ax_angle `Rot) 0.)
+        ~r3:(side_point (-.ax_angle `Rot) 0.)
+        ~step:0.1
+        chunk
+    in
+    (* wall |> Model.translate start  *)
+    Model.union
+      [ Model.hull [ Model.translate start chunk; face.scad ]
+      ; wall |> Model.translate start
+      ]
+
   let scad =
     Model.union
       [ scad
@@ -190,8 +277,15 @@ module Plate = struct
       ; bez_wall `North 0
       ; bez_wall `North 1
       ; bez_wall `North 2
-      ; bez_wall `North 3
-      ; bez_wall `North 4
+      ; bez_wall `North 3 (* ; bez_wall `North 4 *)
+      ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
+      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
+      ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2)
       ]
 
   let t = { scad; columns; thumb }
