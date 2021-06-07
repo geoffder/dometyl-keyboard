@@ -35,10 +35,12 @@ let rotate_about_pt r p t =
   ; joins = Map.map ~f:(Model.rotate_about_pt r p) t.joins
   }
 
-let make ~key ~n_keys ~curve =
+let make ?(join_ax = `NS) ~n_keys ~curve key =
   let place_key keys i = Map.add_exn ~key:i ~data:(curve i key) keys in
   let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
-    Model.hull [ a.faces.north.scad; b.faces.south.scad ]
+    match join_ax with
+    | `NS -> Model.hull [ a.faces.north.scad; b.faces.south.scad ]
+    | `EW -> Model.hull [ a.faces.east.scad; b.faces.west.scad ]
   in
   let keys =
     List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
