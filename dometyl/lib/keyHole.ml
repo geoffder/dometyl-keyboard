@@ -55,6 +55,34 @@ module Face = struct
     { scad = Model.rotate_about_pt r p t.scad
     ; points = Points.rotate_about_pt r p t.points
     }
+
+  (* let angles { points = { top_left; top_right; bot_left; _ }; _ } =
+   *   let x, z =
+   *     let dx, dy, dz = Util.(top_right <-> top_left) in
+   *     Float.atan (dz /. dy), Float.atan (dx /. dy)
+   *   and y =
+   *     let dx, _, dz = Util.(top_left <-> bot_left) in
+   *     Float.atan (dz /. dx)
+   *   in
+   *   Stdio.print_endline "face angles:";
+   *   Stdio.printf "x angle: %.2f \n" x;
+   *   Stdio.printf "y angle: %.2f \n" y;
+   *   Stdio.printf "z angle: %.2f \n\n" z;
+   *   x, y, z
+   *
+   * let angles' { points = { top_left; top_right; _ }; _ } =
+   *   let dx, dy, dz = Math.norm Util.(top_left <-> top_right) in
+   *   let x = Float.acos dx
+   *   and y = Float.acos dy
+   *   and z = Float.acos dz in
+   *   Stdio.print_endline "face angles:";
+   *   Stdio.printf "x angle: %.2f \n" x;
+   *   Stdio.printf "y angle: %.2f \n" y;
+   *   Stdio.printf "z angle: %.2f \n\n" z;
+   *   x, y, z *)
+
+  let direction { points = { top_left; top_right; _ }; _ } =
+    Math.norm Util.(top_left <-> top_right)
 end
 
 module Faces = struct
@@ -81,6 +109,12 @@ module Faces = struct
     ; west = base |> rot_lat |> Face.translate (-.half_w, 0., 0.)
     ; east = base |> rot_lat |> Face.translate (half_w, 0., 0.)
     }
+
+  let face t = function
+    | `North -> t.north
+    | `South -> t.south
+    | `East  -> t.east
+    | `West  -> t.west
 
   let translate p = map ~f:(Face.translate p)
   let rotate r = map ~f:(Face.rotate r)
@@ -142,17 +176,22 @@ let rotate_clips t =
 (* NOTE: These key angle finding functions assume that the key in question is a part
  * of a column oriented along the y-axis *)
 let angles { faces = { north; west; _ }; _ } =
-  let x =
-    let _, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
-    Float.atan (dz /. dy)
+  let x, z' =
+    let dx, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
+    Float.atan (dz /. dy), Float.atan (dx /. dy)
   and y, z =
     let dx, dy, dz = Util.(north.points.top_right <-> north.points.top_left) in
     Float.atan (dz /. dx), Float.atan (dy /. dx)
   in
-  (* Stdio.printf "x angle: %.2f \n" x;
-   * Stdio.printf "y angle: %.2f \n" y;
-   * Stdio.printf "z angle: %.2f \n" z; *)
+  Stdio.print_endline "keyhole angles:";
+  Stdio.printf "x angle: %.2f \n" x;
+  Stdio.printf "y angle: %.2f \n" y;
+  Stdio.printf "z angle: %.2f \n" z;
+  Stdio.printf "z? angle: %.2f \n\n" z';
   x, y, z
+
+let orthogonal t side =
+  Math.norm Util.((Faces.face t.faces side).points.centre <-> t.origin)
 
 let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
   let hole =
