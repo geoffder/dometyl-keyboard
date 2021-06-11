@@ -176,18 +176,18 @@ let rotate_clips t =
 (* NOTE: These key angle finding functions assume that the key in question is a part
  * of a column oriented along the y-axis *)
 let angles { faces = { north; west; _ }; _ } =
-  let x, z' =
-    let dx, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
-    Float.atan (dz /. dy), Float.atan (dx /. dy)
+  let x =
+    let _, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
+    Float.atan (dz /. dy)
   and y, z =
     let dx, dy, dz = Util.(north.points.top_right <-> north.points.top_left) in
     Float.atan (dz /. dx), Float.atan (dy /. dx)
   in
-  Stdio.print_endline "keyhole angles:";
-  Stdio.printf "x angle: %.2f \n" x;
-  Stdio.printf "y angle: %.2f \n" y;
-  Stdio.printf "z angle: %.2f \n" z;
-  Stdio.printf "z? angle: %.2f \n\n" z';
+  (* Stdio.print_endline "keyhole angles:";
+   * Stdio.printf "x angle: %.2f \n" x;
+   * Stdio.printf "y angle: %.2f \n" y;
+   * Stdio.printf "z angle: %.2f \n" z;
+   * Stdio.printf "z? angle: %.2f \n\n" z'; *)
   x, y, z
 
 let orthogonal t side =
