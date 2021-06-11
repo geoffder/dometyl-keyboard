@@ -122,6 +122,17 @@ module Plate = struct
     Model.union
       (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
 
+  let wall_start side (k : _ KeyHole.t) =
+    let cyl =
+      Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
+      |> Model.rotate (0., Math.pi /. 2., 0.)
+    and face = KeyHole.Faces.face k.faces side in
+    let r =
+      Rotation.(align_exn (KeyHole.Face.direction face) (1., 0., 0.) |> euler_of_matrix)
+    and t = Util.(KeyHole.orthogonal k side <*> (2., 2., 2.)) in
+    let centre = Util.(face.points.centre <+> t) in
+    Model.rotate r cyl |> Model.translate centre, centre
+
   let bez_wall side i =
     let key, face, y_sign =
       let c = Map.find_exn columns i in
@@ -198,138 +209,52 @@ module Plate = struct
    * bowing of the radius. Need to figure out the correct angle calculations to correct it
    * (likely will be an issue for the thumb walls as well) *)
   let side_wall side d1 d2 (key : _ KeyHole.t) =
-    let face, sign =
-      match side with
-      | `North -> key.faces.north, 1.
-      | `South -> key.faces.south, -1.
-      | `West  -> key.faces.west, -1.
-      | `East  -> key.faces.east, 1.
+    (* let side_point ax z =
+     *   match side with
+     *   | `North | `South -> 0., ax, z
+     *   | `West | `East   -> ax, 0., z
+     * in *)
+    let chunk, start = wall_start side key
+    and chunk_rad = keyhole.config.thickness /. 2.
+    and ortho = KeyHole.orthogonal key side in
+    let z_hop = (Util.get_z ortho *. chunk_rad) +. 2. in
+    let t2 =
+      Math.(mul (Math.norm (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (0., 0., z_hop))
+    and t3 =
+      Math.(
+        sub
+          (mul (Math.norm (mul ortho (1., 1., 0.))) (d2, d2, 0.))
+          (0., 0., Util.get_z start -. chunk_rad))
     in
-    let side_point ax z =
+    let face = KeyHole.Faces.face key.faces side in
+    let untent =
+      let x, y, z = KeyHole.Face.direction face in
+      (* Stdio.print_endline @@ Util.string_of_point Float.(acos x, acos y, acos z);
+       * Stdio.print_endline @@ Util.string_of_point Float.(atan x, atan y, atan z);
+       * Stdio.print_endline @@ Util.string_of_point Float.(asin x, asin y, asin z); *)
       match side with
-      | `North | `South -> 0., ax, z
-      | `West | `East   -> ax, 0., z
-    in
-    let x_tent, y_tent, z_rot = KeyHole.angles key in
-    (* let x_tent, y_tent, z_rot = KeyHole.Face.angles face in *)
-    (* KeyHole.Face.angles face |> ignore; *)
-    let ax_angle =
-      match side with
-      | `North | `South ->
-        (function
-        | `Trans -> x_tent
-        | `Rot   -> -.y_tent )
+      | `North | `South -> 0., Float.acos x -. Math.pi, 0.
       | `West | `East   ->
-        (function
-        | `Trans -> y_tent
-        | `Rot   -> x_tent )
-    and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
-    let jog =
-      (* Don't jog out further if already pointed downward (nothing to avoid). *)
-      let a = ax_angle `Trans in
-      match side with
-      | (`East | `North) when Float.(a < 0.) -> 0.
-      | (`South | `West) when Float.(a > 0.) -> 0.
-      | _ -> Float.cos a *. (keyhole.config.thickness *. 1.5) *. sign
-    and start =
-      (* move out of the key wall, parallel to the keys columnar tilt *)
-      let t =
-        match side with
-        | `North | `South ->
-          ( 0.
-          , ((Float.cos x_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. sign
-          , Float.sin x_tent *. keyhole.config.thickness /. 2. *. sign )
-        | `West | `East   ->
-          ( ((Float.cos y_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. sign
-          , 0.
-          , Float.sin y_tent *. keyhole.config.thickness /. 2. *. sign )
-      in
-      Util.(centre <+> t)
-    and chunk =
-      (* NOTE: this is to test what would solve the lack of alignment of the first
-       * chunk with the face of the keyhole in east/west. This value of pi/24 seems
-       * bang on for the southern key hole (with the current radius and angle of the
-       * columns). Although the z-rotation comes up as zero when measuring the x-y
-       * axis angle of the "horizontal" faces of the keyholes, the fact that the
-       * columns are "bent" means that when tented the rotations required to match each
-       * key are slightly different. Can I use trig to calculate the appropriate z-rotation
-       * to remedy this? Or should I try calculating more angles to describe the keyhole? *)
-      (* let z_rot =
-       *   match side with
-       *   | `North | `South -> z_rot
-       *   | _               -> Math.pi /. 24.
-       * in *)
-      (* Stdio.printf "zrot: %.2f \n" z_rot; *)
-      Model.cylinder ~center:true (keyhole.config.thickness /. 2.) keyhole.config.outer_w
-      |> Model.rotate
-           Util.(side_point (ax_angle `Rot) z_rot <+> side_point (Math.pi /. 2.) 0.)
+        (* HACK: Checking if angled up or down in z to correct the rotation direction.
+         * There definitely has to be a better way to do this. Also, this scheme
+         * doesn't work at all for the thumb. I think I need to figure out how to do
+         * multi-axis rotation with the bezier wall, though I don't think that euler
+         * rotations can actually be interpolated normally. *)
+        ((Float.acos y -. Math.pi) *. if Float.(z > 0.) then -1. else 1.), 0., 0.
     in
     let wall =
       Bezier.quad_hull
         ~t1:(0., 0., 0.)
-        ~t2:
-          (side_point
-             ((sign *. d1) +. jog)
-             (Float.sin (ax_angle `Trans) *. (keyhole.config.thickness +. 2.)) )
-        ~t3:(side_point ((sign *. d2) +. jog) (-.cz +. (keyhole.config.thickness /. 2.)))
+        ~t2
+        ~t3
+        ~pivot:(Math.negate start)
         ~r1:(0., 0., 0.)
-        ~r2:(side_point (-.ax_angle `Rot) 0.)
-        ~r3:(side_point (-.ax_angle `Rot) 0.)
+        ~r2:untent
+        ~r3:untent
         ~step:0.1
         chunk
     in
-    wall |> Model.translate start
-  (* Model.union
-   *   [ Model.hull [ Model.translate start chunk; face.scad ]
-   *   ; wall |> Model.translate start
-   *   ] *)
-
-  let block = Model.cylinder ~center:true 2. 15. |> Model.rotate (0., Math.pi /. 2., 0.)
-
-  (* let block = Model.cylinder ~center:true 2. 15. |> Model.rotate (Math.pi /. 2., 0., 0.) *)
-  (* let block = Model.cylinder ~center:true 2. 15. *)
-
-  type mat =
-    { x : Core.pos_t
-    ; y : Core.pos_t
-    ; z : Core.pos_t
-    }
-
-  let rot_matrix a b =
-    if false (* check if they are equal, also should deal with 0 vecs and X = -Y *)
-    then None
-    else (
-      let x = Math.norm a
-      and z = Math.(norm (cross a b)) in
-      Some { x; y = Math.(norm (cross z x)); z } )
-
-  let rot_matrix_exn a b = Option.value_exn (rot_matrix a b)
-
-  let euler_of_matrix m =
-    let open Util in
-    let theta = -1. *. Float.sin (get_z m.x) in
-    let cos_theta = Float.cos theta in
-    let psi = Float.atan2 (get_z m.y /. cos_theta) (get_z m.z /. cos_theta) in
-    let phi = Float.atan2 (get_y m.x /. cos_theta) (get_x m.x /. cos_theta) in
-    psi, theta, phi
-
-  let euler_of_matrix' m =
-    let open Util in
-    let x = Float.atan2 (get_z m.y) (get_z m.z) in
-    let y =
-      Float.atan2
-        (-1. *. get_z m.x)
-        (Float.sqrt ((get_z m.y *. get_z m.y) +. (get_z m.z *. get_z m.z)))
-    in
-    let z = Float.atan2 (get_y m.x) (get_x m.x) in
-    x, y, z
-
-  let euler_block side (k : _ KeyHole.t) =
-    let face = KeyHole.Faces.face k.faces side in
-    let r =
-      rot_matrix_exn (KeyHole.Face.direction face) (1., 0., 0.) |> euler_of_matrix'
-    in
-    Model.rotate r block |> Model.translate face.points.centre
+    Model.union [ Model.hull [ chunk; face.scad ]; wall ]
 
   let scad =
     Model.union
@@ -340,24 +265,17 @@ module Plate = struct
          * ; bez_wall `North 0
          * ; bez_wall `North 1
          * ; bez_wall `North 2
-         * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\)
-         * ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 1)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
-         * ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2) *)
-      ; block
-      ; euler_block `South (Map.find_exn thumb.keys 1)
-      ; euler_block `South (Map.find_exn thumb.keys 2)
-      ; euler_block `West (Map.find_exn (Map.find_exn columns 0).keys 2)
-      ; euler_block `West (Map.find_exn (Map.find_exn columns 0).keys 1)
-      ; euler_block `West (Map.find_exn (Map.find_exn columns 0).keys 0)
-      ; euler_block `South (Map.find_exn (Map.find_exn columns 0).keys 0)
-      ; euler_block `North (Map.find_exn (Map.find_exn columns 0).keys 2)
+         * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
+      ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `South 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 0)
+      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
+      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 1)
+      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
+      ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2)
       ]
 
   let t = { scad; columns; thumb }
