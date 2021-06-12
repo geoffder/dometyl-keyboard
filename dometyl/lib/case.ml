@@ -256,6 +256,19 @@ module Plate = struct
     in
     Model.union [ Model.hull [ chunk; face.scad ]; wall ]
 
+  let test_rot =
+    let key = Map.find_exn thumb.keys 1 in
+    let cyl, pos = wall_start `South key in
+    let ortho = KeyHole.orthogonal key `South in
+    let face = KeyHole.Faces.face key.faces `South in
+    let x, y, z = KeyHole.Face.direction face in
+    Stdio.print_endline @@ Util.string_of_point Float.(acos x, acos y, acos z);
+    Stdio.print_endline @@ Util.string_of_point Float.(atan x, atan y, atan z);
+    Stdio.print_endline @@ Util.string_of_point Float.(asin x, asin y, asin z);
+    (* let r = Float.acos x in *)
+    let r = Math.pi /. -12. in
+    Model.vector_rotate_about_pt ortho r (Math.negate pos) cyl
+
   let scad =
     Model.union
       [ scad
@@ -266,16 +279,17 @@ module Plate = struct
          * ; bez_wall `North 1
          * ; bez_wall `North 2
          * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
-      ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; side_wall `South 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 0)
-      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
-      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 1)
-      ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
-      ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
-      ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2)
+        (* ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+         * ; side_wall `South 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 0)
+         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
+         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 1)
+         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
+         * ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
+         * ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
+         * ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2) *)
+      ; test_rot
       ]
 
   let t = { scad; columns; thumb }
