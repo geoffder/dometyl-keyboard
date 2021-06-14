@@ -68,7 +68,7 @@ let hole_config =
         let z = thickness -. clip_height in
         Model.polygon [ 0., z /. -2.; snap_slot_h, z /. -2.; 0., z /. 2. ]
         |> Model.linear_extrude ~height:w
-        |> Model.rotate (Math.pi /. 2., 0., 0.)
+        |> Model.rotate (Float.pi /. 2., 0., 0.)
         |> Model.translate (Bottom.x /. 2., w /. 2., z /. -2.)
       in
       Model.union [ slot; ramp ]
@@ -138,7 +138,7 @@ module Platform = struct
           ]
         |> Model.linear_extrude ~height:width
         |> Model.translate (dome_waist /. -2., 0., width /. -2.)
-        |> Model.rotate (Math.pi /. 2., 0., 0.)
+        |> Model.rotate (Float.pi /. 2., 0., 0.)
       in
       let cyl =
         Model.difference
@@ -167,14 +167,14 @@ module Platform = struct
       let x_prism =
         Model.linear_extrude ~height:Bottom.x poly
         |> Model.translate (-.half_h, -.half_l, Bottom.x /. -2.)
-        |> Model.rotate (Math.pi /. 2., Math.pi /. 2., Math.pi /. 2.)
+        |> Model.rotate (Float.pi /. 2., Float.pi /. 2., Float.pi /. 2.)
         |> Model.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
       in
       let y_prism =
         Model.difference
           ( Model.linear_extrude ~height:Bottom.y poly
           |> Model.translate (-.half_h, -.half_l, Bottom.y /. -2.)
-          |> Model.rotate (Math.pi /. 2., Math.pi /. 2., 0.)
+          |> Model.rotate (Float.pi /. 2., Float.pi /. 2., 0.)
           |> Model.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness) )
           [ Model.scale (1., 1., 1.2) pillars ]
       in
@@ -192,7 +192,7 @@ module Platform = struct
           and y =
             Model.difference
               y_prism
-              [ Model.rotate (0., 0., Math.pi /. -2.) block
+              [ Model.rotate (0., 0., Float.pi /. -2.) block
                 |> Model.translate ((Bottom.x -. dome_w) /. 2., 0., 0.)
               ]
             |> Model.translate (0., (dome_w -. Bottom.y) /. 2., 0.)

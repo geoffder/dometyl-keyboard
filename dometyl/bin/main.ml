@@ -4,7 +4,7 @@ open Dometyl
 let write_thing ?(export = false) name scad =
   let filename ext = Printf.sprintf "../things/%s.%s" name ext in
   let oc = Stdio.Out_channel.create (filename "scad") in
-  Scad_ml.Util.write oc scad;
+  Scad_ml.Core.write oc scad;
   if export
   then (
     try

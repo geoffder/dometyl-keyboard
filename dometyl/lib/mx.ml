@@ -8,7 +8,7 @@ let hole_config =
   let clip hole =
     let clip =
       Model.rotate
-        (Math.pi /. 2., 0., 0.)
+        (Float.pi /. 2., 0., 0.)
         (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
       |> Model.translate (0., inner_w /. 2., -1.3)
     in

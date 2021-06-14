@@ -22,5 +22,5 @@ let place ?well ?fan ~centre_idx i key =
     KeyHole.rotate_about_pt
       (fan_theta' f i)
       (fan_point f)
-      (KeyHole.translate Util.(welled.origin <*> (0., -1., 0.)) welled)
+      (KeyHole.translate Vec3.(welled.origin <*> (0., -1., 0.)) welled)
   | None, None      -> key

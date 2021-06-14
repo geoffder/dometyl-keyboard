@@ -19,7 +19,7 @@ let centre_idx = 1
 let column =
   Column.make
     ~n_keys:n_rows
-    ~curve:Curvature.(place ~well:{ angle = Math.pi /. 12.; radius = 85. } ~centre_idx)
+    ~curve:Curvature.(place ~well:{ angle = Float.pi /. 12.; radius = 85. } ~centre_idx)
     keyhole
 
 let well_column spec =
@@ -33,12 +33,12 @@ let thumb =
       ~curve:
         Curvature.(
           place
-            ~well:{ angle = Math.pi /. 12.; radius = 85. }
-            ~fan:{ angle = Math.pi /. 12.; radius = 85. }
+            ~well:{ angle = Float.pi /. 12.; radius = 85. }
+            ~fan:{ angle = Float.pi /. 12.; radius = 85. }
             ~centre_idx:1)
-      (KeyHole.rotate (0., 0., Math.pi /. 2.) keyhole)
+      (KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole)
     (* orient along x-axis *)
-    |> rotate (0., 0., Math.pi /. -2.))
+    |> rotate (0., 0., Float.pi /. -2.))
 
 module Plate = struct
   type 'k t =
@@ -50,9 +50,9 @@ module Plate = struct
   let n_cols = 5
   let spacing = 2.
   let centre_col = 2
-  let tent = Math.pi /. 6.
+  let tent = Float.pi /. 6.
   let thumb_offset = 7., -50., -3.
-  let thumb_angle = Math.(0., pi /. -4., pi /. 5.)
+  let thumb_angle = Float.(0., pi /. -4., pi /. 5.)
   let clearance = 7.
 
   (* TODO: tune *)
@@ -63,13 +63,13 @@ module Plate = struct
     | _ -> 0., 0., 0.
 
   let well_lookup = function
-    (* | i when i >= 4 -> Curvature.{ angle = Math.pi /. 9.; radius = 60. } (\* pinky *\) *)
-    | _ -> Curvature.{ angle = Math.pi /. 12.; radius = 85. }
+    (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. }
 
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
     let f m i =
-      let data = Util.(offset_lookup i <+> (space *. Float.of_int i, 0., 0.)) in
+      let data = Vec3.(offset_lookup i <+> (space *. Float.of_int i, 0., 0.)) in
       Map.add_exn ~key:i ~data m
     in
     List.fold ~f ~init:(Map.empty (module Int)) (List.range 0 n_cols)
@@ -77,7 +77,7 @@ module Plate = struct
   let centre_offset = Map.find_exn col_offsets centre_col
 
   let apply_tent off col =
-    Column.(rotate_about_pt (0., tent, 0.) Util.(off <-> centre_offset) col)
+    Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
 
   let place_col ~key:i ~data:off =
     apply_tent off (well_column @@ well_lookup i) |> Column.translate off
@@ -88,7 +88,7 @@ module Plate = struct
       let lowest_z =
         let face_low ({ points = ps; _ } : KeyHole.Face.t) =
           KeyHole.Face.Points.fold
-            ~f:(fun m p -> Float.min m (Util.get_z p))
+            ~f:(fun m p -> Float.min m (Vec3.get_z p))
             ~init:Float.max_value
             ps
         in
@@ -125,12 +125,11 @@ module Plate = struct
   let wall_start side (k : _ KeyHole.t) =
     let cyl =
       Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
-      |> Model.rotate (0., Math.pi /. 2., 0.)
+      |> Model.rotate (0., Float.pi /. 2., 0.)
     and face = KeyHole.Faces.face k.faces side in
-    let r =
-      Rotation.(align_exn (KeyHole.Face.direction face) (1., 0., 0.) |> euler_of_matrix)
-    and t = Util.(KeyHole.orthogonal k side <*> (2., 2., 2.)) in
-    let centre = Util.(face.points.centre <+> t) in
+    let r = RotMatrix.(align_exn (KeyHole.Face.direction face) (1., 0., 0.) |> to_euler)
+    and t = Vec3.(KeyHole.orthogonal k side <*> (2., 2., 2.)) in
+    let centre = Vec3.(face.points.centre <+> t) in
     Model.rotate r cyl |> Model.translate centre, centre
 
   let bez_wall side i =
@@ -148,31 +147,31 @@ module Plate = struct
     and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
     let jog_y = Float.cos x_tent *. (keyhole.config.thickness *. 1.5)
     and jog_x =
-      let edge_y = Util.get_y face.points.centre in
+      let edge_y = Vec3.get_y face.points.centre in
       match Map.find columns (i + 1) with
       | Some next_c ->
-        let right_x = Util.get_x face.points.top_right
+        let right_x = Vec3.get_x face.points.top_right
         and next_key = snd @@ Map.max_elt_exn next_c.keys in
         let diff =
           match side with
-          | `North when Float.(Util.get_y next_key.faces.north.points.centre >= edge_y) ->
-            right_x -. Util.get_x next_key.faces.north.points.bot_left
-          | `South when Float.(Util.get_y next_key.faces.south.points.centre <= edge_y) ->
-            right_x -. Util.get_x next_key.faces.south.points.bot_left
+          | `North when Float.(Vec3.get_y next_key.faces.north.points.centre >= edge_y) ->
+            right_x -. Vec3.get_x next_key.faces.north.points.bot_left
+          | `South when Float.(Vec3.get_y next_key.faces.south.points.centre <= edge_y) ->
+            right_x -. Vec3.get_x next_key.faces.south.points.bot_left
           | _ -> -.spacing
         in
         if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
       | _           -> 0.
     and start =
       (* move out of the key wall, parallel to the keys columnar tilt *)
-      Util.(
+      Vec3.(
         centre
         <+> ( 0.
             , ((Float.cos x_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. y_sign
             , Float.sin x_tent *. keyhole.config.thickness /. 2. *. y_sign ))
     and chunk =
       Model.cylinder ~center:true (keyhole.config.thickness /. 2.) keyhole.config.outer_w
-      |> Model.rotate (0., (Math.pi /. 2.) -. y_tent, z_rot)
+      |> Model.rotate (0., (Float.pi /. 2.) -. y_tent, z_rot)
     in
     let wall =
       Bezier.quad_hull
@@ -217,14 +216,14 @@ module Plate = struct
     let chunk, start = wall_start side key
     and chunk_rad = keyhole.config.thickness /. 2.
     and ortho = KeyHole.orthogonal key side in
-    let z_hop = (Util.get_z ortho *. chunk_rad) +. 2. in
+    let z_hop = (Vec3.get_z ortho *. chunk_rad) +. 2. in
     let t2 =
-      Math.(mul (Math.norm (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (0., 0., z_hop))
+      Vec3.(mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (0., 0., z_hop))
     and t3 =
-      Math.(
+      Vec3.(
         sub
-          (mul (Math.norm (mul ortho (1., 1., 0.))) (d2, d2, 0.))
-          (0., 0., Util.get_z start -. chunk_rad))
+          (mul (normalize (mul ortho (1., 1., 0.))) (d2, d2, 0.))
+          (0., 0., get_z start -. chunk_rad))
     in
     let face = KeyHole.Faces.face key.faces side in
     let untent =
@@ -233,21 +232,21 @@ module Plate = struct
        * Stdio.print_endline @@ Util.string_of_point Float.(atan x, atan y, atan z);
        * Stdio.print_endline @@ Util.string_of_point Float.(asin x, asin y, asin z); *)
       match side with
-      | `North | `South -> 0., Float.acos x -. Math.pi, 0.
+      | `North | `South -> 0., Float.acos x -. Float.pi, 0.
       | `West | `East   ->
         (* HACK: Checking if angled up or down in z to correct the rotation direction.
          * There definitely has to be a better way to do this. Also, this scheme
          * doesn't work at all for the thumb. I think I need to figure out how to do
          * multi-axis rotation with the bezier wall, though I don't think that euler
          * rotations can actually be interpolated normally. *)
-        ((Float.acos y -. Math.pi) *. if Float.(z > 0.) then -1. else 1.), 0., 0.
+        ((Float.acos y -. Float.pi) *. if Float.(z > 0.) then -1. else 1.), 0., 0.
     in
     let wall =
       Bezier.quad_hull
         ~t1:(0., 0., 0.)
         ~t2
         ~t3
-        ~pivot:(Math.negate start)
+        ~pivot:(Vec3.negate start)
         ~r1:(0., 0., 0.)
         ~r2:untent
         ~r3:untent
@@ -262,12 +261,12 @@ module Plate = struct
     let ortho = KeyHole.orthogonal key `South in
     let face = KeyHole.Faces.face key.faces `South in
     let x, y, z = KeyHole.Face.direction face in
-    Stdio.print_endline @@ Util.string_of_point Float.(acos x, acos y, acos z);
-    Stdio.print_endline @@ Util.string_of_point Float.(atan x, atan y, atan z);
-    Stdio.print_endline @@ Util.string_of_point Float.(asin x, asin y, asin z);
+    (Stdio.print_endline @@ Vec3.to_string @@ Float.(acos x, acos y, acos z));
+    (Stdio.print_endline @@ Vec3.to_string @@ Float.(atan x, atan y, atan z));
+    (Stdio.print_endline @@ Vec3.to_string @@ Float.(asin x, asin y, asin z));
     (* let r = Float.acos x in *)
-    let r = Math.pi /. -12. in
-    Model.vector_rotate_about_pt ortho r (Math.negate pos) cyl
+    let r = Float.pi /. -12. in
+    Model.vector_rotate_about_pt ortho r (Vec3.negate pos) cyl
 
   let scad =
     Model.union

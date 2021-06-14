@@ -4,11 +4,11 @@ open Scad_ml
 module Face = struct
   module Points = struct
     type t =
-      { top_left : Core.pos_t
-      ; top_right : Core.pos_t
-      ; bot_left : Core.pos_t
-      ; bot_right : Core.pos_t
-      ; centre : Core.pos_t
+      { top_left : Vec3.t
+      ; top_right : Vec3.t
+      ; bot_left : Vec3.t
+      ; bot_right : Vec3.t
+      ; centre : Vec3.t
       }
 
     let make (x, y, _) =
@@ -34,9 +34,9 @@ module Face = struct
       |> flipped t.bot_left
       |> flipped t.bot_right
 
-    let translate p = map ~f:(Math.add p)
-    let rotate r = map ~f:(Math.rotate r)
-    let rotate_about_pt r p = map ~f:(Math.rotate_about_pt r p)
+    let translate p = map ~f:(Vec3.add p)
+    let rotate r = map ~f:(Vec3.rotate r)
+    let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
   end
 
   type t =
@@ -82,7 +82,7 @@ module Face = struct
    *   x, y, z *)
 
   let direction { points = { top_left; top_right; _ }; _ } =
-    Math.norm Util.(top_left <-> top_right)
+    Vec3.normalize Vec3.(top_left <-> top_right)
 end
 
 module Faces = struct
@@ -102,8 +102,8 @@ module Faces = struct
 
   let make width depth =
     let half_w = width /. 2. in
-    let rot_lat = Face.rotate (0., 0., Math.pi /. 2.) in
-    let base = Face.rotate (Math.pi /. 2., 0., 0.) (Face.make (width, depth, 0.1)) in
+    let rot_lat = Face.rotate (0., 0., Float.pi /. 2.) in
+    let base = Face.rotate (Float.pi /. 2., 0., 0.) (Face.make (width, depth, 0.1)) in
     { north = Face.translate (0., half_w, 0.) base
     ; south = Face.translate (0., -.half_w, 0.) base
     ; west = base |> rot_lat |> Face.translate (-.half_w, 0., 0.)
@@ -143,33 +143,33 @@ type 'k config =
 type 'k t =
   { config : 'k config
   ; scad : Model.t
-  ; origin : Core.pos_t
+  ; origin : Vec3.t
   ; faces : Faces.t
   }
 
 let translate p t =
   { t with
     scad = Model.translate p t.scad
-  ; origin = Math.add p t.origin
+  ; origin = Vec3.add p t.origin
   ; faces = Faces.translate p t.faces
   }
 
 let rotate r t =
   { t with
     scad = Model.rotate r t.scad
-  ; origin = Math.rotate r t.origin
+  ; origin = Vec3.rotate r t.origin
   ; faces = Faces.rotate r t.faces
   }
 
 let rotate_about_pt r p t =
   { t with
     scad = Model.rotate_about_pt r p t.scad
-  ; origin = Math.rotate_about_pt r p t.origin
+  ; origin = Vec3.rotate_about_pt r p t.origin
   ; faces = Faces.rotate_about_pt r p t.faces
   }
 
 let rotate_clips t =
-  let t' = rotate (0., 0., Math.pi /. 2.) t in
+  let t' = rotate (0., 0., Float.pi /. 2.) t in
   let { faces = { north; south; east; west }; _ } = t' in
   { t' with faces = { north = east; south = west; east = south; west = north } }
 
@@ -177,10 +177,10 @@ let rotate_clips t =
  * of a column oriented along the y-axis *)
 let angles { faces = { north; west; _ }; _ } =
   let x =
-    let _, dy, dz = Util.(west.points.top_right <-> west.points.top_left) in
+    let _, dy, dz = Vec3.(west.points.top_right <-> west.points.top_left) in
     Float.atan (dz /. dy)
   and y, z =
-    let dx, dy, dz = Util.(north.points.top_right <-> north.points.top_left) in
+    let dx, dy, dz = Vec3.(north.points.top_right <-> north.points.top_left) in
     Float.atan (dz /. dx), Float.atan (dy /. dx)
   in
   (* Stdio.print_endline "keyhole angles:";
@@ -191,7 +191,7 @@ let angles { faces = { north; west; _ }; _ } =
   x, y, z
 
 let orthogonal t side =
-  Math.norm Util.((Faces.face t.faces side).points.centre <-> t.origin)
+  Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
 
 let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
   let hole =
