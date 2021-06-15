@@ -192,22 +192,15 @@ module Plate = struct
       ; wall |> Model.translate start
       ]
 
-  (* TODO:
-   * - this is working for North-South and East-West axis walls, which is good,
-   * and has a large amount of overlap with the bez_wall function, though this one
-   * lacks knowledge of the columns (since it just takes a key). May be able to calculate
-   * the x jogging for the N-S column walls and give that as an argument to this one.
-   * - the issue which I have to think about/resolve next is that the thumb cluster breaks the
-   * assumption that N-S of a key is niceley along Y and E-W along X. I thought I resolved
-   * this based on my simple splay test, but it seems like I wasn't really looking close enough.
-   * Much like how I calculate the distance to jog along the plane of the key, I need to
-   * to the same for the walls jut out for the bezier curve. Otherwise the walls do not
-   * flow naturally from the keys when they are at very rotated angles as they are in the thumb.
-   * - there is a slight issue with E-W walls not seeming to not make contact with the
-   * the keykole edge. Problem is not present on N-S walls. I think it has to do with the
-   * bowing of the radius. Need to figure out the correct angle calculations to correct it
-   * (likely will be an issue for the thumb walls as well) *)
-  let side_wall side d1 d2 (key : _ KeyHole.t) =
+  let get_comp q ax =
+    let qx, qy, qz, qw = q in
+    let rot_ax = qx, qy, qz in
+    let d = Vec3.dot ax rot_ax in
+    let proj = Vec3.map (( *. ) d) ax in
+    let twist = Quaternion.make proj qw in
+    if Float.(d < 0.) then Quaternion.negate twist else twist
+
+  let side_wall ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
     (* let side_point ax z =
      *   match side with
      *   | `North | `South -> 0., ax, z
@@ -216,7 +209,7 @@ module Plate = struct
     let chunk, start = wall_start side key
     and chunk_rad = keyhole.config.thickness /. 2.
     and ortho = KeyHole.orthogonal key side in
-    let z_hop = (Vec3.get_z ortho *. chunk_rad) +. 2. in
+    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_up in
     let t2 =
       Vec3.(mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (0., 0., z_hop))
     and t3 =
@@ -226,47 +219,76 @@ module Plate = struct
           (0., 0., get_z start -. chunk_rad))
     in
     let face = KeyHole.Faces.face key.faces side in
-    let untent =
+    (* TODO: Is it possible to prevent the z-rotation that my xy axis rotation is
+     * creating, so that the z angle at the bottom matches what it started at?
+     * https://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
+     * Could I do swing-twist decomposition to get the angle around the z axis, then remove it?
+     * Also, is there any better way using plain quaternion composition to cancel out any
+     * z rotation before it happens? *)
+    let rotator =
+      (* let q1 = Quaternion.make (KeyHole.orthogonal key side) (Float.pi /. 2.) in *)
+      (* let q1 = Quaternion.make (0., 0., 0.) 0. in *)
+      (* let q1 = Quaternion.make (KeyHole.normal key) 0. in *)
+      (* let q1 = Quaternion.make (KeyHole.Face.direction face) (Float.pi /. 2.) in *)
+      (* let q1 = Quaternion.make (KeyHole.Face.direction face) 0. in *)
+      let q1 = Quaternion.id in
       let x, y, z = KeyHole.Face.direction face in
-      (* Stdio.print_endline @@ Util.string_of_point Float.(acos x, acos y, acos z);
-       * Stdio.print_endline @@ Util.string_of_point Float.(atan x, atan y, atan z);
-       * Stdio.print_endline @@ Util.string_of_point Float.(asin x, asin y, asin z); *)
-      match side with
-      | `North | `South -> 0., Float.acos x -. Float.pi, 0.
-      | `West | `East   ->
-        (* HACK: Checking if angled up or down in z to correct the rotation direction.
-         * There definitely has to be a better way to do this. Also, this scheme
-         * doesn't work at all for the thumb. I think I need to figure out how to do
-         * multi-axis rotation with the bezier wall, though I don't think that euler
-         * rotations can actually be interpolated normally. *)
-        ((Float.acos y -. Float.pi) *. if Float.(z > 0.) then -1. else 1.), 0., 0.
+      (* let x, y, _ = KeyHole.orthogonal key side in *)
+      (* let q1 = RotMatrix.align_exn (0., 0., 1.) (x, y, z) |> Quaternion.of_rotmatrix in *)
+      (* let q2 = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
+      let q2 = RotMatrix.align_exn (x, y, z) (x, y, 0.) |> Quaternion.of_rotmatrix in
+      (* let q2 = Quaternion.make (x, y, 0.) 0. in *)
+      (* let q2 =
+       *   RotMatrix.align_exn (KeyHole.normal key) (0., 0., 1.) |> Quaternion.of_rotmatrix
+       * in *)
+      (* let q2 =
+       *   Quaternion.mul
+       *     (Quaternion.make (0., 0., 1.) (Float.atan (y /. x)))
+       *     (Quaternion.make (x, y, 0.) (Float.pi /. 2.))
+       * in *)
+      (* Stdio.print_endline (Quaternion.to_string q2); *)
+      (* Stdio.print_endline (Quaternion.to_string @@ get_comp q2 (0., 0., 1.)); *)
+      (* let q2 = Quaternion.mul (get_comp q2 (0., 0., 1.) |> Quaternion.conj) q2 in *)
+      (* Stdio.print_endline (Quaternion.to_string q2); *)
+      Bezier.Rotator.make ~pivot:(Vec3.negate start) q1 q2
     in
-    let wall =
-      Bezier.quad_hull
-        ~t1:(0., 0., 0.)
-        ~t2
-        ~t3
-        ~pivot:(Vec3.negate start)
-        ~r1:(0., 0., 0.)
-        ~r2:untent
-        ~r3:untent
-        ~step:0.1
-        chunk
-    in
+    (* let cyl =
+     *   Model.cylinder ~center:true (key.config.thickness /. 2.) key.config.outer_w
+     *   |> Model.rotate (0., Float.pi /. 2., 0.)
+     *   |> Model.translate start
+     * in *)
+    let wall = Bezier.quad_hull' ~rotator ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
     Model.union [ Model.hull [ chunk; face.scad ]; wall ]
 
   let test_rot =
-    let key = Map.find_exn thumb.keys 1 in
-    let cyl, pos = wall_start `South key in
-    let ortho = KeyHole.orthogonal key `South in
-    let face = KeyHole.Faces.face key.faces `South in
-    let x, y, z = KeyHole.Face.direction face in
-    (Stdio.print_endline @@ Vec3.to_string @@ Float.(acos x, acos y, acos z));
-    (Stdio.print_endline @@ Vec3.to_string @@ Float.(atan x, atan y, atan z));
-    (Stdio.print_endline @@ Vec3.to_string @@ Float.(asin x, asin y, asin z));
-    (* let r = Float.acos x in *)
-    let r = Float.pi /. -12. in
-    Model.vector_rotate_about_pt ortho r (Vec3.negate pos) cyl
+    let k = Map.find_exn (Map.find_exn columns 4).keys 0 in
+    let chunk, start = wall_start `South k in
+    let _cyl =
+      Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
+      |> Model.rotate (0., Float.pi /. 2., 0.)
+      |> Model.translate start
+    in
+    (* let x, y, z = KeyHole.orthogonal k `South in *)
+    let x, y, z = KeyHole.Face.direction (KeyHole.Faces.face k.faces `South) in
+    (* let x, y, z = KeyHole.orthogonal k `South in *)
+    (* let x, y, z = KeyHole.normal k in *)
+    (* let q = RotMatrix.align_exn (x, y, z) (0., 0., 1.) |> Quaternion.of_rotmatrix in *)
+    let q =
+      RotMatrix.align_exn (x, y, z) (Vec3.normalize (x, y, 0.)) |> Quaternion.of_rotmatrix
+    in
+    let () =
+      let dir = KeyHole.Face.direction (KeyHole.Faces.face k.faces `South) in
+      Stdio.printf "normal: %s\n" ((x, y, z) |> Vec3.to_string);
+      Stdio.print_endline (dir |> Vec3.to_string);
+      Stdio.print_endline (Quaternion.rotate_vec3 q dir |> Vec3.to_string)
+    in
+    Model.union
+      [ Model.quaternion_about_pt q (Vec3.negate start) chunk
+        (* ; Model.quaternion_about_pt q (Vec3.negate start) cyl *)
+      ]
+
+  (* let q1 = RotMatrix.align_exn (1., 0., 0.) (x, y, z) |> Quaternion.of_rotmatrix in *)
+  (* let q2 = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
 
   let scad =
     Model.union
@@ -278,16 +300,16 @@ module Plate = struct
          * ; bez_wall `North 1
          * ; bez_wall `North 2
          * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
-        (* ; side_wall `North 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `South 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 0)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 0)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 1)
-         * ; side_wall `West 3. 5. (Map.find_exn (Map.find_exn columns 0).keys 2)
-         * ; side_wall `East 1. 3. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `North 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `West 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 3. 5. (Map.find_exn thumb.keys 2) *)
+        (* ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2) *)
+        (* ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0) *)
+        (* ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
+         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
+         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
+         * ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+         * ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0) *)
+        (* ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2) *)
       ; test_rot
       ]
 
