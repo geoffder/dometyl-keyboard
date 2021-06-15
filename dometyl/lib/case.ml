@@ -226,26 +226,28 @@ module Plate = struct
      * Also, is there any better way using plain quaternion composition to cancel out any
      * z rotation before it happens? *)
     let rotator =
-      (* let q1 = Quaternion.make (KeyHole.orthogonal key side) (Float.pi /. 2.) in *)
-      (* let q1 = Quaternion.make (0., 0., 0.) 0. in *)
-      (* let q1 = Quaternion.make (KeyHole.normal key) 0. in *)
-      (* let q1 = Quaternion.make (KeyHole.Face.direction face) (Float.pi /. 2.) in *)
       (* let q1 = Quaternion.make (KeyHole.Face.direction face) 0. in *)
       let q1 = Quaternion.id in
       let x, y, z = KeyHole.Face.direction face in
-      (* let x, y, _ = KeyHole.orthogonal key side in *)
       (* let q1 = RotMatrix.align_exn (0., 0., 1.) (x, y, z) |> Quaternion.of_rotmatrix in *)
       (* let q2 = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
-      let q2 = RotMatrix.align_exn (x, y, z) (x, y, 0.) |> Quaternion.of_rotmatrix in
-      (* let q2 = Quaternion.make (x, y, 0.) 0. in *)
-      (* let q2 =
-       *   RotMatrix.align_exn (KeyHole.normal key) (0., 0., 1.) |> Quaternion.of_rotmatrix
-       * in *)
-      (* let q2 =
-       *   Quaternion.mul
-       *     (Quaternion.make (0., 0., 1.) (Float.atan (y /. x)))
-       *     (Quaternion.make (x, y, 0.) (Float.pi /. 2.))
-       * in *)
+      (* NOTE: This method using align with conj of the rotmatrix projected onto the
+       * xy plane (z cancelled) and the face direction negated works for some side walls,
+       * but not others. For some it a zero/same vector exception is thrown and for others,
+       * the resulting rotaion seems to be 90deg off. Are there special cases that I am missing? *)
+      let q2 =
+        try
+          if Float.(abs y - 0.01 < 0.)
+          then
+            RotMatrix.align_exn (-.x, -.y, -.z) (x, y, 0.)
+            |> Quaternion.of_rotmatrix
+            |> Quaternion.conj
+          else
+            (* RotMatrix.align_exn (x, y, z) (x, y, 0.) |> Quaternion.of_rotmatrix *)
+            Quaternion.make (x, y, 0.) (Float.pi /. 2.)
+        with
+        | _ -> Quaternion.id
+      in
       (* Stdio.print_endline (Quaternion.to_string q2); *)
       (* Stdio.print_endline (Quaternion.to_string @@ get_comp q2 (0., 0., 1.)); *)
       (* let q2 = Quaternion.mul (get_comp q2 (0., 0., 1.) |> Quaternion.conj) q2 in *)
@@ -261,34 +263,36 @@ module Plate = struct
     Model.union [ Model.hull [ chunk; face.scad ]; wall ]
 
   let test_rot =
-    let k = Map.find_exn (Map.find_exn columns 4).keys 0 in
-    let chunk, start = wall_start `South k in
+    let side = `South in
+    (* let k = Map.find_exn (Map.find_exn columns 4).keys 0 in *)
+    let k = Map.find_exn thumb.keys 2 in
+    let chunk, start = wall_start side k in
     let _cyl =
       Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
       |> Model.rotate (0., Float.pi /. 2., 0.)
       |> Model.translate start
     in
-    (* let x, y, z = KeyHole.orthogonal k `South in *)
-    let x, y, z = KeyHole.Face.direction (KeyHole.Faces.face k.faces `South) in
-    (* let x, y, z = KeyHole.orthogonal k `South in *)
+    (* let x, y, z = KeyHole.orthogonal k side in *)
+    let x, y, z = KeyHole.Face.direction (KeyHole.Faces.face k.faces side) in
+    (* let x, y, z = KeyHole.orthogonal k side in *)
     (* let x, y, z = KeyHole.normal k in *)
     (* let q = RotMatrix.align_exn (x, y, z) (0., 0., 1.) |> Quaternion.of_rotmatrix in *)
     let q =
-      RotMatrix.align_exn (x, y, z) (Vec3.normalize (x, y, 0.)) |> Quaternion.of_rotmatrix
+      RotMatrix.align_exn (x, y, z) (Vec3.normalize (x, y, 0.))
+      |> Quaternion.of_rotmatrix
+      |> Quaternion.conj
     in
-    let () =
-      let dir = KeyHole.Face.direction (KeyHole.Faces.face k.faces `South) in
-      Stdio.printf "normal: %s\n" ((x, y, z) |> Vec3.to_string);
-      Stdio.print_endline (dir |> Vec3.to_string);
-      Stdio.print_endline (Quaternion.rotate_vec3 q dir |> Vec3.to_string)
-    in
+    (* let q = RotMatrix.align_exn (1., 0., 0.) (x, y, z) |> Quaternion.of_rotmatrix in *)
+    (* let q = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
+    (* let () =
+     *   let dir = KeyHole.Face.direction (KeyHole.Faces.face k.faces side) in
+     *   Stdio.print_endline (dir |> Vec3.to_string);
+     *   Stdio.print_endline (Quaternion.rotate_vec3 q dir |> Vec3.to_string)
+     * in *)
     Model.union
       [ Model.quaternion_about_pt q (Vec3.negate start) chunk
         (* ; Model.quaternion_about_pt q (Vec3.negate start) cyl *)
       ]
-
-  (* let q1 = RotMatrix.align_exn (1., 0., 0.) (x, y, z) |> Quaternion.of_rotmatrix in *)
-  (* let q2 = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
 
   let scad =
     Model.union
@@ -300,17 +304,17 @@ module Plate = struct
          * ; bez_wall `North 1
          * ; bez_wall `North 2
          * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
-        (* ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2) *)
-        (* ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0) *)
-        (* ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
-         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
-         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
-         * ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0) *)
-        (* ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2) *)
-      ; test_rot
+      ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
+      ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
+      ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
+      ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
+      ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
+        (* ; test_rot *)
       ]
 
   let t = { scad; columns; thumb }
