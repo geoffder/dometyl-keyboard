@@ -193,6 +193,10 @@ let angles { faces = { north; west; _ }; _ } =
 let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
 
+let normal t =
+  let Face.Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
+  Vec3.(normalize (top_left <-> bot_left))
+
 let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
   let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
