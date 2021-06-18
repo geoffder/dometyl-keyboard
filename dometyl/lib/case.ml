@@ -262,36 +262,73 @@ module Plate = struct
     let wall = Bezier.quad_hull' ~rotator ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
     Model.union [ Model.hull [ chunk; face.scad ]; wall ]
 
-  let test_rot =
-    let side = `South in
-    (* let k = Map.find_exn (Map.find_exn columns 4).keys 0 in *)
-    let k = Map.find_exn thumb.keys 2 in
-    let chunk, start = wall_start side k in
-    let _cyl =
-      Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
-      |> Model.rotate (0., Float.pi /. 2., 0.)
-      |> Model.translate start
+  let poly_wall ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
+    let ortho = KeyHole.orthogonal key side in
+    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_up in
+    let get_ps top (x, y, z) =
+      (* TODO: actual calculation will determine where the points on the ground should
+       * be, then calculate the control points based on that (to make sure that the
+       * correct wall thickness is achieved).
+       *
+       * Doing it that way should also fix the problem where the bottom actually juts
+       * out more than the top (column walls pointing upwards). *)
+      let jog = if top then 3. else 0. in
+      let p2 =
+        Vec3.(
+          mul (normalize (mul ortho (1., 1., 0.))) (d1 +. jog, d1 +. jog, 0.)
+          |> add (x, y, z +. z_hop))
+      and p3 =
+        Vec3.(
+          add
+            (mul (normalize (mul ortho (1., 1., 0.))) (d2 +. jog, d2 +. jog, 0.))
+            (x, y, 0.))
+      in
+      p2, p3
     in
-    (* let x, y, z = KeyHole.orthogonal k side in *)
-    let x, y, z = KeyHole.Face.direction (KeyHole.Faces.face k.faces side) in
-    (* let x, y, z = KeyHole.orthogonal k side in *)
-    (* let x, y, z = KeyHole.normal k in *)
-    (* let q = RotMatrix.align_exn (x, y, z) (0., 0., 1.) |> Quaternion.of_rotmatrix in *)
-    let q =
-      RotMatrix.align_exn (x, y, z) (Vec3.normalize (x, y, 0.))
-      |> Quaternion.of_rotmatrix
-      |> Quaternion.conj
+    let face = KeyHole.Faces.face key.faces side in
+    let step = 0.1 in
+    let top_left_bez =
+      let p2, p3 = get_ps true face.points.top_left in
+      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.top_left ~p2 ~p3) step
     in
-    (* let q = RotMatrix.align_exn (1., 0., 0.) (x, y, z) |> Quaternion.of_rotmatrix in *)
-    (* let q = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
-    (* let () =
-     *   let dir = KeyHole.Face.direction (KeyHole.Faces.face k.faces side) in
-     *   Stdio.print_endline (dir |> Vec3.to_string);
-     *   Stdio.print_endline (Quaternion.rotate_vec3 q dir |> Vec3.to_string)
-     * in *)
-    Model.union
-      [ Model.quaternion_about_pt q (Vec3.negate start) chunk
-        (* ; Model.quaternion_about_pt q (Vec3.negate start) cyl *)
+    let top_right_bez =
+      let p2, p3 = get_ps true face.points.top_right in
+      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.top_right ~p2 ~p3) step
+    in
+    let bot_left_bez =
+      let p2, p3 = get_ps false face.points.bot_left in
+      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.bot_left ~p2 ~p3) step
+    in
+    let bot_right_bez =
+      let p2, p3 = get_ps false face.points.bot_right in
+      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.bot_right ~p2 ~p3) step
+    in
+    (* TODO: avoid concatenating like this if I can, build with recursive function
+     * that makes the beziers perhaps *)
+    let pts = top_left_bez @ top_right_bez @ bot_right_bez @ bot_left_bez in
+    let n = List.length top_left_bez in
+    (* TODO: calculate instead of using length *)
+    let e = n - 1 in
+    let top_left_start = 0 in
+    let top_right_start = n in
+    let bot_right_start = n * 2 in
+    let bot_left_start = n * 3 in
+    Model.polyhedron
+      pts
+      [ [ top_right_start; top_left_start; bot_left_start; bot_right_start ]
+      ; [ top_left_start + e
+        ; top_right_start + e
+        ; bot_right_start + e
+        ; bot_left_start + e
+        ]
+      ; List.range ~stride:(-1) (bot_left_start + e) (bot_left_start - 1)
+        @ List.range top_left_start (top_left_start + n)
+      ; List.range ~stride:(-1) (top_right_start + e) (top_right_start - 1)
+        @ List.range bot_right_start (bot_right_start + n)
+      ; List.range ~stride:(-1) (top_left_start + e) (top_left_start - 1)
+        @ List.range top_right_start (top_right_start + n)
+      ; List.range ~stride:(-1) (bot_right_start + e) (bot_right_start - 1)
+        @ List.range bot_left_start (bot_left_start + n)
       ]
 
   let scad =
@@ -304,17 +341,18 @@ module Plate = struct
          * ; bez_wall `North 1
          * ; bez_wall `North 2
          * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
-      ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
-      ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
-      ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
-      ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
-      ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
-        (* ; test_rot *)
+        (* ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2)
+         * ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
+         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
+         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
+         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
+         * ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+         * ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2) *)
+      ; poly_wall `South 4. 7. (Map.find_exn thumb.keys 2)
+      ; poly_wall `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
       ]
 
   let t = { scad; columns; thumb }
