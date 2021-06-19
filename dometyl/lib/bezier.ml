@@ -47,7 +47,11 @@ let cubic_vec3 ~p1:(x1, y1, z1) ~p2:(x2, y2, z2) ~p3:(x3, y3, z3) ~p4:(x4, y4, z
   x, y, z
 
 let curve_rev ?(init = []) bez dt =
-  let rec loop acc t = if Float.(t <= 1.) then loop (bez t :: acc) (t +. dt) else acc in
+  let rec loop acc t =
+    if Float.(max 0. (1. - t) < 0.00001)
+    then bez t :: acc
+    else loop (bez t :: acc) (t +. dt)
+  in
   loop init 0.
 
 let curve bez dt = List.rev (curve_rev ~init:[] bez dt)
