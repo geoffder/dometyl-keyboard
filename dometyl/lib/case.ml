@@ -289,47 +289,21 @@ module Plate = struct
     let step = 0.1 in
     let top_left_bez =
       let p2, p3 = get_ps true face.points.top_left in
-      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.top_left ~p2 ~p3) step
+      Bezier.quad_vec3 ~p1:face.points.top_left ~p2 ~p3
     in
     let top_right_bez =
       let p2, p3 = get_ps true face.points.top_right in
-      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.top_right ~p2 ~p3) step
+      Bezier.quad_vec3 ~p1:face.points.top_right ~p2 ~p3
     in
     let bot_left_bez =
       let p2, p3 = get_ps false face.points.bot_left in
-      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.bot_left ~p2 ~p3) step
+      Bezier.quad_vec3 ~p1:face.points.bot_left ~p2 ~p3
     in
     let bot_right_bez =
       let p2, p3 = get_ps false face.points.bot_right in
-      Bezier.curve (Bezier.quad_vec3 ~p1:face.points.bot_right ~p2 ~p3) step
+      Bezier.quad_vec3 ~p1:face.points.bot_right ~p2 ~p3
     in
-    (* TODO: avoid concatenating like this if I can, build with recursive function
-     * that makes the beziers perhaps *)
-    let pts = top_left_bez @ top_right_bez @ bot_right_bez @ bot_left_bez in
-    let n = List.length top_left_bez in
-    (* TODO: calculate instead of using length *)
-    let e = n - 1 in
-    let top_left_start = 0 in
-    let top_right_start = n in
-    let bot_right_start = n * 2 in
-    let bot_left_start = n * 3 in
-    Model.polyhedron
-      pts
-      [ [ top_right_start; top_left_start; bot_left_start; bot_right_start ]
-      ; [ top_left_start + e
-        ; top_right_start + e
-        ; bot_right_start + e
-        ; bot_left_start + e
-        ]
-      ; List.range ~stride:(-1) (bot_left_start + e) (bot_left_start - 1)
-        @ List.range top_left_start (top_left_start + n)
-      ; List.range ~stride:(-1) (top_right_start + e) (top_right_start - 1)
-        @ List.range bot_right_start (bot_right_start + n)
-      ; List.range ~stride:(-1) (top_left_start + e) (top_left_start - 1)
-        @ List.range top_right_start (top_right_start + n)
-      ; List.range ~stride:(-1) (bot_right_start + e) (bot_right_start - 1)
-        @ List.range bot_left_start (bot_left_start + n)
-      ]
+    Bezier.prism_exn [ top_right_bez; top_left_bez; bot_left_bez; bot_right_bez ] step
 
   let scad =
     Model.union
@@ -352,7 +326,7 @@ module Plate = struct
          * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
          * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2) *)
       ; poly_wall `South 4. 7. (Map.find_exn thumb.keys 2)
-      ; poly_wall `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
+        (* ; poly_wall `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0) *)
       ]
 
   let t = { scad; columns; thumb }
