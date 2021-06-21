@@ -226,23 +226,47 @@ module Plate = struct
       ]
       0.25
 
+  let key_bridge k1 k2 = Model.hull KeyHole.[ k1.faces.east.scad; k2.faces.west.scad ]
+  let join_bridge j1 j2 = Model.hull Column.Join.[ j1.faces.east; j2.faces.west ]
+
+  let join_columns a_i b_i =
+    let a = Map.find_exn columns a_i
+    and b = Map.find_exn columns b_i in
+    let folder ~f ~key:_ ~data hulls =
+      match data with
+      | `Both (a', b') -> f a' b' :: hulls
+      | _              -> hulls
+    in
+    Model.union
+      (Map.fold2
+         ~f:(folder ~f:key_bridge)
+         ~init:(Map.fold2 ~f:(folder ~f:join_bridge) ~init:[] a.joins b.joins)
+         a.keys
+         b.keys )
+
   let scad =
     Model.union
       [ scad
-      ; bez_wall `North 4. 7. 1
-      ; bez_wall `North 4. 7. 2
-      ; bez_wall `North 4. 7. 3
-      ; bez_wall `South 4. 7. 3
-      ; bez_wall `North 4. 7. 4
-      ; bez_wall `South 4. 7. 4
-      ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
-      ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
-      ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
-      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
-      ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
+        (* ; bez_wall `North 4. 7. 0
+         * ; bez_wall `North 4. 7. 1
+         * ; bez_wall `North 4. 7. 2
+         * ; bez_wall `South 4. 7. 2
+         * ; bez_wall `North 4. 7. 3
+         * ; bez_wall `South 4. 7. 3
+         * ; bez_wall `North 4. 7. 4
+         * ; bez_wall `South 4. 7. 4
+         * ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
+         * ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1) *)
+        (* ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2) *)
+        (* ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
+         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
+         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2) *)
+      ; join_columns 0 1
+      ; join_columns 1 2
+      ; join_columns 2 3
+      ; join_columns 3 4
       ]
 
   let t = { scad; columns; thumb }
