@@ -132,201 +132,117 @@ module Plate = struct
     let centre = Vec3.(face.points.centre <+> t) in
     Model.rotate r cyl |> Model.translate centre, centre
 
-  let bez_wall side i =
-    let key, face, y_sign =
-      let c = Map.find_exn columns i in
+  let side_wall ?(x_off = 0.) ?(y_off = 0.) ?(z_off = 2.) side d1 d2 (key : _ KeyHole.t) =
+    let chunk, (x0, y0, z0) = wall_start side key
+    and chunk_rad = keyhole.config.thickness /. 2.
+    and ortho = KeyHole.orthogonal key side in
+    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_off in
+    let t2 =
+      Vec3.(
+        mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (x_off, y_off, z_hop))
+    and t3 =
+      Vec3.(
+        add
+          (mul (normalize (mul ortho (1., 1., 0.))) (d2, d2, 0.))
+          (x_off, y_off, chunk_rad -. z0 -. (keyhole.config.outer_w /. 2.)))
+    in
+    let face = KeyHole.Faces.face key.faces side in
+    let wall = Bezier.quad_hull' ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
+    Model.difference
+      (Model.union [ Model.hull [ chunk; face.scad ]; wall ])
+      [ Model.cube
+          ~center:true
+          ( keyhole.config.outer_w *. 2.
+          , keyhole.config.outer_w *. 2.
+          , keyhole.config.outer_w *. 2. )
+        |> Model.translate (x0, y0, -.keyhole.config.outer_w)
+      ]
+
+  let bez_wall ?z_off side d1 d2 col_idx =
+    let key, face, hanging =
+      let c = Map.find_exn columns col_idx in
       match side with
       | `North ->
         let key = snd @@ Map.max_elt_exn c.keys in
-        key, key.faces.north, 1.
+        let edge_y = Vec3.get_y key.faces.north.points.centre in
+        key, key.faces.north, Float.(( <= ) edge_y)
       | `South ->
         let key = Map.find_exn c.keys 0 in
-        key, key.faces.south, -1.
+        let edge_y = Vec3.get_y key.faces.south.points.centre in
+        key, key.faces.south, Float.(( >= ) edge_y)
     in
-    let x_tent, y_tent, z_rot = KeyHole.angles key
-    and KeyHole.Face.{ points = { centre = (_, _, cz) as centre; _ }; _ } = face in
-    let jog_y = Float.cos x_tent *. (keyhole.config.thickness *. 1.5)
-    and jog_x =
-      let edge_y = Vec3.get_y face.points.centre in
-      match Map.find columns (i + 1) with
+    let x_dodge =
+      match Map.find columns (col_idx + 1) with
       | Some next_c ->
         let right_x = Vec3.get_x face.points.top_right
-        and next_key = snd @@ Map.max_elt_exn next_c.keys in
+        and next_face =
+          KeyHole.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side
+        in
         let diff =
-          match side with
-          | `North when Float.(Vec3.get_y next_key.faces.north.points.centre >= edge_y) ->
-            right_x -. Vec3.get_x next_key.faces.north.points.bot_left
-          | `South when Float.(Vec3.get_y next_key.faces.south.points.centre <= edge_y) ->
-            right_x -. Vec3.get_x next_key.faces.south.points.bot_left
-          | _ -> -.spacing
+          if hanging (Vec3.get_y next_face.points.centre)
+          then right_x -. Vec3.get_x next_face.points.bot_left
+          else -.spacing
         in
         if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
       | _           -> 0.
-    and start =
-      (* move out of the key wall, parallel to the keys columnar tilt *)
-      Vec3.(
-        centre
-        <+> ( 0.
-            , ((Float.cos x_tent *. keyhole.config.thickness /. 2.) -. 0.001) *. y_sign
-            , Float.sin x_tent *. keyhole.config.thickness /. 2. *. y_sign ))
-    and chunk =
-      Model.cylinder ~center:true (keyhole.config.thickness /. 2.) keyhole.config.outer_w
-      |> Model.rotate (0., (Float.pi /. 2.) -. y_tent, z_rot)
     in
-    let wall =
-      Bezier.quad_hull
-        ~t1:(0., 0., 0.)
-        ~t2:
-          ( -.jog_x
-          , y_sign *. (3. +. jog_y)
-          , Float.sin x_tent *. (keyhole.config.thickness +. 2.) )
-        ~t3:(-.jog_x, y_sign *. (5. +. jog_y), -.cz +. (keyhole.config.thickness /. 2.))
-        ~r1:(0., 0., 0.)
-        ~r2:(0., y_tent, 0.)
-        ~r3:(0., y_tent, 0.)
-        ~step:0.1
-        chunk
-    in
-    Model.union
-      [ Model.hull [ Model.translate start chunk; face.scad ]
-      ; wall |> Model.translate start
-      ]
-
-  let get_comp q ax =
-    let qx, qy, qz, qw = q in
-    let rot_ax = qx, qy, qz in
-    let d = Vec3.dot ax rot_ax in
-    let proj = Vec3.map (( *. ) d) ax in
-    let twist = Quaternion.make proj qw in
-    if Float.(d < 0.) then Quaternion.negate twist else twist
-
-  let side_wall ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
-    (* let side_point ax z =
-     *   match side with
-     *   | `North | `South -> 0., ax, z
-     *   | `West | `East   -> ax, 0., z
-     * in *)
-    let chunk, start = wall_start side key
-    and chunk_rad = keyhole.config.thickness /. 2.
-    and ortho = KeyHole.orthogonal key side in
-    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_up in
-    let t2 =
-      Vec3.(mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (0., 0., z_hop))
-    and t3 =
-      Vec3.(
-        sub
-          (mul (normalize (mul ortho (1., 1., 0.))) (d2, d2, 0.))
-          (0., 0., get_z start -. chunk_rad))
-    in
-    let face = KeyHole.Faces.face key.faces side in
-    (* TODO: Is it possible to prevent the z-rotation that my xy axis rotation is
-     * creating, so that the z angle at the bottom matches what it started at?
-     * https://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
-     * Could I do swing-twist decomposition to get the angle around the z axis, then remove it?
-     * Also, is there any better way using plain quaternion composition to cancel out any
-     * z rotation before it happens? *)
-    let rotator =
-      (* let q1 = Quaternion.make (KeyHole.Face.direction face) 0. in *)
-      let q1 = Quaternion.id in
-      let x, y, z = KeyHole.Face.direction face in
-      (* let q1 = RotMatrix.align_exn (0., 0., 1.) (x, y, z) |> Quaternion.of_rotmatrix in *)
-      (* let q2 = Quaternion.make (x, y, 0.) (Float.pi /. 2.) in *)
-      (* NOTE: This method using align with conj of the rotmatrix projected onto the
-       * xy plane (z cancelled) and the face direction negated works for some side walls,
-       * but not others. For some it a zero/same vector exception is thrown and for others,
-       * the resulting rotaion seems to be 90deg off. Are there special cases that I am missing? *)
-      let q2 =
-        try
-          if Float.(abs y - 0.01 < 0.)
-          then
-            RotMatrix.align_exn (-.x, -.y, -.z) (x, y, 0.)
-            |> Quaternion.of_rotmatrix
-            |> Quaternion.conj
-          else
-            (* RotMatrix.align_exn (x, y, z) (x, y, 0.) |> Quaternion.of_rotmatrix *)
-            Quaternion.make (x, y, 0.) (Float.pi /. 2.)
-        with
-        | _ -> Quaternion.id
-      in
-      (* Stdio.print_endline (Quaternion.to_string q2); *)
-      (* Stdio.print_endline (Quaternion.to_string @@ get_comp q2 (0., 0., 1.)); *)
-      (* let q2 = Quaternion.mul (get_comp q2 (0., 0., 1.) |> Quaternion.conj) q2 in *)
-      (* Stdio.print_endline (Quaternion.to_string q2); *)
-      Bezier.Rotator.make ~pivot:(Vec3.negate start) q1 q2
-    in
-    (* let cyl =
-     *   Model.cylinder ~center:true (key.config.thickness /. 2.) key.config.outer_w
-     *   |> Model.rotate (0., Float.pi /. 2., 0.)
-     *   |> Model.translate start
-     * in *)
-    let wall = Bezier.quad_hull' ~rotator ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
-    Model.union [ Model.hull [ chunk; face.scad ]; wall ]
+    side_wall ~x_off:(x_dodge *. -1.) ?z_off side d1 d2 key
 
   let poly_wall ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
+    (* TODO: using very large bezier steps right now since the varying number of
+     * points that it takes to get to the floor for eack side of the key when tented
+     * above a certain amount causes problems for the polyhedron creation. Seems like
+     * going down in z a similar amount for each side then cutting off below the
+     * floor afterwards will be the simplest way to make sure the triangle mesh is
+     * able to form well. *)
     let ortho = KeyHole.orthogonal key side in
     let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_up in
-    let get_ps top (x, y, z) =
-      (* TODO: actual calculation will determine where the points on the ground should
-       * be, then calculate the control points based on that (to make sure that the
-       * correct wall thickness is achieved).
-       *
-       * Doing it that way should also fix the problem where the bottom actually juts
-       * out more than the top (column walls pointing upwards). *)
-      let jog = if top then 3. else 0. in
+    let face = KeyHole.Faces.face key.faces side in
+    let top_offset =
+      Vec3.(mul (1., 1., 0.) (face.points.bot_right <-> face.points.top_right))
+    in
+    let get_bez top ((x, y, z) as p1) =
+      let jog, d1 =
+        if top then keyhole.config.thickness, d1 +. ((d2 -. d1) /. 2.) else 0., d1
+      in
+      let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
       let p2 =
         Vec3.(
-          mul (normalize (mul ortho (1., 1., 0.))) (d1 +. jog, d1 +. jog, 0.)
-          |> add (x, y, z +. z_hop))
+          mul xy (d1 +. jog, d1 +. jog, 0.)
+          |> add (x, y, z +. z_hop)
+          |> add (if top then top_offset else 0., 0., 0.))
       and p3 =
         Vec3.(
-          add
-            (mul (normalize (mul ortho (1., 1., 0.))) (d2 +. jog, d2 +. jog, 0.))
-            (x, y, 0.))
+          add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x, y, 0.)
+          |> add (if top then top_offset else 0., 0., 0.))
       in
-      p2, p3
+      Bezier.quad_vec3 ~p1 ~p2 ~p3
     in
-    let face = KeyHole.Faces.face key.faces side in
-    let step = 0.1 in
-    let top_left_bez =
-      let p2, p3 = get_ps true face.points.top_left in
-      Bezier.quad_vec3 ~p1:face.points.top_left ~p2 ~p3
-    in
-    let top_right_bez =
-      let p2, p3 = get_ps true face.points.top_right in
-      Bezier.quad_vec3 ~p1:face.points.top_right ~p2 ~p3
-    in
-    let bot_left_bez =
-      let p2, p3 = get_ps false face.points.bot_left in
-      Bezier.quad_vec3 ~p1:face.points.bot_left ~p2 ~p3
-    in
-    let bot_right_bez =
-      let p2, p3 = get_ps false face.points.bot_right in
-      Bezier.quad_vec3 ~p1:face.points.bot_right ~p2 ~p3
-    in
-    Bezier.prism_exn [ top_right_bez; top_left_bez; bot_left_bez; bot_right_bez ] step
+    Bezier.prism_exn
+      [ get_bez true face.points.top_right
+      ; get_bez true face.points.top_left
+      ; get_bez false face.points.bot_left
+      ; get_bez false face.points.bot_right
+      ]
+      0.25
 
   let scad =
     Model.union
       [ scad
-        (* ; bez_wall `South 2
-         * ; bez_wall `South 3
-         * ; bez_wall `South 4
-         * ; bez_wall `North 0
-         * ; bez_wall `North 1
-         * ; bez_wall `North 2
-         * ; bez_wall `North 3 (\* ; bez_wall `North 4 *\) *)
-        (* ; side_wall ~z_up:2. `North 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall ~z_up:2. `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0)
-         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
-         * ; side_wall ~z_up:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
-         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
-         * ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-         * ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2) *)
-      ; poly_wall `South 4. 7. (Map.find_exn thumb.keys 2)
-        (* ; poly_wall `South 4. 7. (Map.find_exn (Map.find_exn columns 4).keys 0) *)
+      ; bez_wall `North 4. 7. 1
+      ; bez_wall `North 4. 7. 2
+      ; bez_wall `North 4. 7. 3
+      ; bez_wall `South 4. 7. 3
+      ; bez_wall `North 4. 7. 4
+      ; bez_wall `South 4. 7. 4
+      ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
+      ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1)
+      ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
+      ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
+      ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2)
       ]
 
   let t = { scad; columns; thumb }
