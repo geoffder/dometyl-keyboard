@@ -56,31 +56,6 @@ module Face = struct
     ; points = Points.rotate_about_pt r p t.points
     }
 
-  (* let angles { points = { top_left; top_right; bot_left; _ }; _ } =
-   *   let x, z =
-   *     let dx, dy, dz = Util.(top_right <-> top_left) in
-   *     Float.atan (dz /. dy), Float.atan (dx /. dy)
-   *   and y =
-   *     let dx, _, dz = Util.(top_left <-> bot_left) in
-   *     Float.atan (dz /. dx)
-   *   in
-   *   Stdio.print_endline "face angles:";
-   *   Stdio.printf "x angle: %.2f \n" x;
-   *   Stdio.printf "y angle: %.2f \n" y;
-   *   Stdio.printf "z angle: %.2f \n\n" z;
-   *   x, y, z
-   *
-   * let angles' { points = { top_left; top_right; _ }; _ } =
-   *   let dx, dy, dz = Math.norm Util.(top_left <-> top_right) in
-   *   let x = Float.acos dx
-   *   and y = Float.acos dy
-   *   and z = Float.acos dz in
-   *   Stdio.print_endline "face angles:";
-   *   Stdio.printf "x angle: %.2f \n" x;
-   *   Stdio.printf "y angle: %.2f \n" y;
-   *   Stdio.printf "z angle: %.2f \n\n" z;
-   *   x, y, z *)
-
   let direction { points = { top_left; top_right; _ }; _ } =
     Vec3.normalize Vec3.(top_left <-> top_right)
 end
@@ -172,23 +147,6 @@ let rotate_clips t =
   let t' = rotate (0., 0., Float.pi /. 2.) t in
   let { faces = { north; south; east; west }; _ } = t' in
   { t' with faces = { north = east; south = west; east = south; west = north } }
-
-(* NOTE: These key angle finding functions assume that the key in question is a part
- * of a column oriented along the y-axis *)
-let angles { faces = { north; west; _ }; _ } =
-  let x =
-    let _, dy, dz = Vec3.(west.points.top_right <-> west.points.top_left) in
-    Float.atan (dz /. dy)
-  and y, z =
-    let dx, dy, dz = Vec3.(north.points.top_right <-> north.points.top_left) in
-    Float.atan (dz /. dx), Float.atan (dy /. dx)
-  in
-  (* Stdio.print_endline "keyhole angles:";
-   * Stdio.printf "x angle: %.2f \n" x;
-   * Stdio.printf "y angle: %.2f \n" y;
-   * Stdio.printf "z angle: %.2f \n" z;
-   * Stdio.printf "z? angle: %.2f \n\n" z'; *)
-  x, y, z
 
 let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
