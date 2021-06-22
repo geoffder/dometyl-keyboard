@@ -50,7 +50,7 @@ module Plate = struct
   let n_cols = 5
   let spacing = 2.
   let centre_col = 2
-  let tent = Float.pi /. 6.
+  let tent = Float.pi /. 12.
   let thumb_offset = 7., -50., -3.
   let thumb_angle = Float.(0., pi /. -4., pi /. 5.)
   let clearance = 7.
@@ -118,155 +118,44 @@ module Plate = struct
     in
     Map.map ~f:(Column.translate (0., 0., lift)) placed_cols, thumb
 
-  let scad =
-    Model.union
-      (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
+  let column_joins =
+    let join = Walls.join_columns ~columns in
+    Model.union [ join 0 1; join 1 2; join 2 3; join 3 4 ]
 
-  let wall_start side (k : _ KeyHole.t) =
-    let cyl =
-      Model.cylinder ~center:true (k.config.thickness /. 2.) k.config.outer_w
-      |> Model.rotate (0., Float.pi /. 2., 0.)
-    and face = KeyHole.Faces.face k.faces side in
-    let r = RotMatrix.(align_exn (KeyHole.Face.direction face) (1., 0., 0.) |> to_euler)
-    and t = Vec3.(KeyHole.orthogonal k side <*> (2., 2., 2.)) in
-    let centre = Vec3.(face.points.centre <+> t) in
-    Model.rotate r cyl |> Model.translate centre, centre
+  let support_bridges =
+    let bridge c k =
+      Walls.key_bridge
+        (Map.find_exn (Map.find_exn columns c).keys k)
+        (Map.find_exn (Map.find_exn columns (c + 1)).keys k)
+    in
+    Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
 
-  let side_wall ?(x_off = 0.) ?(y_off = 0.) ?(z_off = 2.) side d1 d2 (key : _ KeyHole.t) =
-    let chunk, (x0, y0, z0) = wall_start side key
-    and chunk_rad = keyhole.config.thickness /. 2.
-    and ortho = KeyHole.orthogonal key side in
-    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_off in
-    let t2 =
-      Vec3.(
-        mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (x_off, y_off, z_hop))
-    and t3 =
-      Vec3.(
-        add
-          (mul (normalize (mul ortho (1., 1., 0.))) (d2, d2, 0.))
-          (x_off, y_off, chunk_rad -. z0 -. (keyhole.config.outer_w /. 2.)))
-    in
-    let face = KeyHole.Faces.face key.faces side in
-    let wall = Bezier.quad_hull' ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
-    Model.difference
-      (Model.union [ Model.hull [ chunk; face.scad ]; wall ])
-      [ Model.cube
-          ~center:true
-          ( keyhole.config.outer_w *. 2.
-          , keyhole.config.outer_w *. 2.
-          , keyhole.config.outer_w *. 2. )
-        |> Model.translate (x0, y0, -.keyhole.config.outer_w)
-      ]
-
-  let bez_wall ?z_off side d1 d2 col_idx =
-    let key, face, hanging =
-      let c = Map.find_exn columns col_idx in
-      match side with
-      | `North ->
-        let key = snd @@ Map.max_elt_exn c.keys in
-        let edge_y = Vec3.get_y key.faces.north.points.centre in
-        key, key.faces.north, Float.(( <= ) edge_y)
-      | `South ->
-        let key = Map.find_exn c.keys 0 in
-        let edge_y = Vec3.get_y key.faces.south.points.centre in
-        key, key.faces.south, Float.(( >= ) edge_y)
-    in
-    let x_dodge =
-      match Map.find columns (col_idx + 1) with
-      | Some next_c ->
-        let right_x = Vec3.get_x face.points.top_right
-        and next_face =
-          KeyHole.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side
-        in
-        let diff =
-          if hanging (Vec3.get_y next_face.points.centre)
-          then right_x -. Vec3.get_x next_face.points.bot_left
-          else -.spacing
-        in
-        if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
-      | _           -> 0.
-    in
-    side_wall ~x_off:(x_dodge *. -1.) ?z_off side d1 d2 key
-
-  let poly_wall ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
-    (* TODO: using very large bezier steps right now since the varying number of
-     * points that it takes to get to the floor for eack side of the key when tented
-     * above a certain amount causes problems for the polyhedron creation. Seems like
-     * going down in z a similar amount for each side then cutting off below the
-     * floor afterwards will be the simplest way to make sure the triangle mesh is
-     * able to form well. *)
-    let ortho = KeyHole.orthogonal key side in
-    let z_hop = (Float.max 0. (Vec3.get_z ortho) *. keyhole.config.thickness) +. z_up in
-    let face = KeyHole.Faces.face key.faces side in
-    let top_offset =
-      Vec3.(mul (1., 1., 0.) (face.points.bot_right <-> face.points.top_right))
-    in
-    let get_bez top ((x, y, z) as p1) =
-      let jog, d1 =
-        if top then keyhole.config.thickness, d1 +. ((d2 -. d1) /. 2.) else 0., d1
-      in
-      let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
-      let p2 =
-        Vec3.(
-          mul xy (d1 +. jog, d1 +. jog, 0.)
-          |> add (x, y, z +. z_hop)
-          |> add (if top then top_offset else 0., 0., 0.))
-      and p3 =
-        Vec3.(
-          add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x, y, 0.)
-          |> add (if top then top_offset else 0., 0., 0.))
-      in
-      Bezier.quad_vec3 ~p1 ~p2 ~p3
-    in
-    Bezier.prism_exn
-      [ get_bez true face.points.top_right
-      ; get_bez true face.points.top_left
-      ; get_bez false face.points.bot_left
-      ; get_bez false face.points.bot_right
-      ]
-      0.25
-
-  let key_bridge k1 k2 = Model.hull KeyHole.[ k1.faces.east.scad; k2.faces.west.scad ]
-  let join_bridge j1 j2 = Model.hull Column.Join.[ j1.faces.east; j2.faces.west ]
-
-  let join_columns a_i b_i =
-    let a = Map.find_exn columns a_i
-    and b = Map.find_exn columns b_i in
-    let folder ~f ~key:_ ~data hulls =
-      match data with
-      | `Both (a', b') -> f a' b' :: hulls
-      | _              -> hulls
-    in
-    Model.union
-      (Map.fold2
-         ~f:(folder ~f:key_bridge)
-         ~init:(Map.fold2 ~f:(folder ~f:join_bridge) ~init:[] a.joins b.joins)
-         a.keys
-         b.keys )
+  let bez_wall = Walls.column_drop ~spacing ~columns ~d1:4. ~d2:7.
 
   let scad =
     Model.union
-      [ scad
-        (* ; bez_wall `North 4. 7. 0
-         * ; bez_wall `North 4. 7. 1
-         * ; bez_wall `North 4. 7. 2
-         * ; bez_wall `South 4. 7. 2
-         * ; bez_wall `North 4. 7. 3
-         * ; bez_wall `South 4. 7. 3
-         * ; bez_wall `North 4. 7. 4
-         * ; bez_wall `South 4. 7. 4
-         * ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 0)
-         * ; side_wall ~z_off:2. `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 1) *)
-        (* ; side_wall `East 3. 5. (Map.find_exn (Map.find_exn columns 4).keys 2) *)
-        (* ; side_wall `North 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `West 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 0)
-         * ; side_wall `South 4. 7. (Map.find_exn thumb.keys 2)
-         * ; side_wall `West 4. 7. (Map.find_exn (Map.find_exn columns 0).keys 2) *)
-      ; join_columns 0 1
-      ; join_columns 1 2
-      ; join_columns 2 3
-      ; join_columns 3 4
+      [ Model.union
+          (Map.fold
+             ~f:(fun ~key:_ ~data l -> data.scad :: l)
+             ~init:[ thumb.scad ]
+             columns )
+      ; bez_wall `North 0
+      ; bez_wall `North 1
+      ; bez_wall `North 2
+      ; bez_wall `South 2
+      ; bez_wall `North 3
+      ; bez_wall `South 3
+      ; bez_wall `North 4
+      ; bez_wall `South 4
+      ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 0)
+        (* ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)
+         * ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 2) *)
+      ; Walls.siding `East ~d1:3. ~d2:5. (Map.find_exn (Map.find_exn columns 4).keys 2)
+      ; Walls.siding `North (Map.find_exn thumb.keys 0)
+      ; Walls.siding `West (Map.find_exn thumb.keys 0)
+      ; Walls.siding `South (Map.find_exn thumb.keys 0)
+      ; Walls.siding `South (Map.find_exn thumb.keys 2)
+      ; support_bridges
       ]
 
   let t = { scad; columns; thumb }
