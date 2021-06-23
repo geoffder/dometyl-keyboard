@@ -132,6 +132,17 @@ module Plate = struct
 
   let bez_wall = Walls.column_drop ~spacing ~columns ~d1:4. ~d2:7.
 
+  let test_points wall =
+    let mark p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
+    Model.union
+      Walls.
+        [ mark wall.points.centre
+        ; mark wall.points.top_right
+        ; mark wall.points.top_left
+        ; mark wall.points.bot_right
+        ; mark wall.points.bot_left
+        ]
+
   let scad =
     Model.union
       [ Model.union
@@ -139,23 +150,25 @@ module Plate = struct
              ~f:(fun ~key:_ ~data l -> data.scad :: l)
              ~init:[ thumb.scad ]
              columns )
-      ; bez_wall `North 0
-      ; bez_wall `North 1
-      ; bez_wall `North 2
-      ; bez_wall `South 2
-      ; bez_wall `North 3
-      ; bez_wall `South 3
-      ; bez_wall `North 4
-      ; bez_wall `South 4
-      ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 0)
+        (* ; (bez_wall `North 0).scad
+         * ; (bez_wall `North 1).scad
+         * ; (bez_wall `North 2).scad
+         * ; (bez_wall `South 2).scad
+         * ; (bez_wall `North 3).scad *)
+      ; (bez_wall `South 3).scad (* ; (bez_wall `North 4).scad *)
+      ; (bez_wall `South 4).scad
+        (* ; (Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 0)).scad *)
         (* ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)
          * ; Walls.siding `West (Map.find_exn (Map.find_exn columns 0).keys 2) *)
-      ; Walls.siding `East ~d1:3. ~d2:5. (Map.find_exn (Map.find_exn columns 4).keys 2)
-      ; Walls.siding `North (Map.find_exn thumb.keys 0)
-      ; Walls.siding `West (Map.find_exn thumb.keys 0)
-      ; Walls.siding `South (Map.find_exn thumb.keys 0)
-      ; Walls.siding `South (Map.find_exn thumb.keys 2)
-      ; support_bridges
+        (* ; (Walls.siding `East ~d1:3. ~d2:5. (Map.find_exn (Map.find_exn columns 4).keys 2))
+         *     .scad
+         * ; (Walls.siding `North (Map.find_exn thumb.keys 0)).scad
+         * ; (Walls.siding `West (Map.find_exn thumb.keys 0)).scad
+         * ; (Walls.siding `South (Map.find_exn thumb.keys 0)).scad
+         * ; (Walls.siding `South (Map.find_exn thumb.keys 2)).scad
+         * ; support_bridges *)
+      ; test_points (bez_wall `South 4)
+      ; test_points (bez_wall `South 3)
       ]
 
   let t = { scad; columns; thumb }
