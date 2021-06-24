@@ -46,33 +46,23 @@ let cubic_vec3 ~p1:(x1, y1, z1) ~p2:(x2, y2, z2) ~p3:(x3, y3, z3) ~p4:(x4, y4, z
   and z = (a *. z1) +. (b *. z2) +. (c *. z3) +. (d *. z4) in
   x, y, z
 
-let curve_rev ?(init = []) bez dt =
-  let rec loop acc t =
-    if Float.(max 0. (1. - t) < 0.00001)
-    then bez t :: acc
-    else loop (bez t :: acc) (t +. dt)
+let curve_rev ?(init = []) ?(n_steps = 10) bez =
+  let dt = 1. /. Float.of_int n_steps in
+  let rec loop acc i t =
+    if i <= n_steps then loop (bez t :: acc) (i + 1) (t +. dt) else acc
   in
-  loop init 0.
+  loop init 0 0.
 
-let curve bez dt = List.rev (curve_rev ~init:[] bez dt)
+let curve ~n_steps bez = List.rev (curve_rev ~init:[] ~n_steps bez)
 
 let quats q1 q2 dt =
   let slerp = Quaternion.slerp q1 q2 in
   let rec loop acc t = if Float.(t <= 1.) then loop (slerp t :: acc) (t +. dt) else acc in
   List.rev (loop [] 0.)
 
-let hull rotator translations rotations scad =
-  List.fold2_exn
-    ~init:(scad, [])
-    ~f:(fun (last, acc) p r ->
-      let next = rotator r scad |> Model.translate p in
-      next, Model.hull [ last; next ] :: acc )
-    translations
-    rotations
-  |> fun (_, hs) -> Model.union hs
-
-let hull' ?(rotator = fun _ s -> s) ?(translator = fun _ s -> s) dt scad =
-  let transformer t = Infix.(rotator t >> translator t) in
+let hull ?(rotator = fun _ s -> s) ?(translator = fun _ s -> s) n_steps scad =
+  let dt = 1. /. Float.of_int n_steps
+  and transformer t = Infix.(rotator t >> translator t) in
   let rec loop last acc t =
     if Float.(t <= 1.)
     then (
@@ -82,71 +72,57 @@ let hull' ?(rotator = fun _ s -> s) ?(translator = fun _ s -> s) dt scad =
   in
   Model.union @@ loop scad [] 0.
 
-let quad_hull' ?rotator ~t1 ~t2 ~t3 ~step =
+let quad_hull ?rotator ~t1 ~t2 ~t3 ~n_steps =
   let translator t = Model.translate (quad_vec3 ~p1:t1 ~p2:t2 ~p3:t3 t) in
-  hull' ?rotator ~translator step
+  hull ?rotator ~translator n_steps
 
-let cubic_hull' ?rotator ~t1 ~t2 ~t3 ~t4 ~step =
+let cubic_hull ?rotator ~t1 ~t2 ~t3 ~t4 ~n_steps =
   let translator t = Model.translate (cubic_vec3 ~p1:t1 ~p2:t2 ~p3:t3 ~p4:t4 t) in
-  hull' ?rotator ~translator step
-
-let quad_hull
-    ?(rotator = fun _ s -> s)
-    ?(r1 = zero)
-    ?(r2 = zero)
-    ?(r3 = zero)
-    ~t1
-    ~t2
-    ~t3
-    ~step
-  =
-  let translations = curve (quad_vec3 ~p1:t1 ~p2:t2 ~p3:t3) step
-  and rotations = curve (quad_vec3 ~p1:r1 ~p2:r2 ~p3:r3) step in
-  hull rotator translations rotations
-
-let cubic_hull
-    ?(rotator = fun _ s -> s)
-    ?(r1 = zero)
-    ?(r2 = zero)
-    ?(r3 = zero)
-    ?(r4 = zero)
-    ~t1
-    ~t2
-    ~t3
-    ~t4
-    ~step
-  =
-  let translations = curve (cubic_vec3 ~p1:t1 ~p2:t2 ~p3:t3 ~p4:t4) step
-  and rotations = curve (cubic_vec3 ~p1:r1 ~p2:r2 ~p3:r3 ~p4:r4) step in
-  hull rotator translations rotations
+  hull ?rotator ~translator n_steps
 
 (* Provide beziers in clockwise order, from the perspective of looking at the
  * face created by the first control points from the outside (see OpenScad polyhedron). *)
-let prism_exn bezs dt =
+let prism_exn bezs n_steps =
   let n_bez = List.length bezs in
+  let n_steps' =
+    match n_steps with
+    | `Uniform n -> List.init ~f:(fun _ -> n) n_bez
+    | `Ragged l  ->
+      if List.length l = n_bez
+      then l
+      else failwith "Length of Ragged n_steps must match bezs."
+  in
+  let pts_per = Array.of_list_map ~f:(( + ) 1) n_steps' in
   if n_bez < 3
   then failwith "At least three beziers are required."
   else (
-    let n_steps =
-      let m = Float.round_down (1. /. dt) in
-      Float.(if equal 1. (m *. dt) then 1 else 0) + Int.of_float m
-    and pts =
-      List.fold ~init:[] ~f:(fun ps b -> curve_rev ~init:ps b dt) bezs |> List.rev
+    let pts =
+      List.fold2_exn
+        ~init:[]
+        ~f:(fun ps b n -> curve_rev ~init:ps ~n_steps:n b)
+        bezs
+        n_steps'
+      |> List.rev
     in
-    let starts = Array.init n_bez ~f:(( * ) n_steps) in
+    let starts = Array.folding_map ~init:0 ~f:(fun s n -> s + n, s) pts_per in
     let sides =
       let face left_i right_i =
+        let left_n = pts_per.(left_i)
+        and left_start = starts.(left_i)
+        and right_start = starts.(right_i) in
         let f i =
-          if i < n_steps then left_i + n_steps - 1 - i else right_i + (i - n_steps)
+          if i < left_n then left_start + left_n - 1 - i else right_start + (i - left_n)
         in
-        List.init ~f (n_steps * 2)
+        List.init ~f (left_n + pts_per.(right_i))
       in
       let wrap i = if i < 0 then n_bez + i else i in
-      List.init n_bez ~f:(fun i -> face starts.(i) starts.(wrap (i - 1)))
+      List.init n_bez ~f:(fun i -> face i (wrap (i - 1)))
     in
     let faces =
       Array.to_list starts
-      :: Array.fold ~init:[] ~f:(fun acc s -> (s + n_steps - 1) :: acc) starts :: sides
+      ::
+      Array.foldi ~init:[] ~f:(fun i acc s -> (s + pts_per.(i) - 1) :: acc) starts
+      :: sides
     in
     Model.polyhedron pts faces )
 
