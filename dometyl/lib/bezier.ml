@@ -1,12 +1,10 @@
 open! Base
 open! Scad_ml
 
-let zero = 0., 0., 0.
-
 module Rotator = struct
   type t = float -> Model.t -> Model.t
 
-  let make ?(pivot = zero) q1 q2 : t =
+  let make ?(pivot = Vec3.zero) q1 q2 : t =
     let slerp = Quaternion.slerp q1 q2 in
     fun t -> Model.quaternion_about_pt (slerp t) pivot
 end
