@@ -11,19 +11,6 @@ module Points = struct
     }
 
   let make ~thickness ~width ~direction ~ortho (x, y, _) =
-    (* TODO: These line up with the actual endcorners of the bezier wall,
-     * but on one side of the tented ones, this is actually "underground". This
-     * leads to the calculated points being off for the cut off side (and to
-     * a lesser extent, the centre point). What is the simplest way to calculate
-     * the correct positions in this circumstance, is it possible without using
-     * the generating bezier itself along with the directionality information?
-     *
-     * NOTE: Just had a (potentially ugly) idea of stopping the bezier when the
-     * lowest part hits z, rather than the highest. Then instead of chopping off
-     * below zero, project the last chunk into 3d, then hull the projection
-     * (need to extrude slighly first?) with the last chunk. If I calculate the
-     * points based on that centre position, will the points line up using the
-     * same calculation method? *)
     let centre = x, y, 0.
     and dir_step =
       Vec3.(map (( *. ) (width /. 2.)) (normalize (mul direction (1., 1., 0.))))
@@ -52,6 +39,10 @@ module Points = struct
   let translate p = map ~f:(Vec3.add p)
   let rotate r = map ~f:(Vec3.rotate r)
   let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
+
+  let mark t =
+    let f p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
+    Model.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]
 end
 
 type t =
@@ -76,10 +67,11 @@ let siding
     ?(z_off = 2.)
     ?(d1 = 4.)
     ?(d2 = 7.)
+    ?(n_steps = 10)
     side
     (key : _ KeyHole.t)
   =
-  let chunk, ((_x0, _y0, z0) as start) = start_chunk side key
+  let chunk, start = start_chunk side key
   and ortho = KeyHole.orthogonal key side
   and face = KeyHole.Faces.face key.faces side in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
@@ -87,22 +79,17 @@ let siding
     Vec3.(
       mul (normalize (mul ortho (1., 1., 0.))) (d1, d1, 0.) |> add (x_off, y_off, z_hop))
   and t3 =
-    let z_tilt = Vec3.(get_z @@ (face.points.top_left <-> face.points.top_right)) in
+    (* Extend down until lowest point is at xy plane. Hull will close rest of gap. *)
+    let lowest_z =
+      let f m (_, _, z) = Float.min m z in
+      KeyHole.Face.Points.fold ~f ~init:Float.max_value face.points
+    in
     Vec3.(
       add
         (mul (normalize (mul ortho (1., 1., 0.))) (d2, d2, 0.))
-        (x_off, y_off, -.z0 -. (z_tilt /. 2.)))
+        (x_off, y_off, -.lowest_z))
   in
-  let wall = Bezier.quad_hull' ~t1:(0., 0., 0.) ~t2 ~t3 ~step:0.1 chunk in
-  let scad =
-    (* Model.difference
-     *   (Model.union [ Model.hull [ chunk; face.scad ]; wall ])
-     *   [ Model.cube
-     *       ~center:true
-     *       (key.config.outer_w *. 2., key.config.outer_w *. 2., key.config.outer_w *. 2.)
-     *     |> Model.translate (x0, y0, -.key.config.outer_w)
-     *   ] *)
-    Model.union [ Model.hull [ chunk; face.scad ]; wall ]
+  let wall = Bezier.quad_hull ~t1:(0., 0., 0.) ~t2 ~t3 ~n_steps chunk
   and points =
     let KeyHole.{ thickness; outer_w = width; _ } = key.config in
     Points.make
@@ -112,9 +99,23 @@ let siding
       ~ortho
       (Vec3.add t3 start)
   in
+  let scad =
+    Model.union
+      [ Model.hull [ chunk; face.scad ]
+      ; wall
+      ; Model.hull
+          [ Model.translate t3 chunk
+          ; Model.polygon
+              (List.map
+                 ~f:Vec3.to_vec2
+                 [ points.top_left; points.top_right; points.bot_right; points.bot_left ] )
+            |> Model.linear_extrude ~height:0.001
+          ]
+      ]
+  in
   { scad; points }
 
-let column_drop ?z_off ?d1 ?d2 ~spacing ~columns side idx =
+let column_drop ?z_off ?d1 ?d2 ?n_steps ~spacing ~columns side idx =
   let key, face, hanging =
     let c : _ Column.t = Map.find_exn columns idx in
     match side with
@@ -142,20 +143,20 @@ let column_drop ?z_off ?d1 ?d2 ~spacing ~columns side idx =
       if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
     | _           -> 0.
   in
-  siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 side key
+  siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 ?n_steps side key
 
-let poly_siding ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
-  (* TODO: using very large bezier steps right now since the varying number of
-   * points that it takes to get to the floor for eack side of the key when tented
-   * above a certain amount causes problems for the polyhedron creation. Seems like
-   * going down in z a similar amount for each side then cutting off below the
-   * floor afterwards will be the simplest way to make sure the triangle mesh is
-   * able to form well. *)
+let poly_siding ?(z_up = 2.) ?(n_steps = 10) side d1 d2 (key : _ KeyHole.t) =
+  (* TODO: return a t with points included, rather than a scad. I'll need to change
+   * the functions up a bit to make it not gross. *)
   let ortho = KeyHole.orthogonal key side in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_up in
   let face = KeyHole.Faces.face key.faces side in
   let top_offset =
     Vec3.(mul (1., 1., 0.) (face.points.bot_right <-> face.points.top_right))
+  in
+  let lowest_z =
+    let f m (_, _, z) = Float.min m z in
+    KeyHole.Face.Points.fold ~f ~init:Float.max_value face.points
   in
   let get_bez top ((x, y, z) as p1) =
     let jog, d1 =
@@ -174,13 +175,22 @@ let poly_siding ?(z_up = 2.) side d1 d2 (key : _ KeyHole.t) =
     in
     Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
+  let steps =
+    let adjust (_, _, z) = Float.(to_int (z /. lowest_z *. of_int n_steps)) in
+    `Ragged
+      [ adjust face.points.top_right
+      ; adjust face.points.top_left
+      ; adjust face.points.bot_right
+      ; adjust face.points.bot_left
+      ]
+  in
   Bezier.prism_exn
     [ get_bez true face.points.top_right
     ; get_bez true face.points.top_left
     ; get_bez false face.points.bot_left
     ; get_bez false face.points.bot_right
     ]
-    0.25
+    steps
 
 let key_bridge k1 k2 = Model.hull KeyHole.[ k1.faces.east.scad; k2.faces.west.scad ]
 let join_bridge j1 j2 = Model.hull Column.Join.[ j1.faces.east; j2.faces.west ]
