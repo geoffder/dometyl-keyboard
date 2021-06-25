@@ -64,6 +64,7 @@ module Plate = struct
 
   let well_lookup = function
     (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    (* | _ -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } *)
     | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. }
 
   let col_offsets =

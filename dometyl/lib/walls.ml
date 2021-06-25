@@ -143,6 +143,11 @@ let poly_siding
     side
     (key : _ KeyHole.t)
   =
+  (* TODO: Possible solution to make these more stable as curvature / number of rows
+   * increase is to not start directly from the face, but rather from a new face
+   * with an easier angle obtained by rotating it around the originating face's
+   * directional axis and moving it out a bit. This could be with rotating and
+   * translating the face and hulling to the original, or calculating a polyhedron. *)
   let ortho = KeyHole.orthogonal key side in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
   let face = KeyHole.Faces.face key.faces side in
