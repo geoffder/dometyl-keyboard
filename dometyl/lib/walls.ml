@@ -143,8 +143,6 @@ let poly_siding
     side
     (key : _ KeyHole.t)
   =
-  (* TODO: return a t with points included, rather than a scad. I'll need to change
-   * the functions up a bit to make it not gross. *)
   let ortho = KeyHole.orthogonal key side in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
   let face = KeyHole.Faces.face key.faces side in
