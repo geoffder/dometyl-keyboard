@@ -37,6 +37,7 @@ module Face = struct
     let translate p = map ~f:(Vec3.add p)
     let rotate r = map ~f:(Vec3.rotate r)
     let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
+    let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
   end
 
   type t =
@@ -77,12 +78,12 @@ module Faces = struct
 
   let make width depth =
     let half_w = width /. 2. in
-    let rot_lat = Face.rotate (0., 0., Float.pi /. 2.) in
+    let rlat = 0., 0., Float.pi /. 2. in
     let base = Face.rotate (Float.pi /. 2., 0., 0.) (Face.make (width, depth, 0.1)) in
     { north = Face.translate (0., half_w, 0.) base
-    ; south = Face.translate (0., -.half_w, 0.) base
-    ; west = base |> rot_lat |> Face.translate (-.half_w, 0., 0.)
-    ; east = base |> rot_lat |> Face.translate (half_w, 0., 0.)
+    ; south = Face.(base |> rotate (0., 0., Float.pi) |> translate (0., -.half_w, 0.))
+    ; west = Face.(base |> rotate rlat |> translate (-.half_w, 0., 0.))
+    ; east = Face.(base |> rotate (Vec3.negate rlat) |> Face.translate (half_w, 0., 0.))
     }
 
   let face t = function
