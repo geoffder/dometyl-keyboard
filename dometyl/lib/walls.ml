@@ -133,36 +133,20 @@ let cyl_siding
   in
   { scad; points }
 
-(* let find_angle ax top bot =
- *   let bot_z = Vec3.get_z bot in
- *   let step = Float.pi /. 24.
- *   and quat = Quaternion.make ax in
- *   let diff a = Vec3.(get_z Quaternion.(rotate_vec3 (quat a) top) -. bot_z) in
- *   let step = if Float.(diff (-.step) > diff step) then -.step else step in
- *   let rec loop a last_diff =
- *     if Float.(a < pi /. 2.)
- *     then (
- *       let d = diff a in
- *       if Float.(d < last_diff) then a -. step else loop (a +. step) d )
- *     else a -. step
- *   in
- *   loop step Float.min_value *)
-
-let find_angle ax pivot top bot =
-  let bot_z = Vec3.get_z bot in
+let find_angle ax pivot top (_, _, bot_z) =
   let step = Float.pi /. 24.
   and quat = Quaternion.make ax in
   let diff a =
-    Vec3.(get_z Quaternion.(rotate_vec3_about_pt (quat a) top pivot) -. bot_z)
+    Vec3.(get_z Quaternion.(rotate_vec3_about_pt (quat a) pivot top) -. bot_z)
   in
-  let rec loop a diffs =
+  let rec loop a last_diff =
     if Float.(a < pi)
-    then loop (a +. step) ((a, diff a) :: diffs)
-    else
-      List.max_elt ~compare:(fun (_, d1) (_, d2) -> Float.compare d1 d2) diffs
-      |> Option.value_map ~default:0. ~f:fst
+    then (
+      let d = diff a in
+      if Float.(d < last_diff) then a -. step else loop (a +. step) d )
+    else a -. step
   in
-  loop step []
+  loop step (Vec3.get_z top -. bot_z)
 
 let poly_siding
     ?(x_off = 0.)
@@ -174,32 +158,36 @@ let poly_siding
     side
     (key : _ KeyHole.t)
   =
-  (* TODO: Possible solution to make these more stable as curvature / number of rows
-   * increase is to not start directly from the face, but rather from a new face
-   * with an easier angle obtained by rotating it around the originating face's
-   * directional axis and moving it out a bit. This could be with rotating and
-   * translating the face and hulling to the original, or calculating a polyhedron.
-   *
-   * NOTE: Idea to try. If the z of the ortho is positive (like used in z_hop),
-   * then take a point on the lower face edge (say the centre), add the thickness
-   * in z, and move along the direction vector to get to either side, and draw a
-   * face to hull to with polyhedron, or use the vector created by this theorhetical
-   * face to calculate the rotation needed to match the key face to it.
-   *
-   * NOTE: Another possibility, extend from the top points along the ortho until
-   * they would be directly above the lower point in z (can I calculate this regardless
-   * of the orientation of the key though?) *)
-  let ortho = KeyHole.orthogonal key side in
-  let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
+  (* TODO:
+   * - Cleanup, consider adding quat functions to Points module, maybe along
+   * with the factoring out into separate module that can be shared between Face
+   * and Walls.
+   * - More consistent calculation of target points on ground (such that the shape
+   * of the face can be re-created, but possibly with the thickness paramaterizable. ) *)
   let face = KeyHole.Faces.face key.faces side in
+  let pivot =
+    Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
+  in
+  let quat =
+    let dir = KeyHole.Face.direction face in
+    let a = find_angle dir pivot face.points.top_right face.points.bot_right in
+    Quaternion.make dir a
+  in
+  let ortho =
+    let rot = Quaternion.rotate_vec3_about_pt quat pivot in
+    let origin' = rot key.origin in
+    let centre' = rot face.points.centre in
+    Vec3.(normalize (centre' <-> origin'))
+  in
+  let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
+  let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
   let top_offset =
     Vec3.(mul (1., 1., 0.) (face.points.bot_right <-> face.points.top_right))
   in
   let get_bez top ((x, y, z) as p1) =
     let jog, d1 =
-      if top then key.config.thickness, d1 +. ((d2 -. d1) /. 2.) else 0., d1
+      if top then key.config.thickness /. 2., d1 +. ((d2 -. d1) /. 2.) else 0., d1
     in
-    let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
     let p2 =
       Vec3.(
         mul xy (d1 +. jog, d1 +. jog, 0.)
@@ -212,11 +200,14 @@ let poly_siding
     in
     p3, Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
-  let cw_points = KeyHole.Face.Points.to_clockwise_list face.points in
+  let pivoted =
+    KeyHole.Face.Points.map ~f:(Quaternion.rotate_vec3_about_pt quat pivot) face.points
+  in
+  let cw_points = KeyHole.Face.Points.to_clockwise_list pivoted in
   let steps =
     let lowest_z =
       let f m (_, _, z) = Float.min m z in
-      KeyHole.Face.Points.fold ~f ~init:Float.max_value face.points
+      KeyHole.Face.Points.fold ~f ~init:Float.max_value pivoted
     in
     let adjust (_, _, z) = Float.(to_int (z /. lowest_z *. of_int n_steps)) in
     `Ragged (List.map ~f:adjust cw_points)
@@ -228,36 +219,10 @@ let poly_siding
       ~init:([], [])
       (List.rev cw_points)
   in
-  let dir = KeyHole.Face.direction face in
-  (* let middle_bot =
-   *   Vec3.(div (face.points.bot_left <+> face.points.bot_right) (2., 2., 2.))
-   * in
-   * let middle_above = Vec3.(middle_bot <+> (0., 0., key.config.thickness)) in
-   * let left_corner =
-   *   Vec3.(middle_above <+> map (( *. ) (-0.5 *. key.config.outer_w)) dir)
-   * in
-   * let right_corner =
-   *   Vec3.(middle_above <+> map (( *. ) (0.5 *. key.config.outer_w)) dir)
-   * in *)
-  (* let left_corner = Vec3.(face.points.bot_left <+> (0., 0., key.config.thickness)) in
-   * let right_corner = Vec3.(face.points.bot_right <+> (0., 0., key.config.thickness)) in
-   * let mark t = Model.cube ~center:true (2., 2., 2.) |> Model.translate t in
-   * { scad =
-   *     Model.union [ Bezier.prism_exn bezs steps; mark left_corner; mark right_corner ]
-   * ; points = Points.of_clockwise_list_exn end_ps
-   * } *)
-  let mark t = Model.cube ~center:true (2., 2., 2.) |> Model.translate t in
-  let pivot =
-    Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
-  in
-  let a = find_angle dir pivot face.points.top_right face.points.bot_right in
-  let q = Quaternion.make dir a in
-  let rot_face = Model.quaternion_about_pt q pivot face.scad in
   { scad =
       Model.union
-        [ Bezier.prism_exn bezs steps |> Model.translate (0., 0., 10.)
-        ; rot_face
-        ; Quaternion.rotate_vec3_about_pt q face.points.top_right pivot |> mark
+        [ Model.hull [ face.scad; Model.quaternion_about_pt quat pivot face.scad ]
+        ; Bezier.prism_exn bezs steps
         ]
   ; points = Points.of_clockwise_list_exn end_ps
   }
