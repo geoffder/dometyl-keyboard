@@ -1,68 +1,6 @@
 open Base
 open Scad_ml
 
-module Points = struct
-  (* TODO: there is a lot of replication between this and the KeyHole.Face.Points
-   * module. It's mainly the make which is different. Should amalgamate in own
-   * file, with two different make functions (with adequate names). *)
-  type t =
-    { top_left : Vec3.t
-    ; top_right : Vec3.t
-    ; bot_left : Vec3.t
-    ; bot_right : Vec3.t
-    ; centre : Vec3.t
-    }
-
-  let make ~thickness ~width ~direction ~ortho (x, y, _) =
-    let centre = x, y, 0.
-    and dir_step =
-      Vec3.(map (( *. ) (width /. 2.)) (normalize (mul direction (1., 1., 0.))))
-    and ortho_step =
-      Vec3.(map (( *. ) (thickness /. 2.)) (normalize (mul ortho (1., 1., 0.))))
-    in
-    { top_left = Vec3.(add centre (add dir_step ortho_step))
-    ; top_right = Vec3.(add ortho_step (sub centre dir_step))
-    ; bot_left = Vec3.(add dir_step (sub centre ortho_step))
-    ; bot_right = Vec3.(sub centre (add dir_step ortho_step))
-    ; centre
-    }
-
-  let map ~f t =
-    { top_left = f t.top_left
-    ; top_right = f t.top_right
-    ; bot_left = f t.bot_left
-    ; bot_right = f t.bot_right
-    ; centre = f t.centre
-    }
-
-  let fold ~f ~init t =
-    let flipped = Fn.flip f in
-    f init t.top_left |> flipped t.top_right |> flipped t.bot_left |> flipped t.bot_right
-
-  let translate p = map ~f:(Vec3.add p)
-  let rotate r = map ~f:(Vec3.rotate r)
-  let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
-
-  let mark t =
-    let f p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
-    Model.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]
-
-  let of_clockwise_list_exn = function
-    | [ top_left; top_right; bot_right; bot_left ] ->
-      { top_left
-      ; top_right
-      ; bot_left
-      ; bot_right
-      ; centre =
-          Vec3.(map (( *. ) 0.25) (top_left <+> top_right <+> bot_left <+> bot_right))
-      }
-    | _ -> failwith "Expect list of length 4, with corner points in clockwise order."
-
-  let of_clockwise_list l =
-    try Ok (of_clockwise_list_exn l) with
-    | Failure e -> Error e
-end
-
 type t =
   { scad : Model.t
   ; points : Points.t
@@ -78,6 +16,21 @@ let start_chunk side (k : _ KeyHole.t) =
   and t = Vec3.(KeyHole.orthogonal k side <*> (rad, rad, rad)) in
   let centre = Vec3.(face.points.centre <+> t) in
   Model.rotate r cyl |> Model.translate centre, centre
+
+let cyl_base_points ~thickness ~width ~direction ~ortho (x, y, _) =
+  let centre = x, y, 0.
+  and dir_step =
+    Vec3.(map (( *. ) (width /. 2.)) (normalize (mul direction (1., 1., 0.))))
+  and ortho_step =
+    Vec3.(map (( *. ) (thickness /. 2.)) (normalize (mul ortho (1., 1., 0.))))
+  in
+  Points.
+    { top_left = Vec3.(add centre (add dir_step ortho_step))
+    ; top_right = Vec3.(add ortho_step (sub centre dir_step))
+    ; bot_left = Vec3.(add dir_step (sub centre ortho_step))
+    ; bot_right = Vec3.(sub centre (add dir_step ortho_step))
+    ; centre
+    }
 
 let cyl_siding
     ?(x_off = 0.)
@@ -100,7 +53,7 @@ let cyl_siding
     (* Extend down until lowest point is at xy plane. Hull will close rest of gap. *)
     let lowest_z =
       let f m (_, _, z) = Float.min m z in
-      KeyHole.Face.Points.fold ~f ~init:Float.max_value face.points
+      Points.fold ~f ~init:Float.max_value face.points
     in
     Vec3.(
       add
@@ -110,7 +63,7 @@ let cyl_siding
   let wall = Bezier.quad_hull ~t1:(0., 0., 0.) ~t2 ~t3 ~n_steps chunk
   and points =
     let KeyHole.{ thickness; outer_w = width; _ } = key.config in
-    Points.make
+    cyl_base_points
       ~thickness
       ~width
       ~direction:(KeyHole.Face.direction face)
@@ -133,20 +86,31 @@ let cyl_siding
   in
   { scad; points }
 
-let find_angle ax pivot top (_, _, bot_z) =
-  let step = Float.pi /. 24.
-  and quat = Quaternion.make ax in
+let swing_face ?(step = Float.pi /. 24.) key_origin face =
+  (* Iteratively find a rotation around it's bottom axis that brings face to a more
+   * vertical orientation, returning the pivoted face and it's new orthogonal. *)
+  let quat = Quaternion.make (KeyHole.Face.direction face)
+  and pivot = Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
+  and top = face.points.top_right
+  and bot_z = Vec3.get_z face.points.bot_right in
   let diff a =
     Vec3.(get_z Quaternion.(rotate_vec3_about_pt (quat a) pivot top) -. bot_z)
   in
-  let rec loop a last_diff =
+  let rec find_angle a last_diff =
     if Float.(a < pi)
     then (
       let d = diff a in
-      if Float.(d < last_diff) then a -. step else loop (a +. step) d )
+      if Float.(d < last_diff) then a -. step else find_angle (a +. step) d )
     else a -. step
   in
-  loop step (Vec3.get_z top -. bot_z)
+  let q = quat @@ find_angle step (Vec3.get_z top -. bot_z) in
+  let face' = KeyHole.Face.quaternion_about_pt q pivot face in
+  let ortho' =
+    Quaternion.rotate_vec3_about_pt q pivot key_origin
+    |> Vec3.sub face.points.centre
+    |> Vec3.normalize
+  in
+  face', ortho'
 
 let poly_siding
     ?(x_off = 0.)
@@ -158,56 +122,36 @@ let poly_siding
     side
     (key : _ KeyHole.t)
   =
-  (* TODO:
-   * - Cleanup, consider adding quat functions to Points module, maybe along
-   * with the factoring out into separate module that can be shared between Face
-   * and Walls.
-   * - More consistent calculation of target points on ground (such that the shape
-   * of the face can be re-created, but possibly with the thickness paramaterizable. ) *)
-  let face = KeyHole.Faces.face key.faces side in
-  let pivot =
-    Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
-  in
-  let quat =
-    let dir = KeyHole.Face.direction face in
-    let a = find_angle dir pivot face.points.top_right face.points.bot_right in
-    Quaternion.make dir a
-  in
-  let ortho =
-    let rot = Quaternion.rotate_vec3_about_pt quat pivot in
-    let origin' = rot key.origin in
-    let centre' = rot face.points.centre in
-    Vec3.(normalize (centre' <-> origin'))
-  in
+  let start_face = KeyHole.Faces.face key.faces side in
+  let pivoted_face, ortho = swing_face key.origin start_face in
   let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
   let top_offset =
-    Vec3.(mul (1., 1., 0.) (face.points.bot_right <-> face.points.top_right))
+    Vec3.(
+      mul (1., 1., 0.) (pivoted_face.points.bot_right <-> pivoted_face.points.top_right))
   in
   let get_bez top ((x, y, z) as p1) =
-    let jog, d1 =
-      if top then key.config.thickness /. 2., d1 +. ((d2 -. d1) /. 2.) else 0., d1
+    let jog, d1, plus =
+      if top
+      then key.config.thickness, d1 +. ((d2 -. d1) /. 2.), top_offset
+      else 0., d1, (0., 0., 0.)
     in
     let p2 =
       Vec3.(
         mul xy (d1 +. jog, d1 +. jog, 0.)
         |> add (x +. x_off, y +. y_off, z +. z_hop)
-        |> add (if top then top_offset else 0., 0., 0.))
+        |> add plus)
     and p3 =
       Vec3.(
-        add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x +. x_off, y +. y_off, 0.)
-        |> add (if top then top_offset else 0., 0., 0.))
+        add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x +. x_off, y +. y_off, 0.) |> add plus)
     in
     p3, Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
-  let pivoted =
-    KeyHole.Face.Points.map ~f:(Quaternion.rotate_vec3_about_pt quat pivot) face.points
-  in
-  let cw_points = KeyHole.Face.Points.to_clockwise_list pivoted in
+  let cw_points = Points.to_clockwise_list pivoted_face.points in
   let steps =
     let lowest_z =
       let f m (_, _, z) = Float.min m z in
-      KeyHole.Face.Points.fold ~f ~init:Float.max_value pivoted
+      Points.fold ~f ~init:Float.max_value pivoted_face.points
     in
     let adjust (_, _, z) = Float.(to_int (z /. lowest_z *. of_int n_steps)) in
     `Ragged (List.map ~f:adjust cw_points)
@@ -221,9 +165,7 @@ let poly_siding
   in
   { scad =
       Model.union
-        [ Model.hull [ face.scad; Model.quaternion_about_pt quat pivot face.scad ]
-        ; Bezier.prism_exn bezs steps
-        ]
+        [ Model.hull [ start_face.scad; pivoted_face.scad ]; Bezier.prism_exn bezs steps ]
   ; points = Points.of_clockwise_list_exn end_ps
   }
 
@@ -273,7 +215,7 @@ let poly_bridge (face1 : KeyHole.Face.t) (face2 : KeyHole.Face.t) =
   in
   List.map2_exn
     ~f:get_bez
-    (KeyHole.Face.Points.to_clockwise_list face1.points)
+    (Points.to_clockwise_list face1.points)
     [ face2.points.top_right
     ; face2.points.top_left
     ; face2.points.bot_left

@@ -2,50 +2,22 @@ open Base
 open Scad_ml
 
 module Face = struct
-  module Points = struct
-    type t =
-      { top_left : Vec3.t
-      ; top_right : Vec3.t
-      ; bot_left : Vec3.t
-      ; bot_right : Vec3.t
-      ; centre : Vec3.t
-      }
-
-    let make (x, y, _) =
-      { top_left = x /. -2., y /. 2., 0.
-      ; top_right = x /. 2., y /. 2., 0.
-      ; bot_left = x /. -2., y /. -2., 0.
-      ; bot_right = x /. 2., y /. -2., 0.
-      ; centre = 0., 0., 0.
-      }
-
-    let map ~f t =
-      { top_left = f t.top_left
-      ; top_right = f t.top_right
-      ; bot_left = f t.bot_left
-      ; bot_right = f t.bot_right
-      ; centre = f t.centre
-      }
-
-    let fold ~f ~init t =
-      let flipped = Fn.flip f in
-      f init t.top_left
-      |> flipped t.top_right
-      |> flipped t.bot_left
-      |> flipped t.bot_right
-
-    let translate p = map ~f:(Vec3.add p)
-    let rotate r = map ~f:(Vec3.rotate r)
-    let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
-    let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
-  end
-
   type t =
     { scad : Model.t
     ; points : Points.t
     }
 
-  let make size = { scad = Model.cube ~center:true size; points = Points.make size }
+  let make ((x, y, _) as size) =
+    let points =
+      Points.
+        { top_left = x /. -2., y /. 2., 0.
+        ; top_right = x /. 2., y /. 2., 0.
+        ; bot_left = x /. -2., y /. -2., 0.
+        ; bot_right = x /. 2., y /. -2., 0.
+        ; centre = 0., 0., 0.
+        }
+    in
+    { scad = Model.cube ~center:true size; points }
 
   let translate p t =
     { scad = Model.translate p t.scad; points = Points.translate p t.points }
@@ -55,6 +27,14 @@ module Face = struct
   let rotate_about_pt r p t =
     { scad = Model.rotate_about_pt r p t.scad
     ; points = Points.rotate_about_pt r p t.points
+    }
+
+  let quaternion q t =
+    { scad = Model.quaternion q t.scad; points = Points.quaternion q t.points }
+
+  let quaternion_about_pt q p t =
+    { scad = Model.quaternion_about_pt q p t.scad
+    ; points = Points.quaternion_about_pt q p t.points
     }
 
   let direction { points = { top_left; top_right; _ }; _ } =
@@ -153,7 +133,7 @@ let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
 
 let normal t =
-  let Face.Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
+  let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
   Vec3.(normalize (top_left <-> bot_left))
 
 let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
