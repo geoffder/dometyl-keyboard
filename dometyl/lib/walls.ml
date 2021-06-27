@@ -133,6 +133,37 @@ let cyl_siding
   in
   { scad; points }
 
+(* let find_angle ax top bot =
+ *   let bot_z = Vec3.get_z bot in
+ *   let step = Float.pi /. 24.
+ *   and quat = Quaternion.make ax in
+ *   let diff a = Vec3.(get_z Quaternion.(rotate_vec3 (quat a) top) -. bot_z) in
+ *   let step = if Float.(diff (-.step) > diff step) then -.step else step in
+ *   let rec loop a last_diff =
+ *     if Float.(a < pi /. 2.)
+ *     then (
+ *       let d = diff a in
+ *       if Float.(d < last_diff) then a -. step else loop (a +. step) d )
+ *     else a -. step
+ *   in
+ *   loop step Float.min_value *)
+
+let find_angle ax pivot top bot =
+  let bot_z = Vec3.get_z bot in
+  let step = Float.pi /. 24.
+  and quat = Quaternion.make ax in
+  let diff a =
+    Vec3.(get_z Quaternion.(rotate_vec3_about_pt (quat a) top pivot) -. bot_z)
+  in
+  let rec loop a diffs =
+    if Float.(a < pi)
+    then loop (a +. step) ((a, diff a) :: diffs)
+    else
+      List.max_elt ~compare:(fun (_, d1) (_, d2) -> Float.compare d1 d2) diffs
+      |> Option.value_map ~default:0. ~f:fst
+  in
+  loop step []
+
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
@@ -147,7 +178,17 @@ let poly_siding
    * increase is to not start directly from the face, but rather from a new face
    * with an easier angle obtained by rotating it around the originating face's
    * directional axis and moving it out a bit. This could be with rotating and
-   * translating the face and hulling to the original, or calculating a polyhedron. *)
+   * translating the face and hulling to the original, or calculating a polyhedron.
+   *
+   * NOTE: Idea to try. If the z of the ortho is positive (like used in z_hop),
+   * then take a point on the lower face edge (say the centre), add the thickness
+   * in z, and move along the direction vector to get to either side, and draw a
+   * face to hull to with polyhedron, or use the vector created by this theorhetical
+   * face to calculate the rotation needed to match the key face to it.
+   *
+   * NOTE: Another possibility, extend from the top points along the ortho until
+   * they would be directly above the lower point in z (can I calculate this regardless
+   * of the orientation of the key though?) *)
   let ortho = KeyHole.orthogonal key side in
   let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
   let face = KeyHole.Faces.face key.faces side in
@@ -187,7 +228,39 @@ let poly_siding
       ~init:([], [])
       (List.rev cw_points)
   in
-  { scad = Bezier.prism_exn bezs steps; points = Points.of_clockwise_list_exn end_ps }
+  let dir = KeyHole.Face.direction face in
+  (* let middle_bot =
+   *   Vec3.(div (face.points.bot_left <+> face.points.bot_right) (2., 2., 2.))
+   * in
+   * let middle_above = Vec3.(middle_bot <+> (0., 0., key.config.thickness)) in
+   * let left_corner =
+   *   Vec3.(middle_above <+> map (( *. ) (-0.5 *. key.config.outer_w)) dir)
+   * in
+   * let right_corner =
+   *   Vec3.(middle_above <+> map (( *. ) (0.5 *. key.config.outer_w)) dir)
+   * in *)
+  (* let left_corner = Vec3.(face.points.bot_left <+> (0., 0., key.config.thickness)) in
+   * let right_corner = Vec3.(face.points.bot_right <+> (0., 0., key.config.thickness)) in
+   * let mark t = Model.cube ~center:true (2., 2., 2.) |> Model.translate t in
+   * { scad =
+   *     Model.union [ Bezier.prism_exn bezs steps; mark left_corner; mark right_corner ]
+   * ; points = Points.of_clockwise_list_exn end_ps
+   * } *)
+  let mark t = Model.cube ~center:true (2., 2., 2.) |> Model.translate t in
+  let pivot =
+    Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
+  in
+  let a = find_angle dir pivot face.points.top_right face.points.bot_right in
+  let q = Quaternion.make dir a in
+  let rot_face = Model.quaternion_about_pt q pivot face.scad in
+  { scad =
+      Model.union
+        [ Bezier.prism_exn bezs steps |> Model.translate (0., 0., 10.)
+        ; rot_face
+        ; Quaternion.rotate_vec3_about_pt q face.points.top_right pivot |> mark
+        ]
+  ; points = Points.of_clockwise_list_exn end_ps
+  }
 
 let column_drop ?z_off ?d1 ?d2 ?n_steps ~spacing ~columns ?(kind = `Poly) side idx =
   let key, face, hanging =
