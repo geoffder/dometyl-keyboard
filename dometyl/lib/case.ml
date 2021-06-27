@@ -3,16 +3,6 @@ open! Scad_ml
 open! Infix
 
 let keyhole = KeyHole.make Niz.hole_config
-
-(* TODO: consider how columns are basically assumed to be oriented along the y-axis,
- * and how things like bez_wall would break if there were to be any fanning or
- * splaying going on in the columns. Columns are never going to be fanned, so having
- * to provide a configuration feels silly already. Can I avoid exposing fan where
- * unneccesary while still reusing curvature code effectively? Think about it when
- * designing the future type/module overhaul.
- *
- * Should consider how to make the wall attachments and their rotation/translation
- * settings could be more robust to allow splaying as a future possibility. *)
 let n_rows = 3
 let centre_idx = 1
 
@@ -59,13 +49,18 @@ module Plate = struct
   let offset_lookup = function
     | 2 -> 0., 6., -6. (* middle *)
     | 3 -> 0., 3., -2. (* ring *)
-    | i when i >= 4 -> 0., -12., 6. (* pinky *)
+    (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
+    | i when i >= 4 -> 3., -12., 6. (* pinky *)
     | _ -> 0., 0., 0.
 
   let well_lookup = function
-    (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (* pinky *)
     (* | _ -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } *)
     | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. }
+
+  let splay_lookup = function
+    | i when i >= 4 -> Float.pi /. -20. (* pinky *)
+    | _ -> 0.
 
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
@@ -81,17 +76,16 @@ module Plate = struct
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
 
   let place_col ~key:i ~data:off =
-    apply_tent off (well_column @@ well_lookup i) |> Column.translate off
+    apply_tent off (well_column @@ well_lookup i)
+    |> Column.rotate (0., 0., splay_lookup i)
+    |> Column.translate off
 
   let columns, thumb =
     let placed_cols = Map.mapi ~f:place_col col_offsets in
     let lift =
       let lowest_z =
         let face_low ({ points = ps; _ } : KeyHole.Face.t) =
-          KeyHole.Face.Points.fold
-            ~f:(fun m p -> Float.min m (Vec3.get_z p))
-            ~init:Float.max_value
-            ps
+          Points.fold ~f:(fun m p -> Float.min m (Vec3.get_z p)) ~init:Float.max_value ps
         in
         let key_low ({ faces = fs; _ } : _ KeyHole.t) =
           KeyHole.Faces.fold
@@ -133,9 +127,9 @@ module Plate = struct
 
   let bez_wall =
     (* Walls.column_drop ~spacing ~columns ~z_off:0. ~d1:4. ~d2:7. ~n_steps:10 ~kind:`Cyl *)
-    Walls.column_drop ~spacing ~columns ~z_off:0. ~d1:4. ~d2:7. ~n_steps:3 ~kind:`Poly
+    Walls.column_drop ~spacing ~columns ~z_off:0. ~d1:4. ~d2:7. ~n_steps:5 ~kind:`Poly
 
-  let siding = Walls.poly_siding ~n_steps:3
+  let siding = Walls.poly_siding ~n_steps:5
 
   let scad =
     Model.union
@@ -155,6 +149,7 @@ module Plate = struct
       ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0)).scad
         (* ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)).scad
          * ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2)).scad *)
+        (* ; (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)).scad *)
       ; (siding `North (Map.find_exn thumb.keys 0)).scad
       ; (siding `West (Map.find_exn thumb.keys 0)).scad
       ; (siding `South (Map.find_exn thumb.keys 0)).scad
