@@ -43,7 +43,7 @@ module Plate = struct
   let tent = Float.pi /. 12.
   let thumb_offset = 7., -50., -3.
   let thumb_angle = Float.(0., pi /. -4., pi /. 5.)
-  let clearance = 7.
+  let clearance = 5.
 
   (* TODO: tune *)
   let offset_lookup = function
@@ -54,9 +54,9 @@ module Plate = struct
     | _ -> 0., 0., 0.
 
   let well_lookup = function
-    | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (* pinky *)
-    (* | _ -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } *)
-    | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. }
+    (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    | _ -> Curvature.{ angle = Float.pi /. 9.; radius = 60. }
+  (* | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. } *)
 
   let splay_lookup = function
     | i when i >= 4 -> Float.pi /. -20. (* pinky *)
@@ -114,22 +114,30 @@ module Plate = struct
     Map.map ~f:(Column.translate (0., 0., lift)) placed_cols, thumb
 
   let column_joins =
-    let join = Walls.join_columns ~columns in
+    let join = Bridge.cols ~columns in
     Model.union [ join 0 1; join 1 2; join 2 3; join 3 4 ]
 
   let support_bridges =
     let bridge c k =
-      Walls.key_bridge
+      Bridge.keys
         (Map.find_exn (Map.find_exn columns c).keys k)
         (Map.find_exn (Map.find_exn columns (c + 1)).keys k)
     in
     Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
 
   let bez_wall =
-    (* Walls.column_drop ~spacing ~columns ~z_off:0. ~d1:4. ~d2:7. ~n_steps:10 ~kind:`Cyl *)
-    Walls.column_drop ~spacing ~columns ~z_off:0. ~d1:4. ~d2:7. ~n_steps:5 ~kind:`Poly
+    Wall.column_drop
+      ~spacing
+      ~columns
+      ~z_off:0.
+      ~d1:2.
+      ~d2:5.
+      ~thickness:3.5
+      ~n_steps:5
+      ~kind:`Poly
 
-  let siding = Walls.poly_siding ~n_steps:5
+  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
+  let thumb_siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
 
   let scad =
     Model.union
@@ -150,13 +158,11 @@ module Plate = struct
         (* ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)).scad
          * ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2)).scad *)
         (* ; (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)).scad *)
-      ; (siding `North (Map.find_exn thumb.keys 0)).scad
-      ; (siding `West (Map.find_exn thumb.keys 0)).scad
-      ; (siding `South (Map.find_exn thumb.keys 0)).scad
-      ; (siding `South (Map.find_exn thumb.keys 2)).scad
+      ; (thumb_siding `West (Map.find_exn thumb.keys 0)).scad
+      ; (thumb_siding `North (Map.find_exn thumb.keys 0)).scad
+      ; (thumb_siding `South (Map.find_exn thumb.keys 0)).scad
+      ; (thumb_siding `South (Map.find_exn thumb.keys 2)).scad
       ; support_bridges
-      ; (siding `South (Map.find_exn thumb.keys 2)).scad
-      ; (siding `South (Map.find_exn thumb.keys 2)).scad
       ]
 
   let t = { scad; columns; thumb }
