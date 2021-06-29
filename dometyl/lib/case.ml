@@ -163,6 +163,13 @@ module Plate = struct
       ; (thumb_siding `South (Map.find_exn thumb.keys 0)).scad
       ; (thumb_siding `South (Map.find_exn thumb.keys 2)).scad
       ; support_bridges
+      ; Walls.Body.base
+          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
+          (bez_wall `North 0)
+      ; Walls.Body.base (bez_wall `North 0) (bez_wall `North 1)
+      ; Walls.Body.base ~height:8. (bez_wall `North 1) (bez_wall `North 2)
+      ; Walls.Body.base ~height:8. (bez_wall `North 2) (bez_wall `North 3)
+      ; Walls.Body.base ~height:8. (bez_wall `North 3) (bez_wall `North 4)
       ]
 
   let t = { scad; columns; thumb }
