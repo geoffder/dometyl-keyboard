@@ -24,6 +24,50 @@ module Body = struct
     { cols : col Map.M(Int).t
     ; sides : sides
     }
+
+  let base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+    let ((dx, dy, _) as dir1) = Points.direction w1.points
+    and dir2 = Points.direction w2.points in
+    let mask = if Float.(abs dx > abs dy) then 1., 0., 0. else 0., 1., 0. in
+    let get_bez start dest =
+      let diff = Vec3.(dest <-> start) in
+      let p1 = Vec3.(start <+> mul dir1 (0.5, 0.5, 0.)) (* fudge for union *)
+      and p2 = Vec3.(start <+> mul mask diff)
+      (* and p3 = Vec3.(dest <+> mul dir2 (0.0002, 0.0002, 0.)) in *)
+      and p3 = Vec3.(dest <-> mul dir2 (0.5, 0.5, 0.)) in
+      Bezier.quad_vec3 ~p1 ~p2 ~p3
+    in
+    let h = 0., 0., height in
+    let starts =
+      let mid = Vec3.(map (( *. ) 0.5) (w1.points.top_right <+> w1.points.bot_right)) in
+      Vec3.
+        [ w1.points.bot_right
+        ; w1.points.top_right
+        ; map (( *. ) 0.5) (w1.points.top_right <+> mid) <+> h
+        ; map (( *. ) 0.5) (w1.points.bot_right <+> mid) <+> h
+          (* ; w1.points.top_right <+> h
+           * ; w1.points.bot_right <+> h *)
+        ]
+    in
+    let dests =
+      let mid = Vec3.(map (( *. ) 0.5) (w2.points.top_left <+> w2.points.bot_left)) in
+      Vec3.
+        [ w2.points.bot_left
+        ; w2.points.top_left
+        ; map (( *. ) 0.5) (w2.points.top_left <+> mid) <+> h
+        ; map (( *. ) 0.5) (w2.points.bot_left <+> mid) <+> h
+          (* ; w2.points.top_left <+> h
+           * ; w2.points.bot_left <+> h *)
+        ]
+    in
+    let steps =
+      let norms = List.map2_exn ~f:(fun s d -> Vec3.(norm (s <-> d))) starts dests in
+      let lowest_norm = List.fold ~init:Float.max_value ~f:Float.min norms in
+      let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in
+      `Ragged (List.map ~f:adjust norms)
+    (* `Uniform n_steps *)
+    and bezs = List.map2_exn ~f:get_bez starts dests in
+    Bezier.prism_exn bezs steps
 end
 
 module Thumb = struct
