@@ -37,8 +37,7 @@ module Face = struct
     ; points = Points.quaternion_about_pt q p t.points
     }
 
-  let direction { points = { top_left; top_right; _ }; _ } =
-    Vec3.normalize Vec3.(top_left <-> top_right)
+  let direction { points; _ } = Points.direction points
 end
 
 module Faces = struct
