@@ -134,11 +134,12 @@ let poly_siding
     Vec3.(
       mul (1., 1., 0.) (pivoted_face.points.bot_right <-> pivoted_face.points.top_right))
   in
-  let get_bez top ((x, y, z) as p1) =
+  let get_bez top ((x, y, z) as start) =
     let jog, d1, plus =
       if top then thickness, d1 +. ((d2 -. d1) /. 2.), top_offset else 0., d1, (0., 0., 0.)
     in
-    let p2 =
+    let p1 = Vec3.(start <-> mul ortho (0.0002, 0.0002, 0.0002)) (* fudge for union *)
+    and p2 =
       Vec3.(
         mul xy (d1 +. jog, d1 +. jog, 0.)
         |> add (x +. x_off, y +. y_off, z +. z_hop)
