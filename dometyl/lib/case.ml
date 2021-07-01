@@ -126,15 +126,7 @@ module Plate = struct
     Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
 
   let bez_wall =
-    Wall.column_drop
-      ~spacing
-      ~columns
-      ~z_off:0.
-      ~d1:2.
-      ~d2:5.
-      ~thickness:3.5
-      ~n_steps:5
-      ~kind:`Poly
+    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
 
   let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
   let thumb_siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
@@ -163,13 +155,17 @@ module Plate = struct
       ; (thumb_siding `South (Map.find_exn thumb.keys 0)).scad
       ; (thumb_siding `South (Map.find_exn thumb.keys 2)).scad
       ; support_bridges
-      ; Walls.Body.base
+      ; Walls.Body.bez_base
           (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
           (bez_wall `North 0)
-      ; Walls.Body.base (bez_wall `North 0) (bez_wall `North 1)
-      ; Walls.Body.base ~height:8. (bez_wall `North 1) (bez_wall `North 2)
-      ; Walls.Body.base ~height:8. (bez_wall `North 2) (bez_wall `North 3)
-      ; Walls.Body.base ~height:8. (bez_wall `North 3) (bez_wall `North 4)
+        (* ; Walls.Body.bez_base (bez_wall `North 0) (bez_wall `North 1)
+         * ; Walls.Body.bez_base ~height:8. (bez_wall `North 1) (bez_wall `North 2)
+         * ; Walls.Body.bez_base ~height:8. (bez_wall `North 2) (bez_wall `North 3)
+         * ; Walls.Body.bez_base ~height:8. (bez_wall `North 3) (bez_wall `North 4) *)
+      ; Walls.Body.straight_base (bez_wall `North 0) (bez_wall `North 1)
+      ; Walls.Body.straight_base ~height:8. (bez_wall `North 1) (bez_wall `North 2)
+      ; Walls.Body.straight_base ~height:8. (bez_wall `North 2) (bez_wall `North 3)
+      ; Walls.Body.straight_base ~height:8. (bez_wall `North 3) (bez_wall `North 4)
       ]
 
   let t = { scad; columns; thumb }
