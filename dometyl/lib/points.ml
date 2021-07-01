@@ -26,7 +26,6 @@ let rotate r = map ~f:(Vec3.rotate r)
 let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
 let quaternion q = map ~f:(Quaternion.rotate_vec3 q)
 let quaternion_about_pt q p = map ~f:(Quaternion.rotate_vec3_about_pt q p)
-let direction { top_left; top_right; _ } = Vec3.normalize Vec3.(top_left <-> top_right)
 let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
 
 let of_clockwise_list_exn = function
