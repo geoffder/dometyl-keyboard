@@ -32,6 +32,14 @@ let prism_exn a b =
  * be separate since the pattern is different there. Makes sense to have the separate
  * modules with their own make functions then. *)
 
+(* TODO: While I am cooking up the way that Wall generation is handled, consider adusting
+ * the d1/d2 values, particularly on the southern side, along with the differing
+ * y-values of the end key face. Could look nice, while also maybe making the base
+ * generation easier. Could even consider an x-offset on the middle finger column,
+ * but that could cause it's own problems as well.
+ * (Could have these adjustments as an option for the wall generation function. Either
+ * give the closures or settings explicitly, or leave it up to the calculations. ) *)
+
 (* TODO:
  * - cubic bezier base function for use on easter side when there is no siding
  * there (should be the default, will probably look nicer).
