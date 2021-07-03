@@ -166,3 +166,6 @@ let column_drop ?z_off ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
     | _           -> 0.
   in
   poly_siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 ?thickness ?n_steps side key
+
+let direction { points = { top_left; top_right; _ }; _ } =
+  Vec3.normalize Vec3.(top_left <-> top_right)
