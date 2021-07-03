@@ -131,6 +131,15 @@ module Plate = struct
   let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
   let thumb_siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
 
+  let eastern_siding =
+    Wall.poly_siding
+      ~d1:1.
+      ~d2:2.
+      ~thickness:3.5
+      ~n_steps:5
+      `East
+      (Map.find_exn (Map.find_exn columns 4).keys 2)
+
   let scad =
     Model.union
       [ Model.union
@@ -150,6 +159,7 @@ module Plate = struct
         (* ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)).scad
          * ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2)).scad *)
         (* ; (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)).scad *)
+      ; eastern_siding.scad
       ; (thumb_siding `West (Map.find_exn thumb.keys 0)).scad
       ; (thumb_siding `North (Map.find_exn thumb.keys 0)).scad
       ; (thumb_siding `South (Map.find_exn thumb.keys 0)).scad
@@ -166,6 +176,38 @@ module Plate = struct
       ; Walls.Body.straight_base ~height:8. (bez_wall `North 1) (bez_wall `North 2)
       ; Walls.Body.straight_base ~height:8. (bez_wall `North 2) (bez_wall `North 3)
       ; Walls.Body.straight_base ~height:8. (bez_wall `North 3) (bez_wall `North 4)
+      ; Walls.Body.straight_base ~height:8. (bez_wall `South 4) (bez_wall `South 3)
+      ; Walls.Body.straight_base ~height:8. (bez_wall `South 3) (bez_wall `South 2)
+        (* ; Walls.Body.straight_base
+         *     ~height:8.
+         *     (bez_wall `South 2)
+         *     (thumb_siding `South (Map.find_exn thumb.keys 2)) *)
+      ; Walls.Body.bez_base
+          ~height:8.
+          (thumb_siding `South (Map.find_exn thumb.keys 2))
+          (thumb_siding `South (Map.find_exn thumb.keys 0))
+      ; Walls.Body.bez_base
+          ~height:4.
+          (thumb_siding `South (Map.find_exn thumb.keys 0))
+          (thumb_siding `West (Map.find_exn thumb.keys 0))
+      ; Walls.Body.bez_base
+          ~height:4.
+          (thumb_siding `West (Map.find_exn thumb.keys 0))
+          (thumb_siding `North (Map.find_exn thumb.keys 0))
+      ; Walls.Body.straight_base
+          ~height:11.
+          (thumb_siding `North (Map.find_exn thumb.keys 0))
+          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
+      ; Walls.Body.bez_base
+          ~height:4.
+          (bez_wall `North 4)
+          (* (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)) *)
+          eastern_siding
+      ; Walls.Body.bez_base
+          ~height:4.
+          (* (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)) *)
+          eastern_siding
+          (bez_wall `South 4)
       ]
 
   let t = { scad; columns; thumb }
