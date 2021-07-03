@@ -19,7 +19,7 @@ let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
 module Edge = struct
   type t = float -> Vec3.t
 
-  let point_at_z ?(max_iter = 100) ?(tolerance = 0.1) t z =
+  let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
     let bez_frac =
       bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
     in
