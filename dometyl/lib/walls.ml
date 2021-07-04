@@ -50,16 +50,15 @@ let prism_exn a b =
  * then hull those. *)
 
 let base_endpoints ~height hand (w : Wall.t) =
-  let top_pt, bot_pt, top_edge, bot_edge =
+  let top, bot =
     match hand with
-    | `Left  -> w.points.top_left, w.points.bot_left, w.edges.top_left, w.edges.bot_left
-    | `Right ->
-      w.points.top_right, w.points.bot_right, w.edges.top_right, w.edges.bot_right
+    | `Left  -> `TL, `BL
+    | `Right -> `TR, `BR
   in
-  [ bot_pt
-  ; top_pt
-  ; Wall.Edge.point_at_z top_edge height
-  ; Wall.Edge.point_at_z bot_edge height
+  [ Points.get w.points bot
+  ; Points.get w.points top
+  ; Wall.(Edge.point_at_z (Edges.get w.edges top) height)
+  ; Wall.(Edge.point_at_z (Edges.get w.edges bot) height)
   ]
 
 let base_steps ~n_steps starts dests =
@@ -188,7 +187,10 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
    * to fill in the area between these as well, I would need their end faces to
    * hull with, or perhaps the points of the swung face (only the top points will
    * be different) which can be used with the 0 points of the edges to create the
-   * polyhedrons I would need. *)
+   * polyhedrons I would need.
+   *
+   * NOTE: this is actually incorrect, the bezier emerges from the swung face, so
+   * I should store the key face points and swung points in Wall.t so I maintain access. *)
   let ((dx, dy, _) as dir1) = Wall.direction w1
   and dir2 = Wall.direction w2 in
   let fudge =
