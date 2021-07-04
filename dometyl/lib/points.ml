@@ -9,6 +9,14 @@ type t =
   ; centre : Vec3.t
   }
 
+type pos =
+  [ `TL
+  | `TR
+  | `BL
+  | `BR
+  | `CN
+  ]
+
 let map ~f t =
   { top_left = f t.top_left
   ; top_right = f t.top_right
@@ -42,6 +50,13 @@ let of_clockwise_list_exn = function
 let of_clockwise_list l =
   try Ok (of_clockwise_list_exn l) with
   | Failure e -> Error e
+
+let get t = function
+  | `TL -> t.top_left
+  | `TR -> t.top_right
+  | `BL -> t.bot_left
+  | `BR -> t.bot_right
+  | `CN -> t.centre
 
 let mark t =
   let f p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in

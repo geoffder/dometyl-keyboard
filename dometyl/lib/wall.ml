@@ -42,6 +42,12 @@ module Edges = struct
   let of_clockwise_list l =
     try Ok (of_clockwise_list_exn l) with
     | Failure e -> Error e
+
+  let get t = function
+    | `TL -> t.top_left
+    | `TR -> t.top_right
+    | `BL -> t.bot_left
+    | `BR -> t.bot_right
 end
 
 type t =
