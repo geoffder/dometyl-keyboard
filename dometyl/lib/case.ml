@@ -150,10 +150,7 @@ module Plate = struct
       ; (bez_wall `South 3).scad
       ; (bez_wall `North 4).scad
       ; (bez_wall `South 4).scad
-      ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0)).scad
-        (* ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)).scad
-         * ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2)).scad *)
-        (* ; (siding `East (Map.find_exn (Map.find_exn columns 4).keys 2)).scad *)
+      ; (siding `West (Columns.key_exn columns 0 0)).scad
       ; (Wall.poly_siding
            ~d1:1.
            ~d2:2.
@@ -170,9 +167,7 @@ module Plate = struct
   let skel =
     Model.union
       [ support_bridges
-      ; Walls.bez_base
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
-          (bez_wall `North 0)
+      ; Walls.bez_base (siding `West (Columns.key_exn columns 0 0)) (bez_wall `North 0)
       ; Walls.straight_base (bez_wall `North 0) (bez_wall `North 1)
       ; Walls.straight_base ~height:7. (bez_wall `North 1) (bez_wall `North 2)
       ; Walls.straight_base ~height:7. (bez_wall `North 2) (bez_wall `North 3)
@@ -207,27 +202,26 @@ module Plate = struct
           ~scale:1.
           ~height:11.
           (thumb_siding `North (Map.find_exn thumb.keys 0))
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
+          (siding `West (Columns.key_exn columns 0 0))
       ]
 
   let closed =
     Model.union
       [ column_joins
-      ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1)).scad
-      ; (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2)).scad
+      ; (siding `West (Columns.key_exn columns 0 1)).scad
+      ; (siding `West (Columns.key_exn columns 0 2)).scad
       ; (eastern_siding 0).scad
       ; (eastern_siding 1).scad
       ; (eastern_siding 2).scad
       ; (thumb_siding `South (Map.find_exn thumb.keys 1)).scad
+      ; (thumb_siding `East (Map.find_exn thumb.keys 2)).scad
       ; Walls.join_walls
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1))
+          (siding `West (Columns.key_exn columns 0 0))
+          (siding `West (Columns.key_exn columns 0 1))
       ; Walls.join_walls
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 1))
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2))
-      ; Walls.join_walls
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 2))
-          (bez_wall `North 0)
+          (siding `West (Columns.key_exn columns 0 1))
+          (siding `West (Columns.key_exn columns 0 2))
+      ; Walls.join_walls (siding `West (Columns.key_exn columns 0 2)) (bez_wall `North 0)
       ; Walls.join_walls (bez_wall `North 0) (bez_wall `North 1)
       ; Walls.join_walls (bez_wall `North 1) (bez_wall `North 2)
       ; Walls.join_walls (bez_wall `North 2) (bez_wall `North 3)
@@ -239,11 +233,11 @@ module Plate = struct
       ; Walls.join_walls (bez_wall `South 4) (bez_wall `South 3)
       ; Walls.join_walls (bez_wall `South 3) (bez_wall `South 2)
       ; Walls.join_walls
+          (thumb_siding `East (Map.find_exn thumb.keys 2))
+          (thumb_siding `South (Map.find_exn thumb.keys 2))
+      ; Walls.join_walls
           (thumb_siding `South (Map.find_exn thumb.keys 2))
           (thumb_siding `South (Map.find_exn thumb.keys 0))
-        (* ; Walls.join_walls
-         *     (thumb_siding `South (Map.find_exn thumb.keys 1))
-         *     (thumb_siding `South (Map.find_exn thumb.keys 0)) *)
       ; Walls.join_walls
           ~fudge_factor:0.
           (thumb_siding `South (Map.find_exn thumb.keys 0))
@@ -260,7 +254,7 @@ module Plate = struct
           (thumb_siding `North (Map.find_exn thumb.keys 0))
       ; Walls.join_walls
           (thumb_siding `North (Map.find_exn thumb.keys 0))
-          (siding `West (Map.find_exn (Map.find_exn columns 0).keys 0))
+          (siding `West (Columns.key_exn columns 0 0))
       ]
 
   let scad = Model.union [ scad; skel ]
