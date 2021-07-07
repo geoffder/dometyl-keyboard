@@ -50,6 +50,9 @@ module Edges = struct
     | `BR -> t.bot_right
 end
 
+(* TODO: store original keyface coordinates (important for joining walls for
+ * closed designs, otherwise their are trought created by the fact that the edges
+ * actually begin away from the wall on the "swung" face. *)
 type t =
   { scad : Model.t
   ; points : Points.t
@@ -82,6 +85,9 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
   in
   face', ortho'
 
+(* TODO: add ability to specify steps per distance that wall will travel from the
+ * key face as opposed to an absolute number of steps. This should help protect against
+ * breakage when walls become too short, making the flat number of steps too great. *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)

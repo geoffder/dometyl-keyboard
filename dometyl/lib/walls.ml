@@ -200,6 +200,14 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
   in
   prism_exn starts dests
 
+(* TODO: add a hull wall join
+ * - mainly for stitching the index columns together, as high tent causes them to
+ *   overlap, causing polyhedron based joining methods to fail.
+ * - slide and difference the walls from themselves along their direction, then
+ *   hull the resulting faces
+ * - may as well default to joining the indexes like this even in skeleton mode for the
+ *   simplicity. They are already so close anyway, and this way there is no fretting
+ *   about placing the port holes. *)
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   (* TODO: This actually works pretty well as a first pass, but it does not account
    * for the "swing_face" hull that has not been stored as part of Wall.t. In order
