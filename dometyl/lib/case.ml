@@ -6,12 +6,6 @@ let keyhole = KeyHole.make Niz.hole_config
 let n_rows = 3
 let centre_idx = 1
 
-let column =
-  Column.make
-    ~n_keys:n_rows
-    ~curve:Curvature.(place ~well:{ angle = Float.pi /. 12.; radius = 85. } ~centre_idx)
-    keyhole
-
 let well_column spec =
   Column.make ~n_keys:n_rows ~curve:Curvature.(place ~well:spec ~centre_idx) keyhole
 
@@ -22,8 +16,8 @@ let thumb =
       ~n_keys:3
       ~curve:
         Curvature.(
-          place
-            ~well:{ angle = Float.pi /. 12.; radius = 85. }
+          place (* ~well:{ angle = Float.pi /. 12.; radius = 85. } *)
+            ~well:{ angle = Float.pi /. 9.; radius = 60. }
             ~fan:{ angle = Float.pi /. 12.; radius = 85. }
             ~centre_idx:1)
       (KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole)
@@ -43,7 +37,7 @@ module Plate = struct
   let tent = Float.pi /. 12.
   let thumb_offset = 7., -50., -3.
   let thumb_angle = Float.(0., pi /. -4., pi /. 5.)
-  let clearance = 5.
+  let clearance = 6.5
 
   (* TODO: tune *)
   let offset_lookup = function
@@ -104,14 +98,13 @@ module Plate = struct
           ~init:Float.max_value
           placed_cols
       in
-      clearance -. lowest_z
+      Column.translate (0., 0., clearance -. lowest_z)
     in
     let thumb =
       let placed = Column.(rotate thumb_angle thumb |> translate thumb_offset) in
-      apply_tent (Map.find_exn placed.keys 1).origin placed
-      |> Column.translate (0., 0., lift)
+      apply_tent (Map.find_exn placed.keys 1).origin placed |> lift
     in
-    Map.map ~f:(Column.translate (0., 0., lift)) placed_cols, thumb
+    Map.map ~f:lift placed_cols, thumb
 
   let column_joins =
     let join = Bridge.cols ~columns in
@@ -125,11 +118,12 @@ module Plate = struct
     in
     Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
 
-  let bez_wall =
-    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
+  let bez_wall ?(d1 = 2.) ?(d2 = 5.) =
+    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1 ~d2 ~thickness:3.5 ~n_steps:4
 
-  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:5
-  let thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:5
+  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:4
+  let lower_thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:2
+  let thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:4
 
   let eastern_siding i =
     let key = Map.find_exn (Map.find_exn columns 4).keys i in
@@ -145,10 +139,10 @@ module Plate = struct
       ; (bez_wall `North 0).scad
       ; (bez_wall `North 1).scad
       ; (bez_wall `North 2).scad
-      ; (bez_wall `South 2).scad
       ; (bez_wall `North 3).scad
-      ; (bez_wall `South 3).scad
       ; (bez_wall `North 4).scad
+      ; (bez_wall `South 2).scad
+      ; (bez_wall `South 3).scad
       ; (bez_wall `South 4).scad
       ; (siding `West (Columns.key_exn columns 0 0)).scad
       ; (Wall.poly_siding
@@ -159,8 +153,8 @@ module Plate = struct
            `West
            (Map.find_exn thumb.keys 0) )
           .scad
-      ; (thumb_siding `North (Map.find_exn thumb.keys 0)).scad
-      ; (thumb_siding `South (Map.find_exn thumb.keys 0)).scad
+      ; (lower_thumb_siding `North (Map.find_exn thumb.keys 0)).scad
+      ; (lower_thumb_siding `South (Map.find_exn thumb.keys 0)).scad
       ; (thumb_siding `South (Map.find_exn thumb.keys 2)).scad
       ]
 
@@ -172,8 +166,10 @@ module Plate = struct
       ; Walls.straight_base ~height:7. (bez_wall `North 1) (bez_wall `North 2)
       ; Walls.straight_base ~height:7. (bez_wall `North 2) (bez_wall `North 3)
       ; Walls.straight_base ~height:7. (bez_wall `North 3) (bez_wall `North 4)
+        (* ; Walls.inward_elbow_base ~height:5. (bez_wall `North 3) (bez_wall `North 4) *)
       ; Walls.cubic_base ~height:4. (bez_wall `North 4) (bez_wall `South 4)
-      ; Walls.straight_base ~height:7. (bez_wall `South 4) (bez_wall `South 3)
+      ; Walls.inward_elbow_base ~height:7. (bez_wall `South 4) (bez_wall `South 3)
+        (* ; Walls.straight_base ~height:7. (bez_wall `South 4) (bez_wall `South 3) *)
       ; Walls.straight_base ~height:7. (bez_wall `South 3) (bez_wall `South 2)
       ; Walls.snake_base
           ~height:8.
