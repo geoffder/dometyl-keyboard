@@ -40,15 +40,6 @@ let prism_exn a b =
  * (Could have these adjustments as an option for the wall generation function. Either
  * give the closures or settings explicitly, or leave it up to the calculations. ) *)
 
-(* TODO:
- * - cubic bezier base function for use on easter side when there is no siding
- * there (should be the default, will probably look nicer).
- * - full wall connection function (try drawing a face for each using the bezier
- * edges, then pass these to the basic prism generator to try and "hull" them).
- * - if the polyhedron full connection doesn't work due to overlapping points at
- * the top, then try making faces by direction sliding subtraction (carried by Wall.t?)
- * then hull those. *)
-
 let base_endpoints ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
@@ -134,6 +125,34 @@ let snake_base
   let dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map3_exn ~f:get_bez [ false; true; true; false ] starts dests in
+  Bezier.prism_exn bezs steps
+
+let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+  (* Quad bezier, but starting from the bottom (inside face) of the wall and
+   * projecting inward. This is so similar to bez_base that some generalization may
+   * be possible to spare the duplication. Perhaps an option of whether the start is
+   * the inward face (on the right) or the usual CW facing right side. *)
+  let dir1 = Wall.direction w1
+  and dir2 = Wall.direction w2
+  and ((inx, iny, _) as inward_dir) =
+    Vec3.normalize Vec3.(w1.points.bot_right <-> w1.points.top_right)
+  in
+  let mask = if Float.(abs inx > abs iny) then 1., 0., 0. else 0., 1., 0. in
+  let get_bez start dest =
+    let diff = Vec3.(dest <-> start) in
+    let p1 = Vec3.(start <-> mul inward_dir (0.01, 0.01, 0.)) (* fudge for union *)
+    and p2 = Vec3.(start <+> mul mask diff)
+    and p3 = Vec3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
+    Bezier.quad_vec3 ~p1 ~p2 ~p3
+  in
+  let starts =
+    let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
+    let w = Vec3.(norm (w1.points.bot_right <-> w1.points.top_right)) in
+    let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
+    [ slide w1.points.bot_right; w1.points.bot_right; up_bot; slide up_bot ]
+  and dests = base_endpoints ~height `Left w2 in
+  let steps = base_steps ~n_steps starts dests
+  and bezs = List.map2_exn ~f:get_bez starts dests in
   Bezier.prism_exn bezs steps
 
 let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.t) =
@@ -238,6 +257,17 @@ module Body = struct
     { cols : col Map.M(Int).t
     ; sides : sides
     }
+
+  (* let skeleton
+   *     ?(d1 = 2.)
+   *     ?(d2 = 5.)
+   *     ~spacing
+   *     ~columns
+   *     ?(z_off = 0.)
+   *     ?(thickness = 3.5)
+   *     ?(n_steps = 5)
+   *   =
+   *   () *)
 end
 
 module Thumb = struct
