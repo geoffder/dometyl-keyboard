@@ -55,7 +55,8 @@ end
  * actually begin away from the wall on the "swung" face. *)
 type t =
   { scad : Model.t
-  ; points : Points.t
+  ; start : Points.t
+  ; foot : Points.t
   ; edges : Edges.t
   }
 
@@ -145,7 +146,8 @@ let poly_siding
   { scad =
       Model.union
         [ Model.hull [ start_face.scad; pivoted_face.scad ]; Bezier.prism_exn bezs steps ]
-  ; points = Points.of_clockwise_list_exn end_ps
+  ; start = start_face.points
+  ; foot = Points.of_clockwise_list_exn end_ps
   ; edges = Edges.of_clockwise_list_exn bezs
   }
 
@@ -179,5 +181,5 @@ let column_drop ?z_off ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
   in
   poly_siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 ?thickness ?n_steps side key
 
-let direction { points = { top_left; top_right; _ }; _ } =
+let direction { foot = { top_left; top_right; _ }; _ } =
   Vec3.normalize Vec3.(top_left <-> top_right)
