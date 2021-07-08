@@ -21,7 +21,7 @@ let prism_exn a b =
       List.range 0 n :: List.range ~stride:(-1) ((n * 2) - 1) (n - 1) :: sides
     in
     Model.polyhedron pts faces )
-  else failwith "At faces must have equal number of vertices."
+  else failwith "Faces must have equal number of vertices."
 
 (* TODO: Come up with how I would like to organize the generated walls, such that
  * joining them up will be sensical.
@@ -32,22 +32,14 @@ let prism_exn a b =
  * be separate since the pattern is different there. Makes sense to have the separate
  * modules with their own make functions then. *)
 
-(* TODO: While I am cooking up the way that Wall generation is handled, consider adusting
- * the d1/d2 values, particularly on the southern side, along with the differing
- * y-values of the end key face. Could look nice, while also maybe making the base
- * generation easier. Could even consider an x-offset on the middle finger column,
- * but that could cause it's own problems as well.
- * (Could have these adjustments as an option for the wall generation function. Either
- * give the closures or settings explicitly, or leave it up to the calculations. ) *)
-
 let base_endpoints ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
     | `Left  -> `TL, `BL
     | `Right -> `TR, `BR
   in
-  [ Points.get w.points bot
-  ; Points.get w.points top
+  [ Points.get w.foot bot
+  ; Points.get w.foot top
   ; Wall.(Edge.point_at_z (Edges.get w.edges top) height)
   ; Wall.(Edge.point_at_z (Edges.get w.edges bot) height)
   ]
@@ -86,7 +78,7 @@ let cubic_base
   let dir1 = Wall.direction w1
   and dir2 = Wall.direction w2
   and dist = d, d, 0.
-  and width = Vec3.(norm (w1.points.top_right <-> w1.points.bot_right)) *. scale in
+  and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
   let get_bez top start dest =
     let outward = if top then Vec3.add (width, width, 0.) dist else dist in
     let p1 = Vec3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
@@ -112,7 +104,7 @@ let snake_base
   let dir1 = Wall.direction w1
   and dir2 = Wall.direction w2
   and dist = d, d, 0.
-  and width = Vec3.(norm (w1.points.top_right <-> w1.points.bot_right)) *. scale in
+  and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
   let get_bez top start dest =
     let outward = Vec3.add (width, width, 0.) dist in
     let p1 = Vec3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
@@ -135,7 +127,7 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
   let dir1 = Wall.direction w1
   and dir2 = Wall.direction w2
   and ((inx, iny, _) as inward_dir) =
-    Vec3.normalize Vec3.(w1.points.bot_right <-> w1.points.top_right)
+    Vec3.normalize Vec3.(w1.foot.bot_right <-> w1.foot.top_right)
   in
   let mask = if Float.(abs inx > abs iny) then 1., 0., 0. else 0., 1., 0. in
   let get_bez start dest =
@@ -147,15 +139,17 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
   in
   let starts =
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
-    let w = Vec3.(norm (w1.points.bot_right <-> w1.points.top_right)) in
+    let w = Vec3.(norm (w1.foot.bot_right <-> w1.foot.top_right)) in
     let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
-    [ slide w1.points.bot_right; w1.points.bot_right; up_bot; slide up_bot ]
+    [ slide w1.foot.bot_right; w1.foot.bot_right; up_bot; slide up_bot ]
   and dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
   Bezier.prism_exn bezs steps
 
 let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.t) =
+  (* TODO: mimic the fix for overlappin walls done in join_walls here. If anything can
+   * be factored out, do so. *)
   let ((dx, dy, _) as dir1) = Wall.direction w1
   and dir2 = Wall.direction w2 in
   let fudge d =
@@ -165,8 +159,8 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     let extra =
       let diff =
         Vec3.(
-          mean [ w1.points.bot_right; w1.points.top_right ]
-          <-> mean [ w2.points.bot_left; w2.points.top_left ])
+          mean [ w1.foot.bot_right; w1.foot.top_right ]
+          <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
       in
       let major = if Float.(abs dx > abs dy) then Vec3.get_x diff else Vec3.get_y diff in
       Float.(abs (min (abs major -. fudge_factor) 0.))
@@ -176,13 +170,13 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
   let outward =
     (* away from the centre of mass, or not? *)
     Float.(
-      Vec3.(norm @@ (w1.points.top_right <-> w2.points.top_left))
-      > Vec3.(norm @@ (w1.points.top_right <-> w2.points.bot_left)))
+      Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.top_left))
+      > Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.bot_left)))
   in
   let starts =
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
-    [ (if not outward then fudge dir1 w1.points.bot_right else w1.points.bot_right)
-    ; w1.points.top_right
+    [ (if not outward then fudge dir1 w1.foot.bot_right else w1.foot.bot_right)
+    ; w1.foot.top_right
     ; Wall.Edge.point_at_z w1.edges.top_right height
     ; (if not outward then fudge dir1 up_bot else up_bot)
     ]
@@ -191,8 +185,8 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     let up_top = Wall.Edge.point_at_z w2.edges.top_left height
     and up_bot = Wall.Edge.point_at_z w2.edges.bot_left height
     and slide = fudge (Vec3.negate dir2) in
-    [ (if outward then slide w2.points.bot_left else w2.points.bot_left)
-    ; w2.points.top_left
+    [ (if outward then slide w2.foot.bot_left else w2.foot.bot_left)
+    ; w2.foot.top_left
     ; up_top
     ; (if outward then slide up_bot else up_bot)
     ]
@@ -200,14 +194,6 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
   in
   prism_exn starts dests
 
-(* TODO: add a hull wall join
- * - mainly for stitching the index columns together, as high tent causes them to
- *   overlap, causing polyhedron based joining methods to fail.
- * - slide and difference the walls from themselves along their direction, then
- *   hull the resulting faces
- * - may as well default to joining the indexes like this even in skeleton mode for the
- *   simplicity. They are already so close anyway, and this way there is no fretting
- *   about placing the port holes. *)
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   (* TODO: This actually works pretty well as a first pass, but it does not account
    * for the "swing_face" hull that has not been stored as part of Wall.t. In order
@@ -220,35 +206,67 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
    * I should store the key face points and swung points in Wall.t so I maintain access. *)
   let ((dx, dy, _) as dir1) = Wall.direction w1
   and dir2 = Wall.direction w2 in
+  let major_diff, minor_diff =
+    let x, y, _ =
+      Vec3.(
+        mean [ w1.foot.bot_right; w1.foot.top_right ]
+        <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
+    in
+    if Float.(abs dx > abs dy) then x, y else y, x
+  in
+  (* Move the destination points along the outer face of the wall to improve angle. *)
   let fudge =
     let extra =
-      let diff =
-        Vec3.(
-          mean [ w1.points.bot_right; w1.points.top_right ]
-          <-> mean [ w2.points.bot_left; w2.points.top_left ])
-      in
-      let major, minor =
-        let x, y, _ = diff in
-        if Float.(abs dx > abs dy) then x, y else y, x
-      in
-      if Float.(abs minor > fudge_factor)
-      then Float.(abs (min (abs major -. fudge_factor) 0.))
+      if Float.(abs minor_diff > fudge_factor)
+      then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
       else 0.
     in
     Vec3.(add (mul dir2 (-.extra, -.extra, 0.)))
   in
   let starts =
+    (* If the walls are overlapping, move back the start positions to counter. *)
+    let overlap =
+      let major_ax = if Float.(abs dx > abs dy) then dx else dy in
+      if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
+      then Float.abs major_diff
+      else 0.
+    in
     Bezier.curve_rev
       ~n_steps
       ~init:(Bezier.curve ~n_steps w1.edges.bot_right)
       w1.edges.top_right
-    |> List.map ~f:Vec3.(add (mul dir1 (0.1, 0.1, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir1 (0.1 +. overlap, 0.1 +. overlap, 0.)))
   and dests =
     Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
         fudge @@ w2.edges.top_left step )
     |> List.map ~f:Vec3.(add (mul dir2 (-0.1, -0.1, 0.)))
   in
   prism_exn starts dests
+
+(* NOTE: This is plagued with CGAL errors, and so is simply prepending the start points
+ * from the face to the beginning of the starts and dests lists. Another option I
+ * could try is hulling between the faces of the swung wedges. (though it will likely
+ * have its own problems). Add the wedge scads to Wall.t and give it a shot. *)
+(* Model.union
+ *   [ prism_exn starts dests
+ *   ; prism_exn
+ *       (List.map
+ *          ~f:
+ *            Vec3.(
+ *              add
+ *                (mul
+ *                   (normalize (w1.start.top_left <-> w1.start.top_right))
+ *                   (0.1, 0.1, 0.) ))
+ *          [ w1.start.top_right; w1.edges.bot_right 0.; w1.edges.top_right 0. ] )
+ *       (List.map
+ *          ~f:
+ *            Vec3.(
+ *              add
+ *                (mul
+ *                   (normalize (w2.start.top_left <-> w2.start.top_right))
+ *                   (-0.1, -0.1, 0.) ))
+ *          [ w2.start.top_left; w2.edges.bot_left 0.; fudge @@ w2.edges.top_left 0. ] )
+ *   ] *)
 
 module Body = struct
   type col =
