@@ -51,8 +51,8 @@ let base_steps ~n_steps starts dests =
   `Ragged (List.map ~f:adjust norms)
 
 let bez_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
-  let ((dx, dy, _) as dir1) = Wall.direction w1
-  and dir2 = Wall.direction w2 in
+  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2 in
   let mask = if Float.(abs dx > abs dy) then 1., 0., 0. else 0., 1., 0. in
   let get_bez start dest =
     let diff = Vec3.(dest <-> start) in
@@ -75,8 +75,8 @@ let cubic_base
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let dir1 = Wall.direction w1
-  and dir2 = Wall.direction w2
+  let dir1 = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2
   and dist = d, d, 0.
   and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
   let get_bez top start dest =
@@ -101,8 +101,8 @@ let snake_base
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let dir1 = Wall.direction w1
-  and dir2 = Wall.direction w2
+  let dir1 = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2
   and dist = d, d, 0.
   and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
   let get_bez top start dest =
@@ -124,8 +124,8 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
    * projecting inward. This is so similar to bez_base that some generalization may
    * be possible to spare the duplication. Perhaps an option of whether the start is
    * the inward face (on the right) or the usual CW facing right side. *)
-  let dir1 = Wall.direction w1
-  and dir2 = Wall.direction w2
+  let dir1 = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2
   and ((inx, iny, _) as inward_dir) =
     Vec3.normalize Vec3.(w1.foot.bot_right <-> w1.foot.top_right)
   in
@@ -148,26 +148,29 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
   Bezier.prism_exn bezs steps
 
 let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.t) =
-  (* TODO: mimic the fix for overlappin walls done in join_walls here. If anything can
-   * be factored out, do so. *)
-  let ((dx, dy, _) as dir1) = Wall.direction w1
-  and dir2 = Wall.direction w2 in
+  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2 in
+  let major_diff =
+    let diff =
+      Vec3.(
+        mean [ w1.foot.bot_right; w1.foot.top_right ]
+        <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
+    in
+    if Float.(abs dx > abs dy) then Vec3.get_x diff else Vec3.get_y diff
+  in
   let fudge d =
     (* For adjustment of bottom (inside face) points to account for steep angles
      * that would otherwise cause the polyhedron to fail. Distance moved is a
      * function of how far apart the walls are along the major axis of the first. *)
-    let extra =
-      let diff =
-        Vec3.(
-          mean [ w1.foot.bot_right; w1.foot.top_right ]
-          <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
-      in
-      let major = if Float.(abs dx > abs dy) then Vec3.get_x diff else Vec3.get_y diff in
-      Float.(abs (min (abs major -. fudge_factor) 0.))
-    in
+    let extra = Float.(abs (min (abs major_diff -. fudge_factor) 0.)) in
     Vec3.(add (mul d (extra, extra, 0.)))
-  in
-  let outward =
+  and overlap =
+    let major_ax = if Float.(abs dx > abs dy) then dx else dy in
+    if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
+    then Float.abs major_diff
+    else 0.01
+  (* If the walls are overlapping, move back the start positions to counter. *)
+  and outward =
     (* away from the centre of mass, or not? *)
     Float.(
       Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.top_left))
@@ -180,7 +183,7 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     ; Wall.Edge.point_at_z w1.edges.top_right height
     ; (if not outward then fudge dir1 up_bot else up_bot)
     ]
-    |> List.map ~f:Vec3.(add (mul dir1 (0.1, 0.1, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
   and dests =
     let up_top = Wall.Edge.point_at_z w2.edges.top_left height
     and up_bot = Wall.Edge.point_at_z w2.edges.bot_left height
@@ -190,22 +193,13 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     ; up_top
     ; (if outward then slide up_bot else up_bot)
     ]
-    |> List.map ~f:Vec3.(add (mul dir2 (-0.1, -0.1, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir2 (-0.01, -0.01, 0.)))
   in
   prism_exn starts dests
 
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
-  (* TODO: This actually works pretty well as a first pass, but it does not account
-   * for the "swing_face" hull that has not been stored as part of Wall.t. In order
-   * to fill in the area between these as well, I would need their end faces to
-   * hull with, or perhaps the points of the swung face (only the top points will
-   * be different) which can be used with the 0 points of the edges to create the
-   * polyhedrons I would need.
-   *
-   * NOTE: this is actually incorrect, the bezier emerges from the swung face, so
-   * I should store the key face points and swung points in Wall.t so I maintain access. *)
-  let ((dx, dy, _) as dir1) = Wall.direction w1
-  and dir2 = Wall.direction w2 in
+  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2 in
   let major_diff, minor_diff =
     let x, y, _ =
       Vec3.(
@@ -222,51 +216,35 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
       else 0.
     in
     Vec3.(add (mul dir2 (-.extra, -.extra, 0.)))
+  and overlap =
+    let major_ax = if Float.(abs dx > abs dy) then dx else dy in
+    if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
+    then Float.abs major_diff
+    else 0.01
+    (* If the walls are overlapping, move back the start positions to counter. *)
   in
   let starts =
-    (* If the walls are overlapping, move back the start positions to counter. *)
-    let overlap =
-      let major_ax = if Float.(abs dx > abs dy) then dx else dy in
-      if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
-      then Float.abs major_diff
-      else 0.
-    in
     Bezier.curve_rev
       ~n_steps
       ~init:(Bezier.curve ~n_steps w1.edges.bot_right)
       w1.edges.top_right
-    |> List.map ~f:Vec3.(add (mul dir1 (0.1 +. overlap, 0.1 +. overlap, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
   and dests =
     Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
         fudge @@ w2.edges.top_left step )
-    |> List.map ~f:Vec3.(add (mul dir2 (-0.1, -0.1, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir2 (-0.01, -0.01, 0.)))
+  and wedge =
+    (* Fill in the volume between the "wedge" hulls that are formed by swinging the
+     * key face prior to drawing the walls. *)
+    prism_exn
+      (List.map
+         ~f:Vec3.(add (mul (Wall.start_direction w1) (overlap, overlap, overlap)))
+         [ w1.start.top_right; w1.edges.bot_right 0.; w1.edges.top_right 0.0001 ] )
+      (List.map
+         ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, -0.01)))
+         [ w2.start.top_left; w2.edges.bot_left 0.; fudge @@ w2.edges.top_left 0.0001 ] )
   in
-  prism_exn starts dests
-
-(* NOTE: This is plagued with CGAL errors, and so is simply prepending the start points
- * from the face to the beginning of the starts and dests lists. Another option I
- * could try is hulling between the faces of the swung wedges. (though it will likely
- * have its own problems). Add the wedge scads to Wall.t and give it a shot. *)
-(* Model.union
- *   [ prism_exn starts dests
- *   ; prism_exn
- *       (List.map
- *          ~f:
- *            Vec3.(
- *              add
- *                (mul
- *                   (normalize (w1.start.top_left <-> w1.start.top_right))
- *                   (0.1, 0.1, 0.) ))
- *          [ w1.start.top_right; w1.edges.bot_right 0.; w1.edges.top_right 0. ] )
- *       (List.map
- *          ~f:
- *            Vec3.(
- *              add
- *                (mul
- *                   (normalize (w2.start.top_left <-> w2.start.top_right))
- *                   (-0.1, -0.1, 0.) ))
- *          [ w2.start.top_left; w2.edges.bot_left 0.; fudge @@ w2.edges.top_left 0. ] )
- *   ] *)
+  Model.union [ prism_exn starts dests; wedge ]
 
 module Body = struct
   type col =
