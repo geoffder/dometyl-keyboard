@@ -119,15 +119,15 @@ module Plate = struct
     Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
 
   let bez_wall ?(d1 = 2.) ?(d2 = 5.) =
-    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1 ~d2 ~thickness:3.5 ~n_steps:4
+    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1 ~d2 ~thickness:3.5 ~n_steps:(`Flat 4)
 
-  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:4
-  let lower_thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:2
-  let thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:4
+  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:(`Flat 4)
+  let lower_thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 2)
+  let thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 4)
 
   let eastern_siding i =
     let key = Map.find_exn (Map.find_exn columns 4).keys i in
-    Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:2 `East key
+    Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 2) `East key
 
   let scad =
     Model.union
@@ -149,7 +149,7 @@ module Plate = struct
            ~d1:1.
            ~d2:2.
            ~thickness:3.5
-           ~n_steps:3
+           ~n_steps:(`Flat 3)
            `West
            (Map.find_exn thumb.keys 0) )
           .scad
@@ -187,7 +187,7 @@ module Plate = struct
              ~d1:1.
              ~d2:2.
              ~thickness:3.5
-             ~n_steps:3
+             ~n_steps:(`Flat 3)
              `West
              (Map.find_exn thumb.keys 0) )
       ; Walls.join_walls
@@ -217,18 +217,22 @@ module Plate = struct
       ; Walls.join_walls
           (siding `West (Columns.key_exn columns 0 1))
           (siding `West (Columns.key_exn columns 0 2))
-      ; Walls.join_walls (siding `West (Columns.key_exn columns 0 2)) (bez_wall `North 0)
+      ; Walls.join_walls
+          ~fudge_factor:0.
+          (siding `West (Columns.key_exn columns 0 2))
+          (bez_wall `North 0)
       ; Walls.join_walls (bez_wall `North 0) (bez_wall `North 1)
       ; Walls.join_walls (bez_wall `North 1) (bez_wall `North 2)
       ; Walls.join_walls (bez_wall `North 2) (bez_wall `North 3)
       ; Walls.join_walls (bez_wall `North 3) (bez_wall `North 4)
-      ; Walls.join_walls (bez_wall `North 4) (eastern_siding 2)
+      ; Walls.join_walls ~fudge_factor:0. (bez_wall `North 4) (eastern_siding 2)
       ; Walls.join_walls (eastern_siding 2) (eastern_siding 1)
       ; Walls.join_walls (eastern_siding 1) (eastern_siding 0)
-      ; Walls.join_walls (eastern_siding 0) (bez_wall `South 4)
+      ; Walls.join_walls ~fudge_factor:0. (eastern_siding 0) (bez_wall `South 4)
       ; Walls.join_walls (bez_wall `South 4) (bez_wall `South 3)
       ; Walls.join_walls (bez_wall `South 3) (bez_wall `South 2)
       ; Walls.join_walls
+          ~fudge_factor:0.
           (thumb_siding `East (Map.find_exn thumb.keys 2))
           (thumb_siding `South (Map.find_exn thumb.keys 2))
       ; Walls.join_walls
@@ -244,7 +248,7 @@ module Plate = struct
              ~d1:1.
              ~d2:2.
              ~thickness:3.5
-             ~n_steps:3
+             ~n_steps:(`Flat 3)
              `West
              (Map.find_exn thumb.keys 0) )
           (thumb_siding `North (Map.find_exn thumb.keys 0))
