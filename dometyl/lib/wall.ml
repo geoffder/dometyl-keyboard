@@ -16,6 +16,19 @@ let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
   in
   loop 0 lower upper
 
+module Steps = struct
+  (* TODO: should name better, this is done as mm in z per step at the moment. *)
+  type t =
+    [ `PerZ of float
+    | `Flat of int
+    ]
+
+  let to_int t z =
+    match t with
+    | `PerZ mm -> Int.min 2 (Float.to_int (z /. mm))
+    | `Flat n  -> n
+end
+
 module Edge = struct
   type t = float -> Vec3.t
 
@@ -50,9 +63,6 @@ module Edges = struct
     | `BR -> t.bot_right
 end
 
-(* TODO: store original keyface coordinates (important for joining walls for
- * closed designs, otherwise their are trought created by the fact that the edges
- * actually begin away from the wall on the "swung" face. *)
 type t =
   { scad : Model.t
   ; start : Points.t
@@ -93,7 +103,7 @@ let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
     ?(z_off = 0.)
-    ?(n_steps = 4)
+    ?(n_steps = `Flat 4)
     ?(d1 = 4.)
     ?(d2 = 7.)
     ?thickness
@@ -103,11 +113,11 @@ let poly_siding
   let start_face = KeyHole.Faces.face key.faces side
   and thickness = Option.value ~default:key.config.thickness thickness in
   let pivoted_face, ortho = swing_face key.origin start_face in
-  let xy = Vec3.(normalize (mul ortho (1., 1., 0.))) in
+  let xy = Vec3.(normalize (mul ortho (1., 1., 0.)))
   (* NOTE: I think z_hop is much less relevant now, check what kind of values it
    * is getting, and consider removing. *)
-  let z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off in
-  let top_offset =
+  and z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off
+  and top_offset =
     Vec3.(
       mul (1., 1., 0.) (pivoted_face.points.bot_right <-> pivoted_face.points.top_right))
   in
@@ -129,11 +139,16 @@ let poly_siding
   in
   let cw_points = Points.to_clockwise_list pivoted_face.points in
   let steps =
-    let lowest_z =
-      let f m (_, _, z) = Float.min m z in
-      Points.fold ~f ~init:Float.max_value pivoted_face.points
+    let adjust (_, _, z) =
+      match n_steps with
+      | `Flat n ->
+        let lowest_z =
+          let f m (_, _, z) = Float.min m z in
+          Points.fold ~f ~init:Float.max_value pivoted_face.points
+        in
+        Float.(to_int (z /. lowest_z *. of_int n))
+      | `PerZ _ -> Steps.to_int n_steps z
     in
-    let adjust (_, _, z) = Float.(to_int (z /. lowest_z *. of_int n_steps)) in
     `Ragged (List.map ~f:adjust cw_points)
   and end_ps, bezs =
     List.foldi
@@ -181,5 +196,8 @@ let column_drop ?z_off ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
   in
   poly_siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 ?thickness ?n_steps side key
 
-let direction { foot = { top_left; top_right; _ }; _ } =
+let start_direction { start = { top_left; top_right; _ }; _ } =
+  Vec3.normalize Vec3.(top_left <-> top_right)
+
+let foot_direction { foot = { top_left; top_right; _ }; _ } =
   Vec3.normalize Vec3.(top_left <-> top_right)
