@@ -96,9 +96,10 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
   in
   face', ortho'
 
-(* TODO: add ability to specify steps per distance that wall will travel from the
- * key face as opposed to an absolute number of steps. This should help protect against
- * breakage when walls become too short, making the flat number of steps too great. *)
+(* TODO: Think of scaling d1 based on how high the key is, though maybe should
+ * do so in the higher level functions in walls that call this one. Having a larger
+ * d1 value will improve the clearance for the tall columns, which aren't in such a
+ * hurry to move in xy (since they have a larger distance to do it). *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)

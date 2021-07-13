@@ -154,6 +154,8 @@ let column_joins { config = { n_cols; _ }; columns; _ } =
   let join = Bridge.cols ~columns in
   Model.union (List.init (n_cols - 1) ~f:(fun i -> join i (i + 1)))
 
+(* TODO: automatic / semi-automatic placement of bridges, such that it works
+ * for layouts other than 5x3. *)
 let skeleton_bridges columns =
   let bridge c k =
     Column.(
