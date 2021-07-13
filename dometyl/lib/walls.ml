@@ -262,16 +262,86 @@ module Body = struct
     ; sides : sides
     }
 
-  (* let skeleton
-   *     ?(d1 = 2.)
-   *     ?(d2 = 5.)
-   *     ~spacing
-   *     ~columns
-   *     ?(z_off = 0.)
-   *     ?(thickness = 3.5)
-   *     ?(n_steps = 5)
-   *   =
-   *   () *)
+  let make_cols
+      ?(d1 = 2.)
+      ?(d2 = 5.)
+      ?(z_off = 0.)
+      ?(thickness = 3.5)
+      ?(n_steps = `Flat 4)
+      ?(north_lookup = fun _ -> true)
+      ?(south_lookup = fun i -> i > 2)
+      ~spacing
+      ~columns
+    =
+    (* TODO: leaving these as params since I may want to adjust d1 based on z.
+     * Still have to decide if I want to do it here or in poly_siding *)
+    let bez_wall ~d1 ~d2 =
+      Wall.column_drop ~spacing ~columns ~z_off ~d1 ~d2 ~thickness ~n_steps
+    in
+    Map.mapi
+      ~f:(fun ~key:i ~data:_ ->
+        { north = (if north_lookup i then Some (bez_wall ~d1 ~d2 `North i) else None)
+        ; south = (if south_lookup i then Some (bez_wall ~d1 ~d2 `South i) else None)
+        } )
+      columns
+
+  let make_sides
+      ?(d1 = 2.)
+      ?(d2 = 5.)
+      ?(z_off = 0.)
+      ?(thickness = 3.5)
+      ?(n_steps = `Flat 4)
+      ?(west_lookup = fun i -> i = 0)
+      ?(east_lookup = fun _ -> false)
+      ~columns
+    =
+    let west_col : _ Column.t = Map.find_exn columns 0
+    and _, (east_col : _ Column.t) = Map.max_elt_exn columns in
+    let sider side ~key ~data m =
+      let lookup =
+        match side with
+        | `West -> west_lookup
+        | `East -> east_lookup
+      in
+      if lookup key
+      then (
+        let data = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps `West data in
+        Map.add_exn ~key ~data m )
+      else m
+    in
+    { west = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
+    ; east = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
+    }
+
+  (* TODO: rough draft. This impl does not allow for different settings between cols
+   * and siding. Is that fine? Or should I add more params here, or just make separately? *)
+  let make
+      ?d1
+      ?d2
+      ?z_off
+      ?thickness
+      ?n_steps
+      ?north_lookup
+      ?south_lookup
+      ?west_lookup
+      ?east_lookup
+      ~spacing
+      ~columns
+    =
+    { cols =
+        make_cols
+          ?d1
+          ?d2
+          ?z_off
+          ?thickness
+          ?n_steps
+          ?north_lookup
+          ?south_lookup
+          ~spacing
+          ~columns
+    ; sides =
+        make_sides ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup ~columns
+    }
 end
 
 module Thumb = struct
