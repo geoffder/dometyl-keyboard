@@ -152,15 +152,14 @@ let make
 
 let column_joins { config = { n_cols; _ }; columns; _ } =
   let join = Bridge.cols ~columns in
-  Model.union (List.init (n_cols - 1) ~f:(fun i -> join i (i + 1)))
+  Model.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
-(* TODO: automatic / semi-automatic placement of bridges, such that it works
- * for layouts other than 5x3. *)
-let skeleton_bridges columns =
+(* TODO: testing *)
+let skeleton_bridges { config = { n_rows; n_cols; _ }; columns; _ } =
   let bridge c k =
-    Column.(
-      Bridge.keys
-        (Map.find_exn (Map.find_exn columns c).keys k)
-        (Map.find_exn (Map.find_exn columns (c + 1)).keys k))
+    Bridge.keys (Columns.key_exn columns c k) (Columns.key_exn columns (c + 1) k)
   in
-  Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
+  Model.union
+  @@ List.init
+       ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows - 1))
+       (n_cols - 1)
