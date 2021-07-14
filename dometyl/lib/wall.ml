@@ -104,6 +104,7 @@ let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
     ?(z_off = 0.)
+    ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
     ?(d1 = 4.)
     ?(d2 = 7.)
@@ -114,17 +115,23 @@ let poly_siding
   let start_face = KeyHole.Faces.face key.faces side
   and thickness = Option.value ~default:key.config.thickness thickness in
   let pivoted_face, ortho = swing_face key.origin start_face in
+  let cleared_face =
+    KeyHole.Face.translate (Vec3.map (( *. ) clearance) ortho) pivoted_face
+  in
   let xy = Vec3.(normalize (mul ortho (1., 1., 0.)))
   (* NOTE: I think z_hop is much less relevant now, check what kind of values it
    * is getting, and consider removing. *)
   and z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off
   and top_offset =
     Vec3.(
-      mul (1., 1., 0.) (pivoted_face.points.bot_right <-> pivoted_face.points.top_right))
+      mul (1., 1., 0.) (cleared_face.points.bot_right <-> cleared_face.points.top_right))
   in
   let get_bez top ((x, y, z) as start) =
     let jog, d1, plus =
-      if top then thickness, d1 +. ((d2 -. d1) /. 2.), top_offset else 0., d1, (0., 0., 0.)
+      let half_delta = (d2 -. d1) /. 2. in
+      if top
+      then thickness, d1 +. Float.max half_delta 0., top_offset
+      else 0., d1 +. Float.min half_delta 0., (0., 0., 0.)
     in
     let p1 = Vec3.(start <-> mul ortho (0.0002, 0.0002, 0.0002)) (* fudge for union *)
     and p2 =
@@ -138,14 +145,14 @@ let poly_siding
     in
     p3, Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
-  let cw_points = Points.to_clockwise_list pivoted_face.points in
+  let cw_points = Points.to_clockwise_list cleared_face.points in
   let steps =
     let adjust (_, _, z) =
       match n_steps with
       | `Flat n ->
         let lowest_z =
           let f m (_, _, z) = Float.min m z in
-          Points.fold ~f ~init:Float.max_value pivoted_face.points
+          Points.fold ~f ~init:Float.max_value cleared_face.points
         in
         Float.(to_int (z /. lowest_z *. of_int n))
       | `PerZ _ -> Steps.to_int n_steps z
@@ -161,13 +168,13 @@ let poly_siding
   in
   { scad =
       Model.union
-        [ Model.hull [ start_face.scad; pivoted_face.scad ]; Bezier.prism_exn bezs steps ]
+        [ Model.hull [ start_face.scad; cleared_face.scad ]; Bezier.prism_exn bezs steps ]
   ; start = start_face.points
   ; foot = Points.of_clockwise_list_exn end_ps
   ; edges = Edges.of_clockwise_list_exn bezs
   }
 
-let column_drop ?z_off ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
+let column_drop ?z_off ?clearance ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
   let key, face, hanging =
     let c : _ Column.t = Map.find_exn columns idx in
     match side with
@@ -195,10 +202,21 @@ let column_drop ?z_off ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
       if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
     | _           -> 0.
   in
-  poly_siding ~x_off:(x_dodge *. -1.) ?z_off ?d1 ?d2 ?thickness ?n_steps side key
+  poly_siding
+    ~x_off:(x_dodge *. -1.)
+    ?z_off
+    ?clearance
+    ?d1
+    ?d2
+    ?thickness
+    ?n_steps
+    side
+    key
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   Vec3.normalize Vec3.(top_left <-> top_right)
 
 let foot_direction { foot = { top_left; top_right; _ }; _ } =
   Vec3.normalize Vec3.(top_left <-> top_right)
+
+let to_scad t = t.scad
