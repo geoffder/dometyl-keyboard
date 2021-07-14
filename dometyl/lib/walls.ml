@@ -247,70 +247,87 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   Model.union [ prism_exn starts dests; wedge ]
 
 module Body = struct
-  type col =
-    { north : Wall.t option
-    ; south : Wall.t option
-    }
+  module Cols = struct
+    type col =
+      { north : Wall.t option
+      ; south : Wall.t option
+      }
 
-  type sides =
-    { west : Wall.t Map.M(Int).t
-    ; east : Wall.t Map.M(Int).t
-    }
+    type t = col Map.M(Int).t
+
+    let make
+        ?(d1 = 2.)
+        ?(d2 = 5.)
+        ?(z_off = 0.)
+        ?(thickness = 3.5)
+        ?(n_steps = `Flat 4)
+        ?(north_lookup = fun _ -> true)
+        ?(south_lookup = fun i -> i > 2)
+        ~spacing
+        ~columns
+      =
+      (* TODO: leaving these as params since I may want to adjust d1 based on z.
+       * Still have to decide if I want to do it here or in poly_siding *)
+      let bez_wall ~d1 ~d2 =
+        Wall.column_drop ~spacing ~columns ~z_off ~d1 ~d2 ~thickness ~n_steps
+      in
+      Map.mapi
+        ~f:(fun ~key:i ~data:_ ->
+          { north = (if north_lookup i then Some (bez_wall ~d1 ~d2 `North i) else None)
+          ; south = (if south_lookup i then Some (bez_wall ~d1 ~d2 `South i) else None)
+          } )
+        columns
+
+    let col_to_scad col =
+      Model.union
+        (List.filter_map ~f:(Option.map ~f:Wall.to_scad) [ col.north; col.south ])
+
+    let to_scad t =
+      Model.union (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
+  end
+
+  module Sides = struct
+    type t =
+      { west : Wall.t Map.M(Int).t
+      ; east : Wall.t Map.M(Int).t
+      }
+
+    let make
+        ?(d1 = 2.)
+        ?(d2 = 5.)
+        ?(z_off = 0.)
+        ?(thickness = 3.5)
+        ?(n_steps = `Flat 4)
+        ?(west_lookup = fun i -> i = 0)
+        ?(east_lookup = fun _ -> false)
+        ~columns
+      =
+      let west_col : _ Column.t = Map.find_exn columns 0
+      and _, (east_col : _ Column.t) = Map.max_elt_exn columns in
+      let sider side ~key ~data m =
+        let lookup =
+          match side with
+          | `West -> west_lookup
+          | `East -> east_lookup
+        in
+        if lookup key
+        then (
+          let data = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps `West data in
+          Map.add_exn ~key ~data m )
+        else m
+      in
+      { west = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
+      ; east = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
+      }
+
+    let to_scad t =
+      let f ~key:_ ~data l = Wall.to_scad data :: l in
+      Model.union (Map.fold ~init:(Map.fold ~init:[] ~f t.west) ~f t.east)
+  end
 
   type t =
-    { cols : col Map.M(Int).t
-    ; sides : sides
-    }
-
-  let make_cols
-      ?(d1 = 2.)
-      ?(d2 = 5.)
-      ?(z_off = 0.)
-      ?(thickness = 3.5)
-      ?(n_steps = `Flat 4)
-      ?(north_lookup = fun _ -> true)
-      ?(south_lookup = fun i -> i > 2)
-      ~spacing
-      ~columns
-    =
-    (* TODO: leaving these as params since I may want to adjust d1 based on z.
-     * Still have to decide if I want to do it here or in poly_siding *)
-    let bez_wall ~d1 ~d2 =
-      Wall.column_drop ~spacing ~columns ~z_off ~d1 ~d2 ~thickness ~n_steps
-    in
-    Map.mapi
-      ~f:(fun ~key:i ~data:_ ->
-        { north = (if north_lookup i then Some (bez_wall ~d1 ~d2 `North i) else None)
-        ; south = (if south_lookup i then Some (bez_wall ~d1 ~d2 `South i) else None)
-        } )
-      columns
-
-  let make_sides
-      ?(d1 = 2.)
-      ?(d2 = 5.)
-      ?(z_off = 0.)
-      ?(thickness = 3.5)
-      ?(n_steps = `Flat 4)
-      ?(west_lookup = fun i -> i = 0)
-      ?(east_lookup = fun _ -> false)
-      ~columns
-    =
-    let west_col : _ Column.t = Map.find_exn columns 0
-    and _, (east_col : _ Column.t) = Map.max_elt_exn columns in
-    let sider side ~key ~data m =
-      let lookup =
-        match side with
-        | `West -> west_lookup
-        | `East -> east_lookup
-      in
-      if lookup key
-      then (
-        let data = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps `West data in
-        Map.add_exn ~key ~data m )
-      else m
-    in
-    { west = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
-    ; east = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
+    { cols : Cols.t
+    ; sides : Sides.t
     }
 
   (* TODO: rough draft. This impl does not allow for different settings between cols
@@ -329,7 +346,7 @@ module Body = struct
       ~columns
     =
     { cols =
-        make_cols
+        Cols.make
           ?d1
           ?d2
           ?z_off
@@ -340,8 +357,10 @@ module Body = struct
           ~spacing
           ~columns
     ; sides =
-        make_sides ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup ~columns
+        Sides.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup ~columns
     }
+
+  let to_scad t = Model.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
 end
 
 module Thumb = struct
