@@ -63,7 +63,7 @@ let make
     ?(n_cols = 5)
     ?(centre_col = 2)
     ?(spacing = 2.)
-    ?(clearance = 5.)
+    ?(clearance = 6.5)
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = 7., -50., -3.)
     ?(thumb_angle = Float.(0., pi /. -4., pi /. 5.))
@@ -163,3 +163,5 @@ let skeleton_bridges { config = { n_rows; n_cols; _ }; columns; _ } =
   @@ List.init
        ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows - 1))
        (n_cols - 1)
+
+let to_scad t = t.scad
