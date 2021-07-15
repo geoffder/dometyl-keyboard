@@ -25,7 +25,7 @@ module Steps = struct
 
   let to_int t z =
     match t with
-    | `PerZ mm -> Int.min 2 (Float.to_int (z /. mm))
+    | `PerZ mm -> Int.max 2 (Float.to_int (z /. mm))
     | `Flat n  -> n
 end
 
