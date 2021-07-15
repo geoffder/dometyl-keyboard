@@ -262,9 +262,8 @@ module Body = struct
         ?(thickness = 3.5)
         ?(n_steps = `Flat 4)
         ?(north_lookup = fun _ -> true)
-        ?(south_lookup = fun i -> i > 2)
-        ~spacing
-        ~columns
+        ?(south_lookup = fun i -> i > 1)
+        Plate.{ config = { spacing; _ }; columns; _ }
       =
       (* TODO: leaving these as params since I may want to adjust d1 based on z.
        * Still have to decide if I want to do it here or in poly_siding *)
@@ -300,10 +299,10 @@ module Body = struct
         ?(n_steps = `Flat 4)
         ?(west_lookup = fun i -> i = 0)
         ?(east_lookup = fun _ -> false)
-        ~columns
+        Plate.{ columns; _ }
       =
-      let west_col : _ Column.t = Map.find_exn columns 0
-      and _, (east_col : _ Column.t) = Map.max_elt_exn columns in
+      let west_col = Map.find_exn columns 0
+      and _, east_col = Map.max_elt_exn columns in
       let sider side ~key ~data m =
         let lookup =
           match side with
@@ -342,22 +341,12 @@ module Body = struct
       ?south_lookup
       ?west_lookup
       ?east_lookup
-      ~spacing
-      ~columns
+      plate
     =
     { cols =
-        Cols.make
-          ?d1
-          ?d2
-          ?z_off
-          ?thickness
-          ?n_steps
-          ?north_lookup
-          ?south_lookup
-          ~spacing
-          ~columns
+        Cols.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?north_lookup ?south_lookup plate
     ; sides =
-        Sides.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup ~columns
+        Sides.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup plate
     }
 
   let to_scad t = Model.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
@@ -378,4 +367,41 @@ module Thumb = struct
     { keys : key Map.M(Int).t
     ; sides : sides
     }
+
+  let make
+      ?(d1 = 1.)
+      ?(d2 = 2.)
+      ?(z_off = 0.)
+      ?(thickness = 3.5)
+      ?(n_steps = `PerZ 3.5)
+      ?(north_lookup = fun i -> i = 0)
+      ?(south_lookup = fun i -> i = 0 || i = 2)
+      ?(west = true)
+      ?(east = false)
+      Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
+    =
+    let siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps in
+    { keys =
+        Map.mapi
+          ~f:(fun ~key:i ~data ->
+            { north = (if north_lookup i then Some (siding `North data) else None)
+            ; south = (if south_lookup i then Some (siding `South data) else None)
+            } )
+          keys
+    ; sides =
+        { west = (if west then Some (siding `West (Map.find_exn keys 0)) else None)
+        ; east =
+            (if east then Some (siding `East (Map.find_exn keys (n_keys - 1))) else None)
+        }
+    }
+
+  let to_scad { keys; sides = { west; east } } =
+    let prepend wall l =
+      Option.value_map ~default:l ~f:(fun w -> Wall.to_scad w :: l) wall
+    in
+    Model.union
+    @@ Map.fold
+         ~init:(prepend west [] |> prepend east)
+         ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
+         keys
 end
