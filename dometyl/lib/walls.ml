@@ -1,37 +1,6 @@
 open! Base
 open! Scad_ml
 
-(* TODO: move this somewhere, possibly Scad_ml. *)
-(* Expects `a` to be clockwise from the perspective of looking at the face the vertices
- * form from the outside (see OpenScad polyhedron), and b to be in the same ordering
- * as `a` such that the edges of the prism will run between the vertices in the same
- * position. This means that the vertices in `b` should be counter-clockwise. *)
-let prism_exn a b =
-  let n = List.length a in
-  if n < 3
-  then failwith "At least three vertices are required."
-  else if n = List.length b
-  then (
-    let pts = a @ b in
-    let sides =
-      let wrap i = if i > n - 1 then i - n else i in
-      List.init n ~f:(fun i -> [ i; i + n; n + wrap (i + 1); wrap (i + 1) ])
-    in
-    let faces =
-      List.range 0 n :: List.range ~stride:(-1) ((n * 2) - 1) (n - 1) :: sides
-    in
-    Model.polyhedron pts faces )
-  else failwith "Faces must have equal number of vertices."
-
-(* TODO: Come up with how I would like to organize the generated walls, such that
- * joining them up will be sensical.
- * - What do I want to supply the top-level functions in this module? Map of columns,
- * with wall generating closures (drop and siding) and a list of where to make each?
- * - Keep in mind that I am going to need to join up the thumb to the west side
- * and southern wall of the middle finger column. Otherwise, the thumbs functions will
- * be separate since the pattern is different there. Makes sense to have the separate
- * modules with their own make functions then. *)
-
 let base_endpoints ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
@@ -150,19 +119,23 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
 let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.t) =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let major_diff =
-    let diff =
+  let major_diff, minor_diff =
+    let x, y, _ =
       Vec3.(
         mean [ w1.foot.bot_right; w1.foot.top_right ]
         <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
     in
-    if Float.(abs dx > abs dy) then Vec3.get_x diff else Vec3.get_y diff
+    if Float.(abs dx > abs dy) then x, y else y, x
   in
   let fudge d =
     (* For adjustment of bottom (inside face) points to account for steep angles
      * that would otherwise cause the polyhedron to fail. Distance moved is a
      * function of how far apart the walls are along the major axis of the first. *)
-    let extra = Float.(abs (min (abs major_diff -. fudge_factor) 0.)) in
+    let extra =
+      if Float.(abs minor_diff > abs major_diff)
+      then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
+      else 0.
+    in
     Vec3.(add (mul d (extra, extra, 0.)))
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy in
@@ -193,9 +166,9 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     ; up_top
     ; (if outward then slide up_bot else up_bot)
     ]
-    |> List.map ~f:Vec3.(add (mul dir2 (-0.01, -0.01, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
-  prism_exn starts dests
+  Util.prism_exn starts dests
 
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
@@ -236,7 +209,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   and wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
      * key face prior to drawing the walls. *)
-    prism_exn
+    Util.prism_exn
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w1) (overlap, overlap, overlap)))
          [ w1.start.top_right; w1.edges.bot_right 0.; w1.edges.top_right 0.0001 ] )
@@ -244,7 +217,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
          ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, -0.01)))
          [ w2.start.top_left; w2.edges.bot_left 0.; fudge @@ w2.edges.top_left 0.0001 ] )
   in
-  Model.union [ prism_exn starts dests; wedge ]
+  Model.union [ Util.prism_exn starts dests; wedge ]
 
 module Body = struct
   module Cols = struct
@@ -370,10 +343,10 @@ module Thumb = struct
 
   let make
       ?(d1 = 1.)
-      ?(d2 = 2.)
+      ?(d2 = 3.)
       ?(z_off = 0.)
       ?(thickness = 3.5)
-      ?(n_steps = `PerZ 3.5)
+      ?(n_steps = `PerZ 4.)
       ?(north_lookup = fun i -> i = 0)
       ?(south_lookup = fun i -> i = 0 || i = 2)
       ?(west = true)
@@ -405,3 +378,10 @@ module Thumb = struct
          ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
          keys
 end
+
+type t =
+  { body : Body.t
+  ; thumb : Thumb.t
+  }
+
+let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
