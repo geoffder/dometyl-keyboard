@@ -99,7 +99,11 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
  * do so in the higher level functions in walls that call this one. Having a larger
  * d1 value will improve the clearance for the tall columns, which aren't in such a
- * hurry to move in xy (since they have a larger distance to do it). *)
+ * hurry to move in xy (since they have a larger distance to do it).
+ *
+ * NOTE: `Flat and `ZRatio as the type for d1? `ZRatio being a % of Z that should
+ * be assigned as d1. Would that make the bow of the curve more consistent without
+ * implementing and switching to splines? *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
