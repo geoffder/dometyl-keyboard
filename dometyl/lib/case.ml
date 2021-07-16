@@ -167,7 +167,7 @@ module Plate = struct
       ; Walls.straight_base ~height:7. (bez_wall `North 2) (bez_wall `North 3)
       ; Walls.straight_base ~height:7. (bez_wall `North 3) (bez_wall `North 4)
         (* ; Walls.inward_elbow_base ~height:5. (bez_wall `North 3) (bez_wall `North 4) *)
-      ; Walls.cubic_base ~height:4. (bez_wall `North 4) (bez_wall `South 4)
+      ; Walls.cubic_base ~height:4. ~d:2. (bez_wall `North 4) (bez_wall `South 4)
       ; Walls.inward_elbow_base ~height:7. (bez_wall `South 4) (bez_wall `South 3)
         (* ; Walls.straight_base ~height:7. (bez_wall `South 4) (bez_wall `South 3) *)
       ; Walls.straight_base ~height:7. (bez_wall `South 3) (bez_wall `South 2)
@@ -258,6 +258,17 @@ module Plate = struct
       ]
 
   let scad = Model.union [ scad; skel ]
+
+  (* let scad =
+   *   let plate = Plate.make keyhole in
+   *   let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
+   *   Model.union
+   *     [ plate.scad
+   *     ; Walls.to_scad walls
+   *     ; Connect.skeleton ~height:7. walls
+   *     ; Plate.skeleton_bridges plate
+   *     ] *)
+
   let t = { scad; columns; thumb }
 end
 
