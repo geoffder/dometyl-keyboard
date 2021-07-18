@@ -224,10 +224,12 @@ let skeleton
     ?height
     ?n_steps
     ?fudge_factor
-    ?_snake_d
+    ?snake_d
+    ?snake_scale
+    ?snake_height
     ?cubic_d
     ?(pinky_idx = 4)
-    Walls.{ body; _ }
+    Walls.{ body; thumb }
   =
   (* TODO: For W-E handle case where there are more walls than just the first one.
    * For those, will also have to set fudge_factor:0. for the tight corners if they
@@ -246,7 +248,7 @@ let skeleton
       (col `N 0)
   in
   let north =
-    let h i = if i < 2 then Some index_height else height in
+    let h i = if i = 0 then Some index_height else height in
     List.init
       ~f:(fun i ->
         Option.map2
@@ -273,4 +275,21 @@ let skeleton
         Option.map2 ~f:(base idx) (col `S idx) (col `S (idx - 1)) )
       (n_cols - 1)
   in
-  west :: east :: (north @ south) |> List.filter_opt |> Model.union
+  let sw_thumb, nw_thumb, ew_thumb, e_link, w_link =
+    let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
+    and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
+    and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.)
+    and link =
+      Option.map2
+        ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps)
+    in
+    let sw = corner w_s thumb.sides.west
+    and nw = corner thumb.sides.west w_n
+    and ew = Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
+    and e_link = link (col `S 2) e_s
+    and w_link = link w_n (Map.find body.sides.west 0) in
+    sw, nw, ew, e_link, w_link
+  in
+  west :: east :: sw_thumb :: nw_thumb :: ew_thumb :: e_link :: w_link :: (north @ south)
+  |> List.filter_opt
+  |> Model.union
