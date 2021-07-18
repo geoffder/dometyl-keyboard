@@ -129,7 +129,7 @@ module Plate = struct
     let key = Map.find_exn (Map.find_exn columns 4).keys i in
     Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 2) `East key
 
-  let scad =
+  let _scad =
     Model.union
       [ Model.union
           (Map.fold
@@ -257,17 +257,17 @@ module Plate = struct
           (siding `West (Columns.key_exn columns 0 0))
       ]
 
-  let scad = Model.union [ scad; skel ]
+  (* let scad = Model.union [ scad; skel ] *)
 
-  (* let scad =
-   *   let plate = Plate.make keyhole in
-   *   let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
-   *   Model.union
-   *     [ plate.scad
-   *     ; Walls.to_scad walls
-   *     ; Connect.skeleton ~height:7. walls
-   *     ; Plate.skeleton_bridges plate
-   *     ] *)
+  let scad =
+    let plate = Plate.make keyhole in
+    let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
+    Model.union
+      [ plate.scad
+      ; Walls.to_scad walls
+      ; Connect.skeleton ~height:7. ~snake_scale:1.5 ~snake_d:5. ~snake_height:10. walls
+      ; Plate.skeleton_bridges plate
+      ]
 
   let t = { scad; columns; thumb }
 end
