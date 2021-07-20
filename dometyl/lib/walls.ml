@@ -250,6 +250,10 @@ module Body = struct
           } )
         columns
 
+    let get t = function
+      | `N -> t.north
+      | `S -> t.south
+
     let col_to_scad col =
       Model.union
         (List.filter_map ~f:(Option.map ~f:Wall.to_scad) [ col.north; col.south ])
