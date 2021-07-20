@@ -233,7 +233,9 @@ let skeleton
   =
   (* TODO: For W-E handle case where there are more walls than just the first one.
    * For those, will also have to set fudge_factor:0. for the tight corners if they
-   * exist. *)
+   * exist.
+   *
+   * Also clean-up, try to make a bit clearer/elegant. *)
   let n_cols = Map.length body.cols
   and col side i =
     let c = Map.find_exn body.cols i in
@@ -293,3 +295,64 @@ let skeleton
   west :: east :: sw_thumb :: nw_thumb :: ew_thumb :: e_link :: w_link :: (north @ south)
   |> List.filter_opt
   |> Model.union
+
+let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
+  let n_cols = Map.length body.cols
+  and col side i =
+    Option.(
+      Map.find body.cols i
+      >>= fun c ->
+      match side with
+      | `N -> c.north
+      | `S -> c.south)
+  and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
+  let _, sides =
+    let sider ~key:_ ~data (last, scads) =
+      ( Some data
+      , Option.value_map
+          ~default:scads
+          ~f:(fun l -> join_walls ?n_steps ?fudge_factor l data :: scads)
+          last )
+    in
+    let _, west = Map.fold ~init:(None, []) ~f:sider body.sides.west in
+    Map.fold_right ~init:(None, west) ~f:sider body.sides.east
+  in
+  let _, sides_cols =
+    let joiner side ~key:_ ~data (last, scads) =
+      let w = Walls.Body.Cols.get data side in
+      let scads' =
+        match Option.map2 ~f:(join_walls ?n_steps ?fudge_factor) last w with
+        | Some j -> j :: scads
+        | None   -> scads
+      in
+      w, scads'
+    in
+    let _, north = Map.fold ~init:(None, sides) ~f:(joiner `N) body.cols in
+    Map.fold_right ~init:(None, north) ~f:(joiner `S) body.cols
+  in
+  let all_body =
+    let prepend w1 w2 l =
+      match corner w1 w2 with
+      | Some c -> c :: l
+      | None   -> l
+    in
+    prepend (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) sides_cols
+    |> prepend (col `N (n_cols - 1)) (Option.map ~f:snd (Map.max_elt body.sides.east))
+    |> prepend (Map.find body.sides.east 0) (col `S (n_cols - 1))
+  in
+  (* let sw_thumb, nw_thumb, ew_thumb, e_link, w_link =
+   *   let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
+   *   and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
+   *   and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.)
+   *   and link =
+   *     Option.map2
+   *       ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps)
+   *   in
+   *   let sw = corner w_s thumb.sides.west
+   *   and nw = corner thumb.sides.west w_n
+   *   and ew = Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
+   *   and e_link = link (col `S 2) e_s
+   *   and w_link = link w_n (Map.find body.sides.west 0) in
+   *   sw, nw, ew, e_link, w_link
+   * in *)
+  all_body |> Model.union
