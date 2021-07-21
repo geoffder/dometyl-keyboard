@@ -297,6 +297,9 @@ let skeleton
   |> Model.union
 
 let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
+  (* TODO: find repeated actions (within here, and skel) that can be factored out,
+   * and clean this up in general (lots of quick and dirty repetition going on right
+   * now. ) *)
   let n_cols = Map.length body.cols
   and col side i =
     Option.(
@@ -306,9 +309,14 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
       | `N -> c.north
       | `S -> c.south)
   and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
+  let prepend w1 w2 l =
+    match corner w1 w2 with
+    | Some c -> c :: l
+    | None   -> l
+  in
   let _, sides =
     let sider ~key:_ ~data (last, scads) =
-      ( Some data
+      ( Option.first_some (Some data) last
       , Option.value_map
           ~default:scads
           ~f:(fun l -> join_walls ?n_steps ?fudge_factor l data :: scads)
@@ -325,34 +333,41 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
         | Some j -> j :: scads
         | None   -> scads
       in
-      w, scads'
+      Option.first_some w last, scads'
     in
     let _, north = Map.fold ~init:(None, sides) ~f:(joiner `N) body.cols in
     Map.fold_right ~init:(None, north) ~f:(joiner `S) body.cols
   in
   let all_body =
-    let prepend w1 w2 l =
-      match corner w1 w2 with
-      | Some c -> c :: l
-      | None   -> l
-    in
     prepend (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) sides_cols
     |> prepend (col `N (n_cols - 1)) (Option.map ~f:snd (Map.max_elt body.sides.east))
     |> prepend (Map.find body.sides.east 0) (col `S (n_cols - 1))
   in
-  (* let sw_thumb, nw_thumb, ew_thumb, e_link, w_link =
-   *   let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
-   *   and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
-   *   and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.)
-   *   and link =
-   *     Option.map2
-   *       ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps)
-   *   in
-   *   let sw = corner w_s thumb.sides.west
-   *   and nw = corner thumb.sides.west w_n
-   *   and ew = Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
-   *   and e_link = link (col `S 2) e_s
-   *   and w_link = link w_n (Map.find body.sides.west 0) in
-   *   sw, nw, ew, e_link, w_link
-   * in *)
-  all_body |> Model.union
+  let all_walls =
+    let _, scads =
+      let joiner ~key:_ ~data (last, scads) =
+        let scads' =
+          match
+            Option.map2 ~f:(join_walls ?n_steps ?fudge_factor) last data.Walls.Thumb.south
+          with
+          | Some j -> j :: scads
+          | None   -> scads
+        in
+        Option.first_some data.Walls.Thumb.south last, scads'
+      in
+      Map.fold_right ~init:(None, all_body) ~f:joiner thumb.keys
+    in
+    let southwest =
+      Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.min_elt thumb.keys)
+    and northwest =
+      Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.north) (Map.min_elt thumb.keys)
+    in
+    prepend
+      thumb.sides.east
+      (Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys))
+      scads
+    |> prepend southwest thumb.sides.west
+    |> prepend thumb.sides.west northwest
+    |> prepend northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
+  in
+  all_walls |> Model.union
