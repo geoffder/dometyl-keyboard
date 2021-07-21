@@ -288,7 +288,7 @@ module Body = struct
         in
         if lookup key
         then (
-          let data = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps `West data in
+          let data = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps side data in
           Map.add_exn ~key ~data m )
         else m
       in
