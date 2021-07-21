@@ -106,160 +106,7 @@ module Plate = struct
     in
     Map.map ~f:lift placed_cols, thumb
 
-  let column_joins =
-    let join = Bridge.cols ~columns in
-    Model.union [ join 0 1; join 1 2; join 2 3; join 3 4 ]
-
-  let support_bridges =
-    let bridge c k =
-      Bridge.keys
-        (Map.find_exn (Map.find_exn columns c).keys k)
-        (Map.find_exn (Map.find_exn columns (c + 1)).keys k)
-    in
-    Model.union [ bridge 0 0; bridge 1 0; bridge 2 2; bridge 3 2 ]
-
-  let bez_wall ?(d1 = 2.) ?(d2 = 5.) =
-    Wall.column_drop ~spacing ~columns ~z_off:0. ~d1 ~d2 ~thickness:3.5 ~n_steps:(`Flat 4)
-
-  let siding = Wall.poly_siding ~d1:2. ~d2:5. ~thickness:3.5 ~n_steps:(`Flat 4)
-  let lower_thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 2)
-  let thumb_siding = Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 4)
-
-  let eastern_siding i =
-    let key = Map.find_exn (Map.find_exn columns 4).keys i in
-    Wall.poly_siding ~d1:1. ~d2:2. ~thickness:3.5 ~n_steps:(`Flat 2) `East key
-
-  let _scad =
-    Model.union
-      [ Model.union
-          (Map.fold
-             ~f:(fun ~key:_ ~data l -> data.scad :: l)
-             ~init:[ thumb.scad ]
-             columns )
-      ; (bez_wall `North 0).scad
-      ; (bez_wall `North 1).scad
-      ; (bez_wall `North 2).scad
-      ; (bez_wall `North 3).scad
-      ; (bez_wall `North 4).scad
-      ; (bez_wall `South 2).scad
-      ; (bez_wall `South 3).scad
-      ; (bez_wall `South 4).scad
-      ; (siding `West (Columns.key_exn columns 0 0)).scad
-      ; (Wall.poly_siding
-           ~d1:1.
-           ~d2:2.
-           ~thickness:3.5
-           ~n_steps:(`Flat 3)
-           `West
-           (Map.find_exn thumb.keys 0) )
-          .scad
-      ; (lower_thumb_siding `North (Map.find_exn thumb.keys 0)).scad
-      ; (lower_thumb_siding `South (Map.find_exn thumb.keys 0)).scad
-      ; (thumb_siding `South (Map.find_exn thumb.keys 2)).scad
-      ]
-
   let skel =
-    Model.union
-      [ support_bridges
-      ; Walls.bez_base (siding `West (Columns.key_exn columns 0 0)) (bez_wall `North 0)
-      ; Walls.straight_base (bez_wall `North 0) (bez_wall `North 1)
-      ; Walls.straight_base ~height:7. (bez_wall `North 1) (bez_wall `North 2)
-      ; Walls.straight_base ~height:7. (bez_wall `North 2) (bez_wall `North 3)
-      ; Walls.straight_base ~height:7. (bez_wall `North 3) (bez_wall `North 4)
-        (* ; Walls.inward_elbow_base ~height:5. (bez_wall `North 3) (bez_wall `North 4) *)
-      ; Walls.cubic_base ~height:4. ~d:2. (bez_wall `North 4) (bez_wall `South 4)
-      ; Walls.inward_elbow_base ~height:7. (bez_wall `South 4) (bez_wall `South 3)
-        (* ; Walls.straight_base ~height:7. (bez_wall `South 4) (bez_wall `South 3) *)
-      ; Walls.straight_base ~height:7. (bez_wall `South 3) (bez_wall `South 2)
-      ; Walls.snake_base
-          ~height:8.
-          ~d:5.
-          (bez_wall `South 2)
-          (thumb_siding `South (Map.find_exn thumb.keys 2))
-      ; Walls.bez_base
-          ~height:8.
-          (thumb_siding `South (Map.find_exn thumb.keys 2))
-          (thumb_siding `South (Map.find_exn thumb.keys 0))
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (thumb_siding `South (Map.find_exn thumb.keys 0))
-          (Wall.poly_siding
-             ~d1:1.
-             ~d2:2.
-             ~thickness:3.5
-             ~n_steps:(`Flat 3)
-             `West
-             (Map.find_exn thumb.keys 0) )
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (thumb_siding `West (Map.find_exn thumb.keys 0))
-          (thumb_siding `North (Map.find_exn thumb.keys 0))
-      ; Walls.snake_base
-          ~scale:1.
-          ~height:11.
-          (thumb_siding `North (Map.find_exn thumb.keys 0))
-          (siding `West (Columns.key_exn columns 0 0))
-      ]
-
-  let closed =
-    Model.union
-      [ column_joins
-      ; (siding `West (Columns.key_exn columns 0 1)).scad
-      ; (siding `West (Columns.key_exn columns 0 2)).scad
-      ; (eastern_siding 0).scad
-      ; (eastern_siding 1).scad
-      ; (eastern_siding 2).scad
-      ; (thumb_siding `South (Map.find_exn thumb.keys 1)).scad
-      ; (thumb_siding `East (Map.find_exn thumb.keys 2)).scad
-      ; Walls.join_walls
-          (siding `West (Columns.key_exn columns 0 0))
-          (siding `West (Columns.key_exn columns 0 1))
-      ; Walls.join_walls
-          (siding `West (Columns.key_exn columns 0 1))
-          (siding `West (Columns.key_exn columns 0 2))
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (siding `West (Columns.key_exn columns 0 2))
-          (bez_wall `North 0)
-      ; Walls.join_walls (bez_wall `North 0) (bez_wall `North 1)
-      ; Walls.join_walls (bez_wall `North 1) (bez_wall `North 2)
-      ; Walls.join_walls (bez_wall `North 2) (bez_wall `North 3)
-      ; Walls.join_walls (bez_wall `North 3) (bez_wall `North 4)
-      ; Walls.join_walls ~fudge_factor:0. (bez_wall `North 4) (eastern_siding 2)
-      ; Walls.join_walls (eastern_siding 2) (eastern_siding 1)
-      ; Walls.join_walls (eastern_siding 1) (eastern_siding 0)
-      ; Walls.join_walls ~fudge_factor:0. (eastern_siding 0) (bez_wall `South 4)
-      ; Walls.join_walls (bez_wall `South 4) (bez_wall `South 3)
-      ; Walls.join_walls (bez_wall `South 3) (bez_wall `South 2)
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (thumb_siding `East (Map.find_exn thumb.keys 2))
-          (thumb_siding `South (Map.find_exn thumb.keys 2))
-      ; Walls.join_walls
-          (thumb_siding `South (Map.find_exn thumb.keys 2))
-          (thumb_siding `South (Map.find_exn thumb.keys 0))
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (thumb_siding `South (Map.find_exn thumb.keys 0))
-          (thumb_siding `West (Map.find_exn thumb.keys 0))
-      ; Walls.join_walls
-          ~fudge_factor:0.
-          (Wall.poly_siding
-             ~d1:1.
-             ~d2:2.
-             ~thickness:3.5
-             ~n_steps:(`Flat 3)
-             `West
-             (Map.find_exn thumb.keys 0) )
-          (thumb_siding `North (Map.find_exn thumb.keys 0))
-      ; Walls.join_walls
-          (thumb_siding `North (Map.find_exn thumb.keys 0))
-          (siding `West (Columns.key_exn columns 0 0))
-      ]
-
-  (* let scad = Model.union [ scad; skel ] *)
-
-  let scad =
     let plate = Plate.make keyhole in
     let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
     Model.union
@@ -269,7 +116,23 @@ module Plate = struct
       ; Plate.skeleton_bridges plate
       ]
 
-  let t = { scad; columns; thumb }
+  let closed =
+    let plate = Plate.make keyhole in
+    let walls =
+      Walls.
+        { body =
+            Body.make
+              ~west_lookup:(fun _ -> true)
+              ~east_lookup:(fun _ -> true)
+              ~n_steps:(`PerZ 3.5)
+              plate
+        ; thumb = Thumb.make ~east:true plate
+        }
+    in
+    Model.union
+      [ plate.scad; Walls.to_scad walls; Connect.closed walls; Plate.column_joins plate ]
+
+  let t = { scad = skel; columns; thumb }
 end
 
 let niz_sensor = Sensor.(make Config.a3144)
