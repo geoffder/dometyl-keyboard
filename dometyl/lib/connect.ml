@@ -219,6 +219,15 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   in
   Model.union [ Util.prism_exn starts dests; wedge ]
 
+let joiner ~get ~join ~key:_ ~data (last, scads) =
+  let next = get data in
+  let scads' =
+    match Option.map2 ~f:join last next with
+    | Some j -> j :: scads
+    | None   -> scads
+  in
+  Option.first_some next last, scads'
+
 let skeleton
     ?(index_height = 11.)
     ?height
@@ -308,66 +317,49 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
       match side with
       | `N -> c.north
       | `S -> c.south)
-  and corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
-  let prepend w1 w2 l =
-    match corner w1 w2 with
+  and prepend_corner w1 w2 l =
+    match Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2 with
     | Some c -> c :: l
     | None   -> l
   in
   let _, sides =
-    let sider ~key:_ ~data (last, scads) =
-      ( Option.first_some (Some data) last
-      , Option.value_map
-          ~default:scads
-          ~f:(fun l -> join_walls ?n_steps ?fudge_factor l data :: scads)
-          last )
-    in
-    let _, west = Map.fold ~init:(None, []) ~f:sider body.sides.west in
-    Map.fold_right ~init:(None, west) ~f:sider body.sides.east
+    let f = joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor) in
+    let _, west = Map.fold ~init:(None, []) ~f body.sides.west in
+    Map.fold_right ~init:(None, west) ~f body.sides.east
   in
   let _, sides_cols =
-    let joiner side ~key:_ ~data (last, scads) =
-      let w = Walls.Body.Cols.get data side in
-      let scads' =
-        match Option.map2 ~f:(join_walls ?n_steps ?fudge_factor) last w with
-        | Some j -> j :: scads
-        | None   -> scads
-      in
-      Option.first_some w last, scads'
+    let f side =
+      joiner
+        ~get:(Fn.flip Walls.Body.Cols.get @@ side)
+        ~join:(join_walls ?n_steps ?fudge_factor)
     in
-    let _, north = Map.fold ~init:(None, sides) ~f:(joiner `N) body.cols in
-    Map.fold_right ~init:(None, north) ~f:(joiner `S) body.cols
+    let _, north = Map.fold ~init:(None, sides) ~f:(f `N) body.cols in
+    Map.fold_right ~init:(None, north) ~f:(f `S) body.cols
   in
   let all_body =
-    prepend (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) sides_cols
-    |> prepend (col `N (n_cols - 1)) (Option.map ~f:snd (Map.max_elt body.sides.east))
-    |> prepend (Map.find body.sides.east 0) (col `S (n_cols - 1))
+    prepend_corner (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) sides_cols
+    |> prepend_corner
+         (col `N (n_cols - 1))
+         (Option.map ~f:snd (Map.max_elt body.sides.east))
+    |> prepend_corner (Map.find body.sides.east 0) (col `S (n_cols - 1))
   in
   let all_walls =
     let _, scads =
-      let joiner ~key:_ ~data (last, scads) =
-        let scads' =
-          match
-            Option.map2 ~f:(join_walls ?n_steps ?fudge_factor) last data.Walls.Thumb.south
-          with
-          | Some j -> j :: scads
-          | None   -> scads
-        in
-        Option.first_some data.Walls.Thumb.south last, scads'
-      in
-      Map.fold_right ~init:(None, all_body) ~f:joiner thumb.keys
+      let join = join_walls ?n_steps ?fudge_factor
+      and get d = d.Walls.Thumb.south in
+      Map.fold_right ~init:(None, all_body) ~f:(joiner ~get ~join) thumb.keys
     in
     let southwest =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.min_elt thumb.keys)
     and northwest =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.north) (Map.min_elt thumb.keys)
     in
-    prepend
+    prepend_corner
       thumb.sides.east
       (Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys))
       scads
-    |> prepend southwest thumb.sides.west
-    |> prepend thumb.sides.west northwest
-    |> prepend northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
+    |> prepend_corner southwest thumb.sides.west
+    |> prepend_corner thumb.sides.west northwest
+    |> prepend_corner northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
   in
   all_walls |> Model.union
