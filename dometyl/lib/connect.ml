@@ -208,14 +208,22 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     |> List.map ~f:Vec3.(add (mul dir2 (-0.01, -0.01, 0.)))
   and wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
-     * key face prior to drawing the walls. *)
+     * key face and moving it out for clearance prior to drawing the walls. *)
     Util.prism_exn
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w1) (overlap, overlap, overlap)))
-         [ w1.start.top_right; w1.edges.bot_right 0.; w1.edges.top_right 0.0001 ] )
+         [ w1.start.top_right
+         ; w1.start.bot_right
+         ; w1.edges.bot_right 0.
+         ; w1.edges.top_right 0.0001
+         ] )
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, -0.01)))
-         [ w2.start.top_left; w2.edges.bot_left 0.; fudge @@ w2.edges.top_left 0.0001 ] )
+         [ w2.start.top_left
+         ; w2.start.bot_left
+         ; w2.edges.bot_left 0.
+         ; fudge @@ w2.edges.top_left 0.0001
+         ] )
   in
   Model.union [ Util.prism_exn starts dests; wedge ]
 
@@ -240,23 +248,33 @@ let skeleton
     ?(pinky_idx = 4)
     Walls.{ body; thumb }
   =
-  (* TODO: For W-E handle case where there are more walls than just the first one.
-   * For those, will also have to set fudge_factor:0. for the tight corners if they
-   * exist.
-   *
-   * Also clean-up, try to make a bit clearer/elegant. *)
+  (* TODO:
+     - Test that this now allows walls on the sides other than the default skel
+     - should still do some clean-up on this. *)
   let n_cols = Map.length body.cols
   and col side i =
     let c = Map.find_exn body.cols i in
     match side with
     | `N -> c.north
     | `S -> c.south
+  and maybe_prepend opt l =
+    match opt with
+    | Some a -> a :: l
+    | None   -> l
   in
   let west =
-    Option.map2
-      ~f:(bez_base ~height:index_height ?n_steps)
-      (Map.find body.sides.west 0)
-      (col `N 0)
+    let _, side =
+      let f =
+        joiner ~get:Option.some ~join:(straight_base ~height:index_height ?fudge_factor)
+      in
+      Map.fold ~init:(None, []) ~f body.sides.west
+    and corner =
+      Option.map2
+        ~f:(bez_base ~height:index_height ?n_steps)
+        (Option.map ~f:snd @@ Map.max_elt body.sides.west)
+        (col `N 0)
+    in
+    Model.union (maybe_prepend corner side)
   in
   let north =
     let h i = if i = 0 then Some index_height else height in
@@ -269,10 +287,24 @@ let skeleton
       (n_cols - 1)
   in
   let east =
-    Option.map2
-      ~f:(cubic_base ?height ?d:cubic_d ?n_steps)
-      (col `N (n_cols - 1))
-      (col `S (n_cols - 1))
+    let north = col `N (n_cols - 1)
+    and south = col `S (n_cols - 1) in
+    if Map.is_empty body.sides.east
+    then Option.map2 ~f:(cubic_base ?height ?d:cubic_d ?n_steps) north south
+    else (
+      let draw_corner = Option.map2 ~f:(bez_base ~height:index_height ?n_steps) in
+      let _, side =
+        let f = joiner ~get:Option.some ~join:(straight_base ?height ?fudge_factor) in
+        Map.fold_right ~init:(None, []) ~f body.sides.east
+      and north_corner =
+        draw_corner north (Option.map ~f:snd @@ Map.max_elt body.sides.east)
+      and south_corner =
+        draw_corner (Option.map ~f:snd @@ Map.min_elt body.sides.east) south
+      in
+      maybe_prepend north_corner side
+      |> maybe_prepend south_corner
+      |> Model.union
+      |> Option.some )
   in
   let south =
     let base i =
@@ -301,22 +333,18 @@ let skeleton
     and w_link = link w_n (Map.find body.sides.west 0) in
     sw, nw, ew, e_link, w_link
   in
-  west :: east :: sw_thumb :: nw_thumb :: ew_thumb :: e_link :: w_link :: (north @ south)
-  |> List.filter_opt
+  west
+  :: ( east :: sw_thumb :: nw_thumb :: ew_thumb :: e_link :: w_link :: (north @ south)
+     |> List.filter_opt )
   |> Model.union
 
 let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
-  (* TODO: find repeated actions (within here, and skel) that can be factored out,
-   * and clean this up in general (lots of quick and dirty repetition going on right
-   * now. ) *)
   let n_cols = Map.length body.cols
   and col side i =
-    Option.(
-      Map.find body.cols i
-      >>= fun c ->
-      match side with
-      | `N -> c.north
-      | `S -> c.south)
+    let%bind.Option c = Map.find body.cols i in
+    match side with
+    | `N -> c.north
+    | `S -> c.south
   and prepend_corner w1 w2 l =
     match Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2 with
     | Some c -> c :: l
