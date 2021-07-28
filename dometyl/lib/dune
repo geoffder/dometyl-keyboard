@@ -1,3 +1,4 @@
 (library
  (name dometyl)
- (libraries scad_ml base stdio))
+ (libraries scad_ml base stdio)
+ (preprocess (pps ppx_jane)))
