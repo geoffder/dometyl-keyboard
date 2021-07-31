@@ -2,65 +2,52 @@ open! Base
 open! Scad_ml
 open! Infix
 
+type 'k t =
+  { scad : Model.t
+  ; plate : 'k Plate.t
+  ; walls : Walls.t
+  }
+
 let keyhole = KeyHole.make Niz.hole_config
-let n_rows = 3
-let centre_idx = 1
+let plate = Plate.make keyhole
 
-let well_column spec =
-  Column.make ~n_keys:n_rows ~curve:Curvature.(place ~well:spec ~centre_idx) keyhole
+let skel =
+  let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
+  { scad =
+      Model.union
+        [ plate.scad
+        ; Walls.to_scad walls
+        ; Connect.skeleton ~height:7. ~snake_scale:1.5 ~snake_d:5. ~snake_height:10. walls
+        ; Plate.skeleton_bridges plate
+        ]
+  ; plate
+  ; walls
+  }
 
-let thumb =
-  Column.(
-    make
-      ~join_ax:`EW
-      ~n_keys:3
-      ~curve:
-        Curvature.(
-          place (* ~well:{ angle = Float.pi /. 12.; radius = 85. } *)
-            ~well:{ angle = Float.pi /. 9.; radius = 60. }
-            ~fan:{ angle = Float.pi /. 12.; radius = 85. }
-            ~centre_idx:1)
-      (KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole)
-    (* orient along x-axis *)
-    |> rotate (0., 0., Float.pi /. -2.))
+let closed =
+  let walls =
+    Walls.
+      { body =
+          Body.make
+            ~west_lookup:(fun _ -> true)
+            ~east_lookup:(fun _ -> true)
+            ~n_steps:(`PerZ 3.5)
+            plate
+      ; thumb = Thumb.make ~east:true plate
+      }
+  in
+  { scad =
+      Model.union
+        [ plate.scad
+        ; Walls.to_scad walls
+        ; Connect.closed ~n_steps:4 walls
+        ; Plate.column_joins plate
+        ]
+  ; plate
+  ; walls
+  }
 
-module Plate = struct
-  (* TODO: get rid of this vestigial module *)
-  type 'k t =
-    { scad : Model.t
-    ; columns : 'k Column.t Map.M(Int).t
-    ; thumb : 'k Column.t
-    }
-
-  let plate = Plate.make keyhole
-
-  let skel =
-    let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
-    Model.union
-      [ plate.scad
-      ; Walls.to_scad walls
-      ; Connect.skeleton ~height:7. ~snake_scale:1.5 ~snake_d:5. ~snake_height:10. walls
-      ; Plate.skeleton_bridges plate
-      ]
-
-  let closed =
-    let walls =
-      Walls.
-        { body =
-            Body.make
-              ~west_lookup:(fun _ -> true)
-              ~east_lookup:(fun _ -> true)
-              ~n_steps:(`PerZ 3.5)
-              plate
-        ; thumb = Thumb.make ~east:true plate
-        }
-    in
-    Model.union
-      [ plate.scad; Walls.to_scad walls; Connect.closed walls; Plate.column_joins plate ]
-
-  let t = { scad = skel; columns = plate.columns; thumb = plate.thumb }
-end
-
+let t = skel
 let niz_sensor = Sensor.(make Config.a3144)
 
 let niz_platform =
