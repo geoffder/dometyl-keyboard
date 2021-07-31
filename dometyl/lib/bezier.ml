@@ -30,6 +30,18 @@ let cubic ~p1 ~p2 ~p3 ~p4 t =
   let a, b, c, d = cubic_weights t in
   (a *. p1) +. (b *. p2) +. (c *. p3) +. (d *. p4)
 
+let quad_vec2 ~p1:(x1, y1) ~p2:(x2, y2) ~p3:(x3, y3) t =
+  let a, b, c = quad_weights t in
+  let x = (a *. x1) +. (b *. x2) +. (c *. x3)
+  and y = (a *. y1) +. (b *. y2) +. (c *. y3) in
+  x, y
+
+let cubic_vec2 ~p1:(x1, y1) ~p2:(x2, y2) ~p3:(x3, y3) ~p4:(x4, y4) t =
+  let a, b, c, d = cubic_weights t in
+  let x = (a *. x1) +. (b *. x2) +. (c *. x3) +. (d *. x4)
+  and y = (a *. y1) +. (b *. y2) +. (c *. y3) +. (d *. y4) in
+  x, y
+
 let quad_vec3 ~p1:(x1, y1, z1) ~p2:(x2, y2, z2) ~p3:(x3, y3, z3) t =
   let a, b, c = quad_weights t in
   let x = (a *. x1) +. (b *. x2) +. (c *. x3)
@@ -118,8 +130,7 @@ let prism_exn bezs n_steps =
     in
     let faces =
       Array.to_list starts
-      ::
-      Array.foldi ~init:[] ~f:(fun i acc s -> (s + pts_per.(i) - 1) :: acc) starts
+      :: Array.foldi ~init:[] ~f:(fun i acc s -> (s + pts_per.(i) - 1) :: acc) starts
       :: sides
     in
     Model.polyhedron pts faces )
