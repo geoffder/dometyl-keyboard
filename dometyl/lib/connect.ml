@@ -1,6 +1,13 @@
 open! Base
 open! Scad_ml
 
+(* TODO: Rather than returning just a scad from the connection functions, try using
+   a record that includes the "outline points", e.g. the "top" or outside edge between
+   the feet of the connected walls. Then, I can string those together to generate the
+   base plate. I have not thought of another way yet that would allow the preservation
+   of the peculiar concave shape while filling in the gaps. Hull would easily fill in
+   the holes in the projection of the case, but the front inlet shape would be lost. *)
+
 (* TODO: calculate multiple points up z, so that it lines up with the wall edge
    better. straight_base and join_walls does not use this helper, and
    inward_elbow_base uses a hybrid, so I will have to make the same upgrades there,

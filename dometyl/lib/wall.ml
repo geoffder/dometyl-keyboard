@@ -91,8 +91,8 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
  * be assigned as d1. Would that make the bow of the curve more consistent without
  * implementing and switching to splines?
    Update: Clearance not using d1 has been added, so this is more of a cosmetic
-   consideration now.
- *)
+   consideration now. *)
+(* TODO: see FIXME below in poly_siding step adjustment *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
@@ -149,6 +149,10 @@ let poly_siding
           Points.fold ~f ~init:Float.max_value cleared_face.points
         in
         Float.(to_int (z /. lowest_z *. of_int n))
+        (* FIXME: using Steps.to_int conversion is not adequate to achieve reliable
+           polyhedrons. I need to incorporate more adjustments based on relative height,
+           as done with `Flat already, or with other factors previously unaccounted for,
+           such as the distance traveled including xy. *)
       | `PerZ _ -> Steps.to_int n_steps z
     in
     `Ragged (List.map ~f:adjust cw_points)
