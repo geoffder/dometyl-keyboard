@@ -179,13 +179,11 @@ let poly_siding
         Screw.make ~normal:(Vec3.negate xy) config foot.bot_left foot.bot_right )
       screw_config
   in
-  let scad =
-    let l =
-      [ Model.hull [ start_face.scad; cleared_face.scad ]; Bezier.prism_exn bezs steps ]
-    in
-    Model.union (Option.value_map ~default:l ~f:(fun s -> s.scad :: l) screw)
-  in
-  { scad
+  { scad =
+      Model.hull [ start_face.scad; cleared_face.scad ]
+      :: Bezier.prism_exn bezs steps
+      :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
+      |> Model.union
   ; start = start_face.points
   ; foot
   ; edges = Edges.of_clockwise_list_exn bezs
