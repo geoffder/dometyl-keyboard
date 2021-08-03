@@ -68,6 +68,7 @@ type t =
   ; start : Points.t
   ; foot : Points.t
   ; edges : Edges.t
+  ; screw : Screw.t option
   }
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
@@ -113,6 +114,7 @@ let poly_siding
     ?(d1 = 4.)
     ?(d2 = 7.)
     ?thickness
+    ?screw_config
     side
     (key : _ KeyHole.t)
   =
@@ -170,15 +172,39 @@ let poly_siding
       ~init:([], [])
       (List.rev cw_points)
   in
-  { scad =
-      Model.union
-        [ Model.hull [ start_face.scad; cleared_face.scad ]; Bezier.prism_exn bezs steps ]
+  let foot = Points.of_clockwise_list_exn end_ps in
+  let screw =
+    Option.map
+      ~f:(fun config ->
+        Screw.make ~normal:(Vec3.negate xy) config foot.bot_left foot.bot_right )
+      screw_config
+  in
+  let scad =
+    let l =
+      [ Model.hull [ start_face.scad; cleared_face.scad ]; Bezier.prism_exn bezs steps ]
+    in
+    Model.union (Option.value_map ~default:l ~f:(fun s -> s.scad :: l) screw)
+  in
+  { scad
   ; start = start_face.points
-  ; foot = Points.of_clockwise_list_exn end_ps
+  ; foot
   ; edges = Edges.of_clockwise_list_exn bezs
+  ; screw
   }
 
-let column_drop ?z_off ?clearance ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns side idx =
+let column_drop
+    ?z_off
+    ?clearance
+    ?d1
+    ?d2
+    ?thickness
+    ?n_steps
+    ?screw_config
+    ~spacing
+    ~columns
+    side
+    idx
+  =
   let key, face, hanging =
     let c : _ Column.t = Map.find_exn columns idx in
     match side with
@@ -214,6 +240,7 @@ let column_drop ?z_off ?clearance ?d1 ?d2 ?thickness ?n_steps ~spacing ~columns 
     ?d2
     ?thickness
     ?n_steps
+    ?screw_config
     side
     key
 

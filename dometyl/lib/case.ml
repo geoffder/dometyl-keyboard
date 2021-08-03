@@ -29,11 +29,11 @@ let closed =
     Walls.
       { body =
           Body.make
-            ~west_lookup:(fun _ -> true)
-            ~east_lookup:(fun _ -> true)
+            ~west_lookup:(fun i -> if i = 0 then Screw else Yes)
+            ~east_lookup:(fun _ -> Yes)
             ~n_steps:(`PerZ 3.5)
             plate
-      ; thumb = Thumb.make ~east:true plate
+      ; thumb = Thumb.make ~east:Yes plate
       }
   in
   { scad =
