@@ -1,21 +1,6 @@
 open Base
 open Scad_ml
 
-let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
-  let rec loop i a b =
-    let c = (a +. b) /. 2. in
-    let res = f c in
-    if Float.(res = 0. || (b -. a) /. 2. < tolerance)
-    then c
-    else if i < max_iter
-    then
-      if Float.(Sign.equal (sign_exn res) (sign_exn (f a)))
-      then loop (i + 1) c b
-      else loop (i + 1) a c
-    else failwith "Maximum iterations reached in bisection search."
-  in
-  loop 0 lower upper
-
 module Steps = struct
   (* TODO: should name better, this is done as mm in z per step at the moment. *)
   type t =
@@ -34,7 +19,7 @@ module Edge = struct
 
   let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
     let bez_frac =
-      bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
+      Util.bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
     in
     t bez_frac
 end
@@ -104,7 +89,10 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
  *
  * NOTE: `Flat and `ZRatio as the type for d1? `ZRatio being a % of Z that should
  * be assigned as d1. Would that make the bow of the curve more consistent without
- * implementing and switching to splines? *)
+ * implementing and switching to splines?
+   Update: Clearance not using d1 has been added, so this is more of a cosmetic
+   consideration now.
+ *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)

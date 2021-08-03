@@ -22,3 +22,18 @@ let prism_exn a b =
     in
     Model.polyhedron pts faces )
   else failwith "Faces must have equal number of vertices."
+
+let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
+  let rec loop i a b =
+    let c = (a +. b) /. 2. in
+    let res = f c in
+    if Float.(res = 0. || (b -. a) /. 2. < tolerance)
+    then c
+    else if i < max_iter
+    then
+      if Float.(Sign.equal (sign_exn res) (sign_exn (f a)))
+      then loop (i + 1) c b
+      else loop (i + 1) a c
+    else failwith "Maximum iterations reached in bisection search."
+  in
+  loop 0 lower upper
