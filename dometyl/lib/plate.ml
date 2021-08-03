@@ -6,6 +6,7 @@ module Lookups = struct
     { offset : int -> Vec3.t
     ; well : int -> Curvature.spec
     ; splay : int -> float
+    ; tilt : int -> float
     }
 
   let default_offset = function
@@ -13,6 +14,7 @@ module Lookups = struct
     | 3 -> 0., 3., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
     | i when i >= 4 -> 1.5, -16., 6. (* pinky *)
+    | 0 -> -5., 0., 5.
     | _ -> 0., 0., 0.
 
   let default_well = function
@@ -24,8 +26,18 @@ module Lookups = struct
     | i when i >= 4 -> Float.pi /. -20. (* pinky *)
     | _ -> 0.
 
-  let make ?(offset = default_offset) ?(well = default_well) ?(splay = default_splay) () =
-    { offset; well; splay }
+  let default_tilt = function
+    | i when i = 0 -> Float.pi /. 12.
+    | _ -> 0.
+
+  let make
+      ?(offset = default_offset)
+      ?(well = default_well)
+      ?(splay = default_splay)
+      ?(tilt = default_tilt)
+      ()
+    =
+    { offset; well; splay; tilt }
 end
 
 type 'k config =
@@ -92,6 +104,7 @@ let make
   in
   let place_col ~key:i ~data:off =
     apply_tent off (well_column @@ lookups.well i)
+    |> Column.rotate (0., lookups.tilt i, 0.)
     |> Column.rotate (0., 0., lookups.splay i)
     |> Column.translate off
   in
