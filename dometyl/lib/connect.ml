@@ -1,6 +1,12 @@
 open! Base
 open! Scad_ml
 
+(* TODO: calculate multiple points up z, so that it lines up with the wall edge
+   better. straight_base and join_walls does not use this helper, and
+   inward_elbow_base uses a hybrid, so I will have to make the same upgrades there,
+   and ensure that they remain compatible. Also, maybe try to improve the abstractions
+   to not rely on the "is top?" lists that I am using (which will need to change if
+   using a variable number of steps for the endpoints.) *)
 let base_endpoints ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
@@ -249,7 +255,9 @@ let skeleton
     Walls.{ body; thumb }
   =
   (* TODO:
-     - Test that this now allows walls on the sides other than the default skel
+     - bez_base is not great on the northeast corner when there is actually a wall
+       on that side that needs to be connected, because it was designed for cornering
+       like it is used on the west side.
      - should still do some clean-up on this. *)
   let n_cols = Map.length body.cols
   and col side i =
@@ -292,7 +300,7 @@ let skeleton
     if Map.is_empty body.sides.east
     then Option.map2 ~f:(cubic_base ?height ?d:cubic_d ?n_steps) north south
     else (
-      let draw_corner = Option.map2 ~f:(bez_base ~height:index_height ?n_steps) in
+      let draw_corner = Option.map2 ~f:(bez_base ?height ?n_steps) in
       let _, side =
         let f = joiner ~get:Option.some ~join:(straight_base ?height ?fudge_factor) in
         Map.fold_right ~init:(None, []) ~f body.sides.east
