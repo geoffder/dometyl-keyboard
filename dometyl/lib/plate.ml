@@ -9,10 +9,10 @@ module Lookups = struct
     }
 
   let default_offset = function
-    | 2 -> 0., 6., -6. (* middle *)
+    | 2 -> 0., 8., -6. (* middle *)
     | 3 -> 0., 3., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
-    | i when i >= 4 -> 1.5, -12., 6. (* pinky *)
+    | i when i >= 4 -> 1.5, -16., 6. (* pinky *)
     | _ -> 0., 0., 0.
 
   let default_well = function
