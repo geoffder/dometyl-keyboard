@@ -46,7 +46,8 @@ let hole_config =
   and snap_outer_wall = 0.2
   and outer_w = 19.5
   and inner_w = 14.
-  and thickness = 4. in
+  and thickness = 4.
+  and cap_height = 6.25 in
   let clip hole =
     let inset_depth = thickness -. clip_height in
     let inset =
@@ -76,7 +77,13 @@ let hole_config =
     Model.difference hole [ inset; bot; snap; Model.mirror (1, 0, 0) snap ]
   in
   KeyHole.
-    { spec = Kind.Niz { clip_height; snap_slot_h }; outer_w; inner_w; thickness; clip }
+    { spec = Kind.Niz { clip_height; snap_slot_h }
+    ; outer_w
+    ; inner_w
+    ; thickness
+    ; clip
+    ; cap_height
+    }
 
 module Platform = struct
   type config =

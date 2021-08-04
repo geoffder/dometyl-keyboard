@@ -8,11 +8,18 @@ type 'k t =
   ; walls : Walls.t
   }
 
-let keyhole = KeyHole.make Niz.hole_config
+let cap =
+  Model.import "../things/SA_R3.stl"
+  |> Model.color Color.DarkSlateBlue
+  |> Model.rotate (Float.pi /. 2., 0., 0.)
+
+let keyhole = KeyHole.make ~cap Niz.hole_config
 let plate = Plate.make keyhole
 
 let skel =
-  let walls = Walls.{ body = Body.make plate; thumb = Thumb.make plate } in
+  let walls =
+    Walls.{ body = Body.make plate; thumb = Thumb.make ~n_steps:(`PerZ 5.5) plate }
+  in
   { scad =
       Model.union
         [ plate.scad
@@ -47,7 +54,21 @@ let closed =
   ; walls
   }
 
+let all_caps =
+  let collect ~key:_ ~data acc =
+    Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap
+  in
+  let body_caps =
+    Map.fold
+      ~init:[]
+      ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f:collect data.Column.keys)
+      plate.columns
+  in
+  Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
+
 let t = skel
+
+(* let t = { skel with scad = Model.union [ skel.scad; all_caps ] } *)
 let niz_sensor = Sensor.(make Config.a3144)
 
 let niz_platform =

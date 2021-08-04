@@ -94,6 +94,7 @@ type 'k config =
   ; inner_w : float
   ; thickness : float
   ; clip : Model.t -> Model.t
+  ; cap_height : float
   }
 
 type 'k t =
@@ -101,6 +102,7 @@ type 'k t =
   ; scad : Model.t
   ; origin : Vec3.t
   ; faces : Faces.t
+  ; cap : Model.t option
   }
 
 let translate p t =
@@ -108,6 +110,7 @@ let translate p t =
     scad = Model.translate p t.scad
   ; origin = Vec3.add p t.origin
   ; faces = Faces.translate p t.faces
+  ; cap = Option.map ~f:(Model.translate p) t.cap
   }
 
 let rotate r t =
@@ -115,6 +118,7 @@ let rotate r t =
     scad = Model.rotate r t.scad
   ; origin = Vec3.rotate r t.origin
   ; faces = Faces.rotate r t.faces
+  ; cap = Option.map ~f:(Model.rotate r) t.cap
   }
 
 let rotate_about_pt r p t =
@@ -122,6 +126,7 @@ let rotate_about_pt r p t =
     scad = Model.rotate_about_pt r p t.scad
   ; origin = Vec3.rotate_about_pt r p t.origin
   ; faces = Faces.rotate_about_pt r p t.faces
+  ; cap = Option.map ~f:(Model.rotate_about_pt r p) t.cap
   }
 
 let rotate_clips t =
@@ -136,10 +141,15 @@ let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
   Vec3.(normalize (top_left <-> bot_left))
 
-let make ({ outer_w; inner_w; thickness; clip; _ } as config) =
+let make ?cap ({ outer_w; inner_w; thickness; clip; cap_height; _ } as config) =
   let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
     let inner = Model.cube ~center:true (inner_w, inner_w, thickness +. 0.1) in
     Model.difference outer [ inner ]
   in
-  { config; scad = clip hole; origin = 0., 0., 0.; faces = Faces.make outer_w thickness }
+  { config
+  ; scad = clip hole
+  ; origin = 0., 0., 0.
+  ; faces = Faces.make outer_w thickness
+  ; cap = Option.map ~f:(Model.translate (0., 0., cap_height)) cap
+  }

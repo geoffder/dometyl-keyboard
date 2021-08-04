@@ -4,7 +4,8 @@ open! Scad_ml
 let hole_config =
   let outer_w = 19.
   and inner_w = 14.
-  and thickness = 4. in
+  and thickness = 4.
+  and cap_height = 6.25 in
   let clip hole =
     let clip =
       Model.rotate
@@ -14,4 +15,4 @@ let hole_config =
     in
     Model.difference hole [ clip; Model.mirror (0, 1, 0) clip ]
   in
-  KeyHole.{ spec = Kind.Mx (); outer_w; inner_w; thickness; clip }
+  KeyHole.{ spec = Kind.Mx (); outer_w; inner_w; thickness; clip; cap_height }
