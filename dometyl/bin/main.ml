@@ -31,7 +31,7 @@ let () =
   (* write_thing "keyhole" Case.keyhole.scad;
    * write_thing "column" Case.column.scad;
    * write_thing "thumb" Case.thumb.scad; *)
-  write_thing ~export:true "case" Case.t.scad;
+  write_thing ~export:false "case" Case.t.scad;
   (* write_thing "niz_bottom" Niz.Bottom.scad;
    * write_thing "niz_platform" Case.niz_platform.scad;
    * write_thing "niz_cross_section" Case.niz_cross_section;
