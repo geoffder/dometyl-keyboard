@@ -14,12 +14,12 @@ module Lookups = struct
     | 3 -> 0., 3., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
     | i when i >= 4 -> 1.5, -16., 6. (* pinky *)
-    | 0 -> -5., 0., 5.
+    | 0 -> -5., 0., 4.
     | _ -> 0., 0., 0.
 
   let default_well = function
     (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
-    | _ -> Curvature.{ angle = Float.pi /. 9.; radius = 60. }
+    | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60. }
   (* | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. } *)
 
   let default_splay = function
@@ -79,8 +79,8 @@ let make
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = 7., -50., -3.)
     ?(thumb_angle = Float.(0., pi /. -4., pi /. 5.))
-    ?(thumb_fan = Curvature.{ angle = Float.pi /. 12.; radius = 85. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 9.; radius = 60. })
+    ?(thumb_fan = Curvature.{ angle = Float.pi /. 11.; radius = 85. })
+    ?(thumb_well = Curvature.{ angle = Float.pi /. 7.; radius = 60. })
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
