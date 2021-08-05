@@ -20,6 +20,7 @@ module Body = struct
         ?(d2 = 5.)
         ?(z_off = 0.)
         ?(thickness = 3.5)
+        ?(clearance = 1.5)
         ?(n_steps = `Flat 4)
         ?(north_lookup = fun i -> if i = 2 || i = 4 then Screw else Yes)
         ?(south_lookup =
@@ -30,7 +31,9 @@ module Body = struct
         ?(screw_config = Screw.default_config)
         Plate.{ config = { spacing; _ }; columns; _ }
       =
-      let drop = Wall.column_drop ~spacing ~columns ~z_off ~thickness ~n_steps ~d1 ~d2 in
+      let drop =
+        Wall.column_drop ~spacing ~columns ~z_off ~thickness ~clearance ~n_steps ~d1 ~d2
+      in
       let bez_wall = function
         | No    -> fun _ _ -> None
         | Yes   -> fun side i -> Some (drop side i)
@@ -66,6 +69,7 @@ module Body = struct
         ?(d2 = 5.)
         ?(z_off = 0.)
         ?(thickness = 3.5)
+        ?(clearance = 1.5)
         ?(n_steps = `Flat 4)
         ?(west_lookup = fun i -> if i = 0 then Screw else No)
         ?(east_lookup = fun _ -> No)
@@ -74,7 +78,7 @@ module Body = struct
       =
       let west_col = Map.find_exn columns 0
       and _, east_col = Map.max_elt_exn columns
-      and siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps in
+      and siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps in
       let sider side ~key ~data m =
         let lookup =
           match side with
@@ -144,6 +148,7 @@ module Thumb = struct
       ?(d2 = 3.)
       ?(z_off = 0.)
       ?(thickness = 3.5)
+      ?(clearance = 3.)
       ?(n_steps = `PerZ 4.)
       ?(north_lookup = fun i -> if i = 0 then Yes else No)
       ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Screw else No)
@@ -152,7 +157,7 @@ module Thumb = struct
       ?(screw_config = Screw.default_config)
       Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
     =
-    let siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~n_steps in
+    let siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps in
     let bez_wall = function
       | No    -> fun _ _ -> None
       | Yes   -> fun side i -> Some (siding side i)
@@ -171,13 +176,20 @@ module Thumb = struct
         }
     }
 
-  let to_scad { keys; sides = { west; east } } =
+  let to_scad ?(incl_east = true) { keys; sides = { west; east } } =
     let prepend wall l =
       Option.value_map ~default:l ~f:(fun w -> Wall.to_scad w :: l) wall
     in
+    (* NOTE: janky stand-in. Will likely remove this ugly option once I improve
+       poly_siding to create sturdier walls for near-vertical keys. Let this serve
+       as a reminder of that necessity.*)
+    let sides =
+      let w = prepend west [] in
+      if incl_east then prepend east w else w
+    in
     Model.union
     @@ Map.fold
-         ~init:(prepend west [] |> prepend east)
+         ~init:sides
          ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
          keys
 end
@@ -187,4 +199,5 @@ type t =
   ; thumb : Thumb.t
   }
 
-let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
+let to_scad ?incl_east_thumb { body; thumb } =
+  Model.union [ Body.to_scad body; Thumb.to_scad ?incl_east:incl_east_thumb thumb ]
