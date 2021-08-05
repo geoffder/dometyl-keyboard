@@ -6,7 +6,6 @@ module Lookups = struct
     { offset : int -> Vec3.t
     ; well : int -> Curvature.spec
     ; splay : int -> float
-    ; tilt : int -> float
     }
 
   let default_offset = function
@@ -14,30 +13,23 @@ module Lookups = struct
     | 3 -> 0., 3., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
     | i when i >= 4 -> 1.5, -16., 6. (* pinky *)
-    | 0 -> -5., 0., 4.
+    (* | 0 -> -8.5, 0., 6.5 *)
+    | 0 -> 0., 0., 6.5
     | _ -> 0., 0., 0.
 
   let default_well = function
     (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
-    | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60. }
+    | i when i = 0 ->
+      Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = Float.pi /. 7.5 }
+    | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
   (* | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. } *)
 
   let default_splay = function
     | i when i >= 4 -> Float.pi /. -20. (* pinky *)
     | _ -> 0.
 
-  let default_tilt = function
-    | i when i = 0 -> Float.pi /. 12.
-    | _ -> 0.
-
-  let make
-      ?(offset = default_offset)
-      ?(well = default_well)
-      ?(splay = default_splay)
-      ?(tilt = default_tilt)
-      ()
-    =
-    { offset; well; splay; tilt }
+  let make ?(offset = default_offset) ?(well = default_well) ?(splay = default_splay) () =
+    { offset; well; splay }
 end
 
 type 'k config =
@@ -79,9 +71,11 @@ let make
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = 7., -50., -3.)
     ?(thumb_angle = Float.(0., pi /. -4., pi /. 5.))
-    ?(thumb_fan = Curvature.{ angle = Float.pi /. 11.; radius = 85. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 7.; radius = 60. })
-    ?(lookups = Lookups.make ())
+    ?(thumb_fan = Curvature.{ angle = Float.pi /. 10.5; radius = 85.; tilt = 0. })
+    ?(thumb_well = Curvature.{ angle = Float.pi /. 5.; radius = 50.; tilt = 0. })
+    ?((* ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.; radius = 70.; tilt = 0. })
+       * ?(thumb_well = Curvature.{ angle = Float.pi /. 4.; radius = 45.; tilt = 0. }) *)
+    lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
   let well_column spec =
@@ -104,7 +98,6 @@ let make
   in
   let place_col ~key:i ~data:off =
     apply_tent off (well_column @@ lookups.well i)
-    |> Column.rotate (0., lookups.tilt i, 0.)
     |> Column.rotate (0., 0., lookups.splay i)
     |> Column.translate off
   in
