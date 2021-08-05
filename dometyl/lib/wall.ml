@@ -142,20 +142,27 @@ let poly_siding
   let cw_points = Points.to_clockwise_list cleared_face.points in
   let steps =
     let adjust (_, _, z) =
-      match n_steps with
-      | `Flat n ->
-        let lowest_z =
-          let f m (_, _, z) = Float.min m z in
-          Points.fold ~f ~init:Float.max_value cleared_face.points
-        in
-        Float.(to_int (z /. lowest_z *. of_int n))
-        (* FIXME: using Steps.to_int conversion is not adequate to achieve reliable
-           polyhedrons. I need to incorporate more adjustments based on relative height,
-           as done with `Flat already, or with other factors previously unaccounted for,
-           such as the distance traveled including xy. *)
-      | `PerZ _ -> Steps.to_int n_steps z
+      (* match n_steps with
+       * | `Flat n ->
+       *   let lowest_z =
+       *     let f m (_, _, z) = Float.min m z in
+       *     Points.fold ~f ~init:Float.max_value cleared_face.points
+       *   in
+       *   Float.(to_int (z /. lowest_z *. of_int n))
+       *   (\* FIXME: using Steps.to_int conversion is not adequate to achieve reliable
+       *      polyhedrons. I need to incorporate more adjustments based on relative height,
+       *      as done with `Flat already, or with other factors previously unaccounted for,
+       *      such as the distance traveled including xy. *\)
+       * | `PerZ _ -> Steps.to_int n_steps z *)
+      let lowest_z =
+        let f m (_, _, z) = Float.min m z in
+        Points.fold ~f ~init:Float.max_value cleared_face.points
+      in
+      Float.(to_int (z /. lowest_z *. of_int (Steps.to_int n_steps z)))
     in
-    `Ragged (List.map ~f:adjust cw_points)
+    (* `Ragged (List.map ~f:adjust cw_points) *)
+    `Ragged
+      (List.map2_exn ~f:(fun p a -> Int.max (adjust p + a) 2) cw_points [ 0; 0; 0; 0 ])
   and end_ps, bezs =
     List.foldi
       ~f:(fun i (ends, bs) p ->
