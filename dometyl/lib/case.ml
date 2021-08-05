@@ -18,18 +18,28 @@ let skel =
      very thin / losing sturdiness. *)
   let walls =
     Walls.
-      { body = Body.make plate; thumb = Thumb.make ~east:Yes ~n_steps:(`Flat 3) plate }
+      { body = Body.make plate
+      ; thumb =
+          Thumb.make
+            ~south_lookup:(fun i -> if i < 2 then Yes else Screw)
+            ~east:No
+            ~n_steps:(`Flat 3)
+            plate
+      }
   in
   { scad =
       Model.union
         [ plate.scad
-        ; Walls.to_scad ~incl_east_thumb:false walls
+        ; Walls.to_scad walls
         ; Connect.skeleton
             ~height:7.
-            ~snake_scale:1.5
-            ~snake_d:5.
-            ~snake_height:10.
+            ~thumb_height:11.
+            ~snake_scale:2.
+            ~snake_d:1.
+            ~cubic_d:4.
+            ~cubic_scale:1.25
             ~join_steps:4
+            ~close_thumb:true
             walls
         ; Plate.skeleton_bridges plate
         ]
@@ -46,7 +56,8 @@ let closed =
             ~east_lookup:(fun _ -> Yes)
             ~n_steps:(`PerZ 3.5)
             plate
-      ; thumb = Thumb.make ~east:Yes plate
+      ; thumb =
+          Thumb.make ~east:No ~south_lookup:(fun i -> if i < 2 then Yes else Screw) plate
       }
   in
   { scad =
@@ -72,9 +83,11 @@ let all_caps =
   in
   Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
 
-let t = skel
+(* let t = skel *)
 
-(* let t = { skel with scad = Model.union [ skel.scad; all_caps ] } *)
+let t = { skel with scad = Model.union [ skel.scad; all_caps ] }
+
+(* let t = { closed with scad = Model.union [ closed.scad; all_caps ] } *)
 let niz_sensor = Sensor.(make Config.a3144)
 
 let niz_platform =

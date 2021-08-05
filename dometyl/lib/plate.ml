@@ -61,6 +61,7 @@ let make_thumb ?well ?fan keyhole =
     (* orient along x-axis *)
     |> rotate (0., 0., Float.pi /. -2.))
 
+(* thumb angle was y = -4 *)
 let make
     ?(n_rows = 3)
     ?(centre_row = 1)
@@ -70,12 +71,12 @@ let make
     ?(clearance = 6.5)
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = 7., -50., -3.)
-    ?(thumb_angle = Float.(0., pi /. -4., pi /. 5.))
-    ?(thumb_fan = Curvature.{ angle = Float.pi /. 10.5; radius = 85.; tilt = 0. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 5.; radius = 50.; tilt = 0. })
-    ?((* ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.; radius = 70.; tilt = 0. })
-       * ?(thumb_well = Curvature.{ angle = Float.pi /. 4.; radius = 45.; tilt = 0. }) *)
-    lookups = Lookups.make ())
+    ?(thumb_angle = Float.(0., pi /. -7., pi /. 5.))
+    ?((* ?(thumb_fan = Curvature.{ angle = Float.pi /. 10.5; radius = 85.; tilt = 0. })
+       * ?(thumb_well = Curvature.{ angle = Float.pi /. 5.; radius = 50.; tilt = 0. }) *)
+    thumb_fan = Curvature.{ angle = Float.pi /. 7.75; radius = 70.; tilt = 0. })
+    ?(thumb_well = Curvature.{ angle = Float.pi /. 3.; radius = 30.; tilt = 0. })
+    ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
   let well_column spec =

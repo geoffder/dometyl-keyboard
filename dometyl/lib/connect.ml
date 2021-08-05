@@ -54,6 +54,7 @@ let cubic_base
     ?(scale = 1.1)
     ?(d = 2.)
     ?(n_steps = 10)
+    ?(bow_out = true)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
@@ -62,7 +63,9 @@ let cubic_base
   and dist = d, d, 0.
   and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
   let get_bez top start dest =
-    let outward = if top then Vec3.add (width, width, 0.) dist else dist in
+    let outward =
+      if Bool.equal top bow_out then Vec3.add (width, width, 0.) dist else dist
+    in
     let p1 = Vec3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
     and p2 = Vec3.(start <-> mul dir1 outward)
     and p3 = Vec3.(dest <+> mul dir2 outward)
@@ -79,7 +82,7 @@ let snake_base
     ?(height = 4.)
     ?(scale = 1.5)
     ?(d = 2.)
-    ?(n_steps = 10)
+    ?(n_steps = 12)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
@@ -254,12 +257,15 @@ let skeleton
     ?height
     ?n_steps
     ?join_steps
+    ?(join_index = true)
     ?fudge_factor
     ?snake_d
     ?snake_scale
-    ?snake_height
     ?cubic_d
+    ?cubic_scale
+    ?thumb_height
     ?(pinky_idx = 4)
+    ?(close_thumb = false)
     Walls.{ body; thumb }
   =
   (* TODO:
@@ -293,11 +299,15 @@ let skeleton
     Model.union (maybe_prepend corner side)
   in
   let north =
-    let h i = if i = 0 then Some index_height else height in
+    let index =
+      if join_index
+      then join_walls ?n_steps:join_steps
+      else straight_base ~height:index_height
+    in
     List.init
       ~f:(fun i ->
         Option.map2
-          ~f:(straight_base ?height:(h i) ?fudge_factor)
+          ~f:((if i = 0 then index else straight_base ?height) ?fudge_factor)
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
@@ -340,21 +350,37 @@ let skeleton
     and corner = Option.map2 ~f:(join_walls ?n_steps:join_steps ~fudge_factor:0.)
     and link =
       Option.map2
-        ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps)
+        ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
     in
     let sw = corner w_s thumb.sides.west
     and nw = corner thumb.sides.west w_n
-    and ew = Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
+    and ew =
+      if close_thumb
+      then (
+        let _, scads =
+          let join = join_walls ?n_steps ?fudge_factor
+          and get d = d.Walls.Thumb.south in
+          Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
+        in
+        Some (Model.union scads) )
+      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
     and es = corner thumb.sides.east e_s
     and e_link =
       if Option.is_some thumb.sides.east
-      then
-        Option.map2 (* ~f:(straight_base ~fudge_factor:0. ?height) *)
-          ~f:(bez_base ~n_steps:3 ?height)
-          (col `S 2)
-          thumb.sides.east
+      then Option.map2 ~f:(bez_base ~n_steps:3 ?height) (col `S 2) thumb.sides.east
       else link (col `S 2) e_s
-    and w_link = link w_n (Map.find body.sides.west 0) in
+    and w_link =
+      Option.map2
+        ~f:
+          (cubic_base
+             ?height:thumb_height
+             ?scale:cubic_scale
+             ?d:cubic_d
+             ?n_steps
+             ~bow_out:false )
+        w_n
+        (Map.find body.sides.west 0)
+    in
     sw, nw, ew, es, e_link, w_link
   in
   west
