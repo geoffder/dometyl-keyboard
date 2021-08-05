@@ -8,23 +8,29 @@ type 'k t =
   ; walls : Walls.t
   }
 
-let cap =
-  Model.import "../things/SA_R3.stl"
-  |> Model.color Color.DarkSlateBlue
-  |> Model.rotate (Float.pi /. 2., 0., 0.)
-
+let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
 let keyhole = KeyHole.make ~cap Niz.hole_config
 let plate = Plate.make keyhole
 
 let skel =
+  (* NOTE: temporary inclusion of east wall on thumb, and the incl east thumb param.
+     Need handle very vertical keys better. Smarter clearance, as well as not becoming
+     very thin / losing sturdiness. *)
   let walls =
-    Walls.{ body = Body.make plate; thumb = Thumb.make ~n_steps:(`PerZ 5.5) plate }
+    Walls.
+      { body = Body.make plate; thumb = Thumb.make ~east:Yes ~n_steps:(`Flat 3) plate }
   in
   { scad =
       Model.union
         [ plate.scad
-        ; Walls.to_scad walls
-        ; Connect.skeleton ~height:7. ~snake_scale:1.5 ~snake_d:5. ~snake_height:10. walls
+        ; Walls.to_scad ~incl_east_thumb:false walls
+        ; Connect.skeleton
+            ~height:7.
+            ~snake_scale:1.5
+            ~snake_d:5.
+            ~snake_height:10.
+            ~join_steps:4
+            walls
         ; Plate.skeleton_bridges plate
         ]
   ; plate
