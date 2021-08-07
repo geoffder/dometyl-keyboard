@@ -21,7 +21,7 @@ module Lookups = struct
     | i when i >= 4 ->
       Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = 0. } (* pinky *)
     | i when i = 0 ->
-      Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = Float.pi /. 6.75 }
+      Curvature.{ angle = Float.pi /. 8.; radius = 57.5; tilt = Float.pi /. 6.75 }
     | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
 
   let default_splay = function
