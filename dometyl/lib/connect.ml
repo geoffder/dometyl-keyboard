@@ -136,7 +136,7 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2
 let straight_base
     ?(height = 11.)
     ?(fudge_factor = 6.)
-    ?(min_width = 5.)
+    ?(min_width = 4.5)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
