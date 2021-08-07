@@ -9,18 +9,22 @@ module Lookups = struct
     }
 
   let default_offset = function
-    | 2 -> 0., 8., -6. (* middle *)
-    | 3 -> 0., 3., -2. (* ring *)
+    | 2 -> 0., 9., -6. (* middle *)
+    | 3 -> 0., 5., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
-    | i when i >= 4 -> 1.5, -16., 6. (* pinky *)
-    (* | 0 -> -8.5, 0., 6.5 *)
-    | 0 -> 0., 0., 6.5
+    | i when i >= 4 -> 1.5, -21., 6. (* pinky *)
+    (* | 0 -> 0., 0., 6.5  (* first test with *) *)
+    | 0 -> -1., 0., 5.5
     | _ -> 0., 0., 0.
 
   let default_well = function
-    (* | i when i >= 4 -> Curvature.{ angle = Float.pi /. 9.; radius = 60. } (\* pinky *\) *)
+    | i when i >= 4 ->
+      Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = 0. } (* pinky *)
+    (* | i when i = 0 ->
+       (* first print with *)
+     *   Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = Float.pi /. 7.5 } *)
     | i when i = 0 ->
-      Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = Float.pi /. 7.5 }
+      Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = Float.pi /. 6.75 }
     | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
   (* | _ -> Curvature.{ angle = Float.pi /. 12.; radius = 85. } *)
 
@@ -61,7 +65,11 @@ let make_thumb ?well ?fan keyhole =
     (* orient along x-axis *)
     |> rotate (0., 0., Float.pi /. -2.))
 
-(* thumb angle was y = -4 *)
+(* Old
+   ?(thumb_angle = Float.(0., pi /. -4., pi /. 5.))
+   ?(thumb_fan = Curvature.{ angle = Float.pi /. 10.5; radius = 85.; tilt = 0. })
+   ?(thumb_well = Curvature.{ angle = Float.pi /. 5.; radius = 50.; tilt = 0. })
+*)
 let make
     ?(n_rows = 3)
     ?(centre_row = 1)
@@ -71,11 +79,9 @@ let make
     ?(clearance = 6.5)
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = 7., -50., -3.)
-    ?(thumb_angle = Float.(0., pi /. -7., pi /. 5.))
-    ?((* ?(thumb_fan = Curvature.{ angle = Float.pi /. 10.5; radius = 85.; tilt = 0. })
-       * ?(thumb_well = Curvature.{ angle = Float.pi /. 5.; radius = 50.; tilt = 0. }) *)
-    thumb_fan = Curvature.{ angle = Float.pi /. 7.75; radius = 70.; tilt = 0. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 3.; radius = 30.; tilt = 0. })
+    ?(thumb_angle = Float.(0., pi /. -5.5, pi /. 5.))
+    ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.25; radius = 70.; tilt = 0. })
+    ?(thumb_well = Curvature.{ angle = Float.pi /. 6.; radius = 70.; tilt = 0. })
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
