@@ -2,14 +2,15 @@ open! Base
 open! Scad_ml
 
 module Bottom = struct
-  let x = 17.25 (* NOTE: was 17.15 *)
+  let x = 17.5 (* NOTE: was 17.25 *)
 
   let y = 17.5
   let z = 4.
   let bulge_thickness = 0.5
   let bulge_length = 6.5
   let bulge_height = 3.2
-  let ellipse_inset_x_rad = 1.4
+  let ellipse_inset_x_rad = 1.6 (* was 1.4 *)
+
   let ellipse_inset_y_scale = 1.2
   let corner_cut_rad = 5.
   let corner_cut_off = 2.75
@@ -41,13 +42,13 @@ module Bottom = struct
 end
 
 let hole_config =
-  let clip_height = 1.1
+  let clip_height = 1.0
   and snap_slot_h = 1.2
   and snap_outer_wall = 0.2
   and outer_w = 19.5
   and inner_w = 14.
   and thickness = 4.
-  and cap_height = 6.25 in
+  and cap_height = 5. (* mx is 6.25, but niz seems to measure at 4.9 ~ 5. *) in
   let clip hole =
     let inset_depth = thickness -. clip_height in
     let inset =
@@ -151,10 +152,13 @@ module Platform = struct
         Model.difference
           (Bottom.ellipse |> Model.linear_extrude ~height:wall_height)
           [ Model.cube
-              ~center:true
-              ( dome_waist
-              , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2.
-              , dome_thickness *. 2. )
+              ( Bottom.ellipse_inset_x_rad
+              , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale
+              , wall_height )
+            |> Model.translate
+                 ( w /. 2.
+                 , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale /. -2.
+                 , 0. )
           ]
       in
       Model.difference (Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]) [ waist_cut ]
