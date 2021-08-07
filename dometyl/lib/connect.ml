@@ -104,7 +104,8 @@ let snake_base
   and bezs = List.map3_exn ~f:get_bez [ false; true; true; false ] starts dests in
   Bezier.prism_exn bezs steps
 
-let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2 : Wall.t)
+  =
   (* Quad bezier, but starting from the bottom (inside face) of the wall and
    * projecting inward. This is so similar to bez_base that some generalization may
    * be possible to spare the duplication. Perhaps an option of whether the start is
@@ -118,7 +119,7 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
   let get_bez start dest =
     let diff = Vec3.(dest <-> start) in
     let p1 = Vec3.(start <-> mul inward_dir (0.01, 0.01, 0.)) (* fudge for union *)
-    and p2 = Vec3.(start <+> mul mask diff)
+    and p2 = Vec3.(start <+> mul mask diff <+> map (( *. ) d) dir2)
     and p3 = Vec3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
     Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
@@ -132,7 +133,13 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t)
   and bezs = List.map2_exn ~f:get_bez starts dests in
   Bezier.prism_exn bezs steps
 
-let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.t) =
+let straight_base
+    ?(height = 11.)
+    ?(fudge_factor = 6.)
+    ?(min_width = 5.)
+    (w1 : Wall.t)
+    (w2 : Wall.t)
+  =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let major_diff, minor_diff =
@@ -147,10 +154,21 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
     (* For adjustment of bottom (inside face) points to account for steep angles
      * that would otherwise cause the polyhedron to fail. Distance moved is a
      * function of how far apart the walls are along the major axis of the first. *)
-    let extra =
+    let angle_extra =
       if Float.(abs minor_diff > abs major_diff)
-      then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
+      then Float.(abs (min (abs major_diff -. fudge_factor) 0.)) /. 2.
       else 0.
+    in
+    (* Check now thick the connection is in the middle, and create a rough adjustment
+       if it is less than the specified minimum. *)
+    let extra =
+      if Float.(angle_extra = 0.)
+      then (
+        let mid_top = Vec3.mean [ w1.foot.top_right; w2.foot.top_left ]
+        and mid_bot = Vec3.mean [ w1.foot.bot_right; w2.foot.bot_left ] in
+        let thickness = Vec3.(norm (mid_top <-> mid_bot)) in
+        if Float.(thickness < min_width) then min_width -. thickness else 0. )
+      else angle_extra
     in
     Vec3.(add (mul d (extra, extra, 0.)))
   and overlap =
@@ -165,26 +183,42 @@ let straight_base ?(height = 11.) ?(fudge_factor = 6.) (w1 : Wall.t) (w2 : Wall.
       Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.top_left))
       > Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.bot_left)))
   in
-  let starts =
+  let starts og =
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
-    [ (if not outward then fudge dir1 w1.foot.bot_right else w1.foot.bot_right)
+    [ ( if og
+      then w1.foot.bot_right
+      else if not outward
+      then fudge dir1 w1.foot.bot_right
+      else fudge (Vec3.negate dir1) w1.foot.bot_right )
     ; w1.foot.top_right
     ; Wall.Edge.point_at_z w1.edges.top_right height
-    ; (if not outward then fudge dir1 up_bot else up_bot)
+    ; ( if og
+      then up_bot
+      else if not outward
+      then fudge dir1 up_bot
+      else fudge (Vec3.negate dir1) up_bot )
     ]
     |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
-  and dests =
-    let up_top = Wall.Edge.point_at_z w2.edges.top_left height
-    and up_bot = Wall.Edge.point_at_z w2.edges.bot_left height
+  and dests og =
+    let up_bot = Wall.Edge.point_at_z w2.edges.bot_left height
     and slide = fudge (Vec3.negate dir2) in
-    [ (if outward then slide w2.foot.bot_left else w2.foot.bot_left)
+    [ ( if og
+      then w2.foot.bot_left
+      else if outward
+      then slide w2.foot.bot_left
+      else fudge dir2 w2.foot.bot_left )
     ; w2.foot.top_left
-    ; up_top
-    ; (if outward then slide up_bot else up_bot)
+    ; Wall.Edge.point_at_z w2.edges.top_left height
+    ; (if og then up_bot else if outward then slide up_bot else fudge dir2 up_bot)
     ]
     |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
-  Util.prism_exn starts dests
+  Model.union
+    [ Util.prism_exn (starts false) (dests false)
+    ; ( if outward
+      then Util.prism_exn (starts true) (starts false)
+      else Util.prism_exn (dests false) (dests true) )
+    ]
 
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
@@ -207,7 +241,8 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     Vec3.(add (mul dir2 (-.extra, -.extra, 0.)))
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy in
-    if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
+    if (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
+       && Float.(abs major_diff > abs minor_diff)
     then Float.abs major_diff
     else 0.01
     (* If the walls are overlapping, move back the start positions to counter. *)
@@ -255,6 +290,7 @@ let joiner ~get ~join ~key:_ ~data (last, scads) =
 let skeleton
     ?(index_height = 11.)
     ?height
+    ?min_straight_width
     ?n_steps
     ?join_steps
     ?(join_index = true)
@@ -266,6 +302,7 @@ let skeleton
     ?thumb_height
     ?(pinky_idx = 4)
     ?(close_thumb = false)
+    ?(close_pinky = false)
     Walls.{ body; thumb }
   =
   (* TODO:
@@ -302,12 +339,18 @@ let skeleton
     let index =
       if join_index
       then join_walls ?n_steps:join_steps
-      else straight_base ~height:index_height
+      else straight_base ~height:index_height ?min_width:min_straight_width
     in
     List.init
       ~f:(fun i ->
         Option.map2
-          ~f:((if i = 0 then index else straight_base ?height) ?fudge_factor)
+          ~f:
+            (( if i = 0
+             then index
+             else if i >= 3 && close_pinky
+             then join_walls ?n_steps:join_steps
+             else straight_base ?height ?min_width:min_straight_width )
+               ?fudge_factor )
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
@@ -316,7 +359,11 @@ let skeleton
     let north = col `N (n_cols - 1)
     and south = col `S (n_cols - 1) in
     if Map.is_empty body.sides.east
-    then Option.map2 ~f:(cubic_base ?height ?d:cubic_d ?n_steps) north south
+    then
+      Option.map2
+        ~f:(cubic_base ?height ?d:cubic_d ?scale:cubic_scale ?n_steps)
+        north
+        south
     else (
       let draw_corner = Option.map2 ~f:(bez_base ?height ?n_steps) in
       let _, side =
@@ -335,8 +382,11 @@ let skeleton
   let south =
     let base i =
       if i = pinky_idx
-      then inward_elbow_base ?height ?n_steps
-      else straight_base ?height ?fudge_factor
+      then
+        if close_pinky
+        then join_walls ?n_steps:join_steps ?fudge_factor
+        else inward_elbow_base ~d:1. ?height ?n_steps
+      else straight_base ?height ?fudge_factor ?min_width:min_straight_width
     in
     List.init
       ~f:(fun i ->
@@ -358,7 +408,7 @@ let skeleton
       if close_thumb
       then (
         let _, scads =
-          let join = join_walls ?n_steps ?fudge_factor
+          let join = join_walls ?n_steps:join_steps ?fudge_factor
           and get d = d.Walls.Thumb.south in
           Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
         in
