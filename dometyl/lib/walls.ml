@@ -28,7 +28,7 @@ module Body = struct
           | i when i = 3 -> Screw
           | i when i > 1 -> Yes
           | _ -> No)
-        ?(screw_config = Screw.default_config)
+        ?(screw_config = Screw.m4_config)
         Plate.{ config = { spacing; _ }; columns; _ }
       =
       let drop =
@@ -69,11 +69,11 @@ module Body = struct
         ?(d2 = 5.)
         ?(z_off = 0.)
         ?(thickness = 3.5)
-        ?(clearance = 2.5)
+        ?(clearance = 3.)
         ?(n_steps = `Flat 4)
         ?(west_lookup = fun i -> if i = 0 then Screw else No)
         ?(east_lookup = fun _ -> No)
-        ?(screw_config = Screw.default_config)
+        ?(screw_config = Screw.m4_config)
         Plate.{ columns; _ }
       =
       let west_col = Map.find_exn columns 0
@@ -116,12 +116,31 @@ module Body = struct
       ?south_lookup
       ?west_lookup
       ?east_lookup
+      ?screw_config
       plate
     =
     { cols =
-        Cols.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?north_lookup ?south_lookup plate
+        Cols.make
+          ?d1
+          ?d2
+          ?z_off
+          ?thickness
+          ?n_steps
+          ?north_lookup
+          ?south_lookup
+          ?screw_config
+          plate
     ; sides =
-        Sides.make ?d1 ?d2 ?z_off ?thickness ?n_steps ?west_lookup ?east_lookup plate
+        Sides.make
+          ?d1
+          ?d2
+          ?z_off
+          ?thickness
+          ?n_steps
+          ?west_lookup
+          ?east_lookup
+          ?screw_config
+          plate
     }
 
   let to_scad t = Model.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
@@ -154,7 +173,7 @@ module Thumb = struct
       ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Screw else No)
       ?(west = Yes)
       ?(east = No)
-      ?(screw_config = Screw.default_config)
+      ?(screw_config = Screw.m4_config)
       Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
     =
     let siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps in
