@@ -1,6 +1,8 @@
 open! Base
 open! Scad_ml
 
+let plate_clearance = 3.
+
 let hole_config =
   let outer_w = 19.
   and inner_w = 14.

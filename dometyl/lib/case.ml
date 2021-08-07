@@ -10,7 +10,7 @@ type 'k t =
 
 let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
 let keyhole = KeyHole.make ~cap Mx.hole_config
-let plate = Plate.make keyhole
+let plate = Plate.make ~clearance:Mx.plate_clearance keyhole
 
 let skel =
   (* NOTE: temporary inclusion of east wall on thumb, and the incl east thumb param.
@@ -91,7 +91,8 @@ let ports =
 
 let t = skel
 let t = { t with scad = Model.difference t.scad [ ports ] }
-let t = { t with scad = Model.union [ t.scad; all_caps ] }
+
+(* let t = { t with scad = Model.union [ t.scad; all_caps ] } *)
 let niz_sensor = Sensor.(make Config.a3144)
 
 let niz_platform =

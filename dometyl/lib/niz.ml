@@ -41,6 +41,8 @@ module Bottom = struct
     |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
 end
 
+let plate_clearance = 6.5
+
 let hole_config =
   let clip_height = 1.0
   and snap_slot_h = 1.2
