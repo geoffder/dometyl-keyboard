@@ -13,7 +13,8 @@ type t =
   ; config : config
   }
 
-let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 2.0 }
+let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0 }
+let m4_config = { outer_rad = 5.; inner_rad = 3.0; thickness = 4.0 }
 
 let make ~normal ({ outer_rad; inner_rad; thickness } as config) p1 p2 =
   let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1))
