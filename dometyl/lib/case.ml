@@ -9,7 +9,7 @@ type 'k t =
   }
 
 let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
-let keyhole = KeyHole.make ~cap Niz.hole_config
+let keyhole = KeyHole.make ~cap Mx.hole_config
 let plate = Plate.make keyhole
 
 let skel =
@@ -21,7 +21,7 @@ let skel =
       { body = Body.make plate
       ; thumb =
           Thumb.make
-            ~south_lookup:(fun i -> if i < 2 then Yes else Screw)
+            ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
             ~east:No
             ~n_steps:(`Flat 3)
             plate
@@ -37,11 +37,14 @@ let skel =
             ~snake_scale:2.
             ~snake_d:1.
             ~cubic_d:4.
-            ~cubic_scale:1.25
+            ~cubic_scale:1.5
             ~join_steps:4
+            ~fudge_factor:8.
             ~close_thumb:true
+            ~close_pinky:false
             walls
         ; Plate.skeleton_bridges plate
+          (* ; Plate.column_joins plate *)
         ]
   ; plate
   ; walls
@@ -57,7 +60,7 @@ let closed =
             ~n_steps:(`PerZ 3.5)
             plate
       ; thumb =
-          Thumb.make ~east:No ~south_lookup:(fun i -> if i < 2 then Yes else Screw) plate
+          Thumb.make ~east:No ~south_lookup:(fun i -> if i = 1 then Screw else Yes) plate
       }
   in
   { scad =
@@ -83,11 +86,12 @@ let all_caps =
   in
   Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
 
-(* let t = skel *)
+let ports =
+  Ports.make (Option.value_exn (Map.find_exn skel.walls.body.cols 0).north).foot.top_left
 
-let t = { skel with scad = Model.union [ skel.scad; all_caps ] }
-
-(* let t = { closed with scad = Model.union [ closed.scad; all_caps ] } *)
+let t = skel
+let t = { t with scad = Model.difference t.scad [ ports ] }
+let t = { t with scad = Model.union [ t.scad; all_caps ] }
 let niz_sensor = Sensor.(make Config.a3144)
 
 let niz_platform =
@@ -102,7 +106,7 @@ let niz_platform =
       ; base_thickness = 2.25
       ; sensor_depth = 1.5
       ; snap_clearance = 0.3
-      ; snap_len = 0.7
+      ; snap_len = 0.8 (* Try 1.2, see if it's possiblle *)
       ; lug_height = 1.5
       ; sensor_config = Sensor.Config.a3144_print
       })
