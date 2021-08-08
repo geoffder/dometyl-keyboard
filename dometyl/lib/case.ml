@@ -86,11 +86,33 @@ let all_caps =
   in
   Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
 
-let ports =
-  Ports.make (Option.value_exn (Map.find_exn skel.walls.body.cols 0).north).foot.top_left
-
 let t = skel
+
+let ports =
+  Ports.make (Option.value_exn (Map.find_exn t.walls.body.cols 0).north).foot.top_left
+
 let t = { t with scad = Model.difference t.scad [ ports ] }
+
+let t =
+  { t with
+    scad =
+      (let centre = Vec3.mul (Columns.key_exn t.plate.columns 2 1).origin (1., 1., 0.) in
+       let cut =
+         Model.projection ~cut:true t.scad |> Model.translate (Vec3.negate centre)
+       in
+       let fill =
+         Model.linear_extrude ~height:0.01 ~scale:0. ~center:true cut |> Model.projection
+       in
+       (* let fill = Model.linear_extrude ~height:0.01 ~scale:0. cut in *)
+       Model.union
+         [ t.scad
+         ; Model.linear_extrude ~height:2. fill
+           |> Model.translate (Vec3.add centre (0., 0., -5.))
+         ; Model.linear_extrude ~height:2. cut
+           |> Model.translate (Vec3.add centre (0., 0., -10.))
+         ] )
+      (* [ t.scad; fill |> Model.translate (0., 0., -5.) ] ) *)
+  }
 
 (* let t = { t with scad = Model.union [ t.scad; all_caps ] } *)
 let niz_sensor = Sensor.(make Config.a3144)
