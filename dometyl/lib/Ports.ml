@@ -1,6 +1,17 @@
 open! Base
 open! Scad_ml
 
+(* TODO:
+   - add a square inset around the jack to thin the wall. Make sure jack goes
+   through.
+   - unfortunately this is going to mean either taking a Wall/Walls.t, or a
+   thickness and a normal value. So will just go with the coupling I guess...
+   - so if I take walls, along with a length of jack "cuff" then I can make the
+   neccesary inset into the wall at the correct angle to make sure that the jack
+   and usb are flush and sufficiently through respectively. Due to the tilt parameters
+   etc for the inner index, this wall is not actually "flat" and evenly angled, so the
+   inset thinning will have to accomplish this somehow
+*)
 let make
     ?(jack_radius = 2.65)
     ?(usb_height = 3.6)
