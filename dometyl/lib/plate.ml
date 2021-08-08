@@ -10,21 +10,23 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 7., -6. (* middle *)
-    | 3 -> 0., 3., -2. (* ring *)
+    (* | 3 -> 0., 3., -2. (\* ring *\) *)
+    | 3 -> 1.5, 0., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
-    | i when i >= 4 -> 1.5, -21., 6. (* pinky *)
+    | i when i >= 4 -> -0.5, -21., 6. (* pinky *)
     | 0 -> -1., 0., 5.5
     | _ -> 0., 0., 0.
 
   (* skeletyl is in neighbourhood of { angle = Float.pi /. 12.; radius = 85. } *)
   let default_well = function
-    | i when i >= 4 ->
-      Curvature.{ angle = Float.pi /. 8.; radius = 58.; tilt = 0. } (* pinky *)
+    | i when i >= 3 ->
+      Curvature.{ angle = Float.pi /. 7.; radius = 50.; tilt = 0. } (* pinky and ring *)
     | i when i = 0 ->
       Curvature.{ angle = Float.pi /. 8.; radius = 57.5; tilt = Float.pi /. 6.75 }
     | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
 
   let default_splay = function
+    | i when i = 3 -> Float.pi /. -30. (* ring *)
     | i when i >= 4 -> Float.pi /. -20. (* pinky *)
     | _ -> 0.
 
@@ -69,7 +71,7 @@ let make
     ?(spacing = 2.)
     ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = 0., -50., 2.)
+    ?(thumb_offset = -2., -48., 8.)
     ?(thumb_angle = Float.(0., pi /. -4.75, pi /. 7.))
     ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.25; radius = 70.; tilt = 0. })
     ?(thumb_well = Curvature.{ angle = Float.pi /. 6.; radius = 50.; tilt = 0. })
