@@ -180,8 +180,8 @@ let straight_base
   and outward =
     (* away from the centre of mass, or not? *)
     Float.(
-      Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.top_left))
-      > Vec3.(norm @@ (w1.foot.top_right <-> w2.foot.bot_left)))
+      Vec3.(norm (w1.foot.top_right <-> w2.foot.top_left))
+      > Vec3.(norm (w1.foot.top_right <-> w2.foot.bot_left)))
   in
   let starts og =
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
@@ -244,7 +244,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     if (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
        && Float.(abs major_diff > abs minor_diff)
     then Float.abs major_diff
-    else 0.01
+    else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
   let starts =
@@ -256,7 +256,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   and dests =
     Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
         fudge @@ w2.edges.top_left step )
-    |> List.map ~f:Vec3.(add (mul dir2 (-0.01, -0.01, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir2 (-0.001, -0.001, 0.)))
   and wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
      * key face and moving it out for clearance prior to drawing the walls. *)
