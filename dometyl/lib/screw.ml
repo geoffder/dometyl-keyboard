@@ -43,3 +43,5 @@ let make ~normal ({ outer_rad; inner_rad; thickness } as config) p1 p2 =
   ; centre = hole_centre
   ; config
   }
+
+let to_scad t = t.scad

@@ -56,6 +56,16 @@ module Body = struct
 
     let to_scad t =
       Model.union (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
+
+    let collect_screws ?(init = []) (t : t) =
+      let prepend wall l =
+        Option.bind ~f:(fun w -> w.Wall.screw) wall
+        |> Option.value_map ~default:l ~f:(fun w -> w :: l)
+      in
+      Map.fold
+        ~init
+        ~f:(fun ~key:_ ~data l -> prepend data.north l |> prepend data.south)
+        t
   end
 
   module Sides = struct
@@ -97,6 +107,12 @@ module Body = struct
     let to_scad t =
       let f ~key:_ ~data l = Wall.to_scad data :: l in
       Model.union (Map.fold ~init:(Map.fold ~init:[] ~f t.west) ~f t.east)
+
+    let collect_screws ?(init = []) (t : t) =
+      let f ~key:_ ~data l =
+        Option.value_map ~default:l ~f:(fun s -> s :: l) data.Wall.screw
+      in
+      Map.fold ~init:(Map.fold ~init ~f t.west) ~f t.east
   end
 
   type t =
@@ -144,6 +160,9 @@ module Body = struct
     }
 
   let to_scad t = Model.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
+
+  let collect_screws ?(init = []) (t : t) =
+    Cols.collect_screws ~init:(Sides.collect_screws ~init t.sides) t.cols
 end
 
 module Thumb = struct
@@ -204,6 +223,16 @@ module Thumb = struct
          ~init:(prepend west [] |> prepend east)
          ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
          keys
+
+  let collect_screws ?(init = []) { keys; sides = { west; east } } =
+    let prepend wall l =
+      Option.bind ~f:(fun w -> w.Wall.screw) wall
+      |> Option.value_map ~default:l ~f:(fun w -> w :: l)
+    in
+    Map.fold
+      ~init:(prepend west init |> prepend east)
+      ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
+      keys
 end
 
 type t =
@@ -212,3 +241,6 @@ type t =
   }
 
 let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
+
+let collect_screws { body; thumb } =
+  Body.collect_screws ~init:(Thumb.collect_screws thumb) body
