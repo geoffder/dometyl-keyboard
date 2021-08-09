@@ -32,6 +32,7 @@ let () =
   write_thing ~export:false "case" Case.t.scad;
   (* write_thing "niz_bottom" Niz.Bottom.scad; *)
   write_thing "niz_platform" Case.niz_platform.scad;
+  write_thing "tent" (Tent.make Case.t);
   (* write_thing "niz_cross_section" Case.niz_cross_section; *)
   (* write_thing "niz_sensor" Case.niz_sensor.scad; *)
   Stdio.print_endline "Done!"
