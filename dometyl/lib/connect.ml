@@ -1,6 +1,18 @@
 open! Base
 open! Scad_ml
 
+type t =
+  { scad : Model.t
+  ; outline : Vec3.t list
+  }
+
+let clockwise_union ts =
+  let f (scads, pts) { scad; outline } =
+    scad :: scads, List.fold ~init:pts ~f:(fun ps p -> p :: ps) outline
+  in
+  let scads, pts = List.fold ~init:([], []) ~f ts in
+  { scad = Model.union scads; outline = List.rev pts }
+
 (* TODO: Rather than returning just a scad from the connection functions, try using
    a record that includes the "outline points", e.g. the "top" or outside edge between
    the feet of the connected walls. Then, I can string those together to generate the
@@ -316,10 +328,6 @@ let skeleton
     match side with
     | `N -> c.north
     | `S -> c.south
-  and maybe_prepend opt l =
-    match opt with
-    | Some a -> a :: l
-    | None   -> l
   in
   let west =
     let _, side =
@@ -333,7 +341,7 @@ let skeleton
         (Option.map ~f:snd @@ Map.max_elt body.sides.west)
         (col `N 0)
     in
-    Model.union (maybe_prepend corner side)
+    Model.union (Util.prepend_opt corner side)
   in
   let north =
     let index =
@@ -374,8 +382,8 @@ let skeleton
       and south_corner =
         draw_corner (Option.map ~f:snd @@ Map.min_elt body.sides.east) south
       in
-      maybe_prepend north_corner side
-      |> maybe_prepend south_corner
+      Util.prepend_opt north_corner side
+      |> Util.prepend_opt south_corner
       |> Model.union
       |> Option.some )
   in
@@ -452,10 +460,8 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
     match side with
     | `N -> c.north
     | `S -> c.south
-  and prepend_corner w1 w2 l =
-    match Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2 with
-    | Some c -> c :: l
-    | None   -> l
+  and prepend_corner w1 w2 =
+    Util.prepend_opt @@ Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2
   in
   let _, sides =
     let f = joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor) in

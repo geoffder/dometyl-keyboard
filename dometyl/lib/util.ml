@@ -37,3 +37,13 @@ let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
     else failwith "Maximum iterations reached in bisection search."
   in
   loop 0 lower upper
+
+let prepend_opt opt l =
+  match opt with
+  | Some a -> a :: l
+  | None   -> l
+
+let prepend_opt_map ~f opt l =
+  match opt with
+  | Some a -> f a :: l
+  | None   -> l
