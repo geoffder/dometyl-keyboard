@@ -17,7 +17,7 @@ let make
     ?(board_thickness = 1.)
     ?(dist = 15.5)
     ?(x_off = 6.)
-    ?(z_off = 6.)
+    ?(z_off = 7.)
     Walls.{ body = { cols; _ }; _ }
   =
   let foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
