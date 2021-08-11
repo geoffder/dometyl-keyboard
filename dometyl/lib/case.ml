@@ -61,6 +61,7 @@ let skel =
                walls )
               .outline
           |> Model.polygon
+          |> Model.linear_extrude ~height:2.
           |> Model.translate (0., 0., -20.)
         ]
   ; plate
