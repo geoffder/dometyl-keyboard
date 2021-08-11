@@ -97,7 +97,7 @@ let all_caps =
   in
   Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
 
-let t = closed
+let t = skel
 let ports = Ports.make t.walls
 let t = { t with scad = Model.difference t.scad [ ports ] }
 
