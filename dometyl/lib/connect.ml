@@ -415,7 +415,7 @@ let skeleton
       (n_cols - 1)
     |> List.filter_opt
   in
-  let sw_thumb, nw_thumb, ew_thumb, es_thumb, e_link, w_link =
+  let east_swoop, west_swoop =
     let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
     and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
     and corner = Option.map2 ~f:(join_walls ?n_steps:join_steps ~fudge_factor:0.)
@@ -423,23 +423,13 @@ let skeleton
       Option.map2
         ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
     in
-    let sw = corner w_s thumb.sides.west
-    and nw = corner thumb.sides.west w_n
-    and ew =
-      if close_thumb
-      then (
-        let _, scads =
-          let join = join_walls ?n_steps:join_steps ?fudge_factor
-          and get d = d.Walls.Thumb.south in
-          Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
-        in
-        List.rev scads )
-      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s |> Option.to_list
-    and es = corner thumb.sides.east e_s
+    let es = corner thumb.sides.east e_s
     and e_link =
       if Option.is_some thumb.sides.east
       then Option.map2 ~f:(bez_base ~n_steps:3 ?height) (col `S 2) thumb.sides.east
       else link (col `S 2) e_s
+    and sw = corner w_s thumb.sides.west
+    and nw = corner thumb.sides.west w_n
     and w_link =
       Option.map2
         ~f:
@@ -452,17 +442,23 @@ let skeleton
         w_n
         (Map.find body.sides.west 0)
     in
-    sw, nw, ew, es, e_link, w_link
+    let east_swoop =
+      if close_thumb
+      then (
+        let _, scads =
+          let join = join_walls ?n_steps:join_steps ?fudge_factor
+          and get d = d.Walls.Thumb.south in
+          Map.fold_right
+            ~init:(None, Util.prepend_opt es (Option.to_list e_link))
+            ~f:(joiner ~get ~join)
+            thumb.keys
+        in
+        List.rev scads )
+      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s |> Option.to_list
+    in
+    east_swoop, List.filter_opt [ sw; nw; w_link ]
   in
-  List.join
-    [ west
-    ; north
-    ; east
-    ; south
-    ; Util.prepend_opt e_link ew_thumb |> Util.prepend_opt es_thumb
-    ; List.filter_opt [ sw_thumb; nw_thumb; w_link ]
-    ]
-  |> clockwise_union
+  List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
 let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
   let n_cols = Map.length body.cols
