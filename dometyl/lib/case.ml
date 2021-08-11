@@ -31,20 +31,37 @@ let skel =
       Model.union
         [ plate.scad
         ; Walls.to_scad walls
-        ; Connect.skeleton
-            ~height:7.
-            ~thumb_height:11.
-            ~snake_scale:2.
-            ~snake_d:1.
-            ~cubic_d:4.
-            ~cubic_scale:1.5
-            ~join_steps:4
-            ~fudge_factor:8.
-            ~close_thumb:true
-            ~close_pinky:false
-            walls
-        ; Plate.skeleton_bridges plate
-          (* ; Plate.column_joins plate *)
+        ; (Connect.skeleton
+             ~height:7.
+             ~thumb_height:11.
+             ~snake_scale:2.
+             ~snake_d:1.
+             ~cubic_d:4.
+             ~cubic_scale:1.5
+             ~join_steps:4
+             ~fudge_factor:8.
+             ~close_thumb:true
+             ~close_pinky:false
+             walls )
+            .scad
+        ; Plate.skeleton_bridges plate (* ; Plate.column_joins plate *)
+        ; List.map
+            ~f:Vec3.to_vec2
+            (Connect.skeleton
+               ~height:7.
+               ~thumb_height:11.
+               ~snake_scale:2.
+               ~snake_d:1.
+               ~cubic_d:4.
+               ~cubic_scale:1.5
+               ~join_steps:4
+               ~fudge_factor:8.
+               ~close_thumb:true
+               ~close_pinky:false
+               walls )
+              .outline
+          |> Model.polygon
+          |> Model.translate (0., 0., -20.)
         ]
   ; plate
   ; walls
@@ -67,7 +84,7 @@ let closed =
       Model.union
         [ plate.scad
         ; Walls.to_scad walls
-        ; Connect.closed ~n_steps:4 walls
+        ; (Connect.closed ~n_steps:4 walls).scad
         ; Plate.column_joins plate
         ]
   ; plate

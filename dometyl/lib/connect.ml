@@ -6,19 +6,23 @@ type t =
   ; outline : Vec3.t list
   }
 
+(* Assumes lists are lead with the outer (top) line along the xy plane. *)
+let prism_connection bezs steps =
+  let n_steps =
+    match steps with
+    | `Uniform n -> n
+    | `Ragged ns -> List.hd_exn ns
+  in
+  { scad = Bezier.prism_exn bezs steps
+  ; outline = Bezier.curve ~n_steps (List.hd_exn bezs)
+  }
+
 let clockwise_union ts =
   let f (scads, pts) { scad; outline } =
     scad :: scads, List.fold ~init:pts ~f:(fun ps p -> p :: ps) outline
   in
   let scads, pts = List.fold ~init:([], []) ~f ts in
   { scad = Model.union scads; outline = List.rev pts }
-
-(* TODO: Rather than returning just a scad from the connection functions, try using
-   a record that includes the "outline points", e.g. the "top" or outside edge between
-   the feet of the connected walls. Then, I can string those together to generate the
-   base plate. I have not thought of another way yet that would allow the preservation
-   of the peculiar concave shape while filling in the gaps. Hull would easily fill in
-   the holes in the projection of the case, but the front inlet shape would be lost. *)
 
 (* TODO: calculate multiple points up z, so that it lines up with the wall edge
    better. straight_base and join_walls does not use this helper, and
@@ -32,10 +36,10 @@ let base_endpoints ~height hand (w : Wall.t) =
     | `Left  -> `TL, `BL
     | `Right -> `TR, `BR
   in
-  [ Points.get w.foot bot
-  ; Points.get w.foot top
+  [ Points.get w.foot top
   ; Wall.(Edge.point_at_z (Edges.get w.edges top) height)
   ; Wall.(Edge.point_at_z (Edges.get w.edges bot) height)
+  ; Points.get w.foot bot
   ]
 
 let base_steps ~n_steps starts dests =
@@ -59,7 +63,7 @@ let bez_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
-  Bezier.prism_exn bezs steps
+  prism_connection bezs steps
 
 let cubic_base
     ?(height = 4.)
@@ -87,8 +91,8 @@ let cubic_base
   let starts = base_endpoints ~height `Right w1 in
   let dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
-  and bezs = List.map3_exn ~f:get_bez [ false; true; true; false ] starts dests in
-  Bezier.prism_exn bezs steps
+  and bezs = List.map3_exn ~f:get_bez [ true; true; false; false ] starts dests in
+  prism_connection bezs steps
 
 let snake_base
     ?(height = 4.)
@@ -113,8 +117,8 @@ let snake_base
   let starts = base_endpoints ~height `Right w1 in
   let dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
-  and bezs = List.map3_exn ~f:get_bez [ false; true; true; false ] starts dests in
-  Bezier.prism_exn bezs steps
+  and bezs = List.map3_exn ~f:get_bez [ true; true; false; false ] starts dests in
+  prism_connection bezs steps
 
 let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2 : Wall.t)
   =
@@ -139,11 +143,12 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
     let w = Vec3.(norm (w1.foot.bot_right <-> w1.foot.top_right)) in
     let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
-    [ slide w1.foot.bot_right; w1.foot.bot_right; up_bot; slide up_bot ]
+    [ w1.foot.bot_right; up_bot; slide up_bot; slide w1.foot.bot_right ]
   and dests = base_endpoints ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
-  Bezier.prism_exn bezs steps
+  let t = prism_connection bezs steps in
+  { t with outline = w1.foot.top_right :: t.outline }
 
 let straight_base
     ?(height = 11.)
@@ -225,12 +230,15 @@ let straight_base
     ]
     |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
-  Model.union
-    [ Util.prism_exn (starts false) (dests false)
-    ; ( if outward
-      then Util.prism_exn (starts true) (starts false)
-      else Util.prism_exn (dests false) (dests true) )
-    ]
+  { scad =
+      Model.union
+        [ Util.prism_exn (starts false) (dests false)
+        ; ( if outward
+          then Util.prism_exn (starts true) (starts false)
+          else Util.prism_exn (dests false) (dests true) )
+        ]
+  ; outline = [ w1.foot.top_right; w2.foot.top_left ]
+  }
 
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
@@ -288,7 +296,9 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
          ; fudge @@ w2.edges.top_left 0.0001
          ] )
   in
-  Model.union [ Util.prism_exn starts dests; wedge ]
+  { scad = Model.union [ Util.prism_exn starts dests; wedge ]
+  ; outline = [ w1.foot.top_right; fudge w2.foot.top_left ]
+  }
 
 let joiner ~get ~join ~key:_ ~data (last, scads) =
   let next = get data in
@@ -321,7 +331,8 @@ let skeleton
      - bez_base is not great on the northeast corner when there is actually a wall
        on that side that needs to be connected, because it was designed for cornering
        like it is used on the west side.
-     - should still do some clean-up on this. *)
+     - should still do some clean-up on this, especially now that I ripped through here
+       adjusting to the new type t. *)
   let n_cols = Map.length body.cols
   and col side i =
     let c = Map.find_exn body.cols i in
@@ -330,18 +341,19 @@ let skeleton
     | `S -> c.south
   in
   let west =
-    let _, side =
-      let f =
-        joiner ~get:Option.some ~join:(straight_base ~height:index_height ?fudge_factor)
-      in
-      Map.fold ~init:(None, []) ~f body.sides.west
-    and corner =
+    let corner =
       Option.map2
         ~f:(bez_base ~height:index_height ?n_steps)
         (Option.map ~f:snd @@ Map.max_elt body.sides.west)
         (col `N 0)
     in
-    Model.union (Util.prepend_opt corner side)
+    let _, side =
+      let f =
+        joiner ~get:Option.some ~join:(straight_base ~height:index_height ?fudge_factor)
+      in
+      Map.fold ~init:(None, []) ~f body.sides.west
+    in
+    List.rev @@ Util.prepend_opt corner side
   in
   let north =
     let index =
@@ -362,6 +374,7 @@ let skeleton
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
+    |> List.filter_opt
   in
   let east =
     let north = col `N (n_cols - 1)
@@ -372,20 +385,19 @@ let skeleton
         ~f:(cubic_base ?height ?d:cubic_d ?scale:cubic_scale ?n_steps)
         north
         south
+      |> Option.to_list
     else (
       let draw_corner = Option.map2 ~f:(bez_base ?height ?n_steps) in
-      let _, side =
-        let f = joiner ~get:Option.some ~join:(straight_base ?height ?fudge_factor) in
-        Map.fold_right ~init:(None, []) ~f body.sides.east
-      and north_corner =
-        draw_corner north (Option.map ~f:snd @@ Map.max_elt body.sides.east)
-      and south_corner =
+      let south_corner =
         draw_corner (Option.map ~f:snd @@ Map.min_elt body.sides.east) south
       in
-      Util.prepend_opt north_corner side
-      |> Util.prepend_opt south_corner
-      |> Model.union
-      |> Option.some )
+      let _, side =
+        let f = joiner ~get:Option.some ~join:(straight_base ?height ?fudge_factor) in
+        Map.fold_right ~init:(None, Option.to_list south_corner) ~f body.sides.east
+      and north_corner =
+        draw_corner north (Option.map ~f:snd @@ Map.max_elt body.sides.east)
+      in
+      Util.prepend_opt north_corner side )
   in
   let south =
     let base i =
@@ -401,6 +413,7 @@ let skeleton
         let idx = n_cols - 1 - i in
         Option.map2 ~f:(base idx) (col `S idx) (col `S (idx - 1)) )
       (n_cols - 1)
+    |> List.filter_opt
   in
   let sw_thumb, nw_thumb, ew_thumb, es_thumb, e_link, w_link =
     let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
@@ -420,8 +433,8 @@ let skeleton
           and get d = d.Walls.Thumb.south in
           Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
         in
-        Some (Model.union scads) )
-      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s
+        List.rev scads )
+      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s |> Option.to_list
     and es = corner thumb.sides.east e_s
     and e_link =
       if Option.is_some thumb.sides.east
@@ -441,17 +454,15 @@ let skeleton
     in
     sw, nw, ew, es, e_link, w_link
   in
-  west
-  :: ( east
-       :: sw_thumb
-       :: nw_thumb
-       :: ew_thumb
-       :: es_thumb
-       :: e_link
-       :: w_link
-       :: (north @ south)
-     |> List.filter_opt )
-  |> Model.union
+  List.join
+    [ west
+    ; north
+    ; east
+    ; south
+    ; Util.prepend_opt e_link ew_thumb |> Util.prepend_opt es_thumb
+    ; List.filter_opt [ sw_thumb; nw_thumb; w_link ]
+    ]
+  |> clockwise_union
 
 let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
   let n_cols = Map.length body.cols
@@ -503,4 +514,6 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
     |> prepend_corner thumb.sides.west northwest
     |> prepend_corner northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
   in
-  all_walls |> Model.union
+  (* TODO: actually make this clockwise, it is totally un-retouched to adjust for
+     the introduction of type t at the moment. *)
+  clockwise_union all_walls
