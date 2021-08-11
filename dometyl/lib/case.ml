@@ -27,39 +27,27 @@ let skel =
             plate
       }
   in
+  let connections =
+    Connect.skeleton
+      ~height:7.
+      ~thumb_height:11.
+      ~snake_scale:2.
+      ~snake_d:1.
+      ~cubic_d:4.
+      ~cubic_scale:1.5
+      ~join_steps:4
+      ~fudge_factor:8.
+      ~close_thumb:true
+      ~close_pinky:false
+      walls
+  in
   { scad =
       Model.union
         [ plate.scad
         ; Walls.to_scad walls
-        ; (Connect.skeleton
-             ~height:7.
-             ~thumb_height:11.
-             ~snake_scale:2.
-             ~snake_d:1.
-             ~cubic_d:4.
-             ~cubic_scale:1.5
-             ~join_steps:4
-             ~fudge_factor:8.
-             ~close_thumb:true
-             ~close_pinky:false
-             walls )
-            .scad
+        ; connections.scad
         ; Plate.skeleton_bridges plate (* ; Plate.column_joins plate *)
-        ; List.map
-            ~f:Vec3.to_vec2
-            (Connect.skeleton
-               ~height:7.
-               ~thumb_height:11.
-               ~snake_scale:2.
-               ~snake_d:1.
-               ~cubic_d:4.
-               ~cubic_scale:1.5
-               ~join_steps:4
-               ~fudge_factor:8.
-               ~close_thumb:true
-               ~close_pinky:false
-               walls )
-              .outline
+        ; List.map ~f:Vec3.to_vec2 connections.outline
           |> Model.polygon
           |> Model.linear_extrude ~height:2.
           |> Model.translate (0., 0., -20.)
@@ -81,12 +69,17 @@ let closed =
           Thumb.make ~east:No ~south_lookup:(fun i -> if i = 1 then Screw else Yes) plate
       }
   in
+  let connections = Connect.closed ~n_steps:4 walls in
   { scad =
       Model.union
         [ plate.scad
         ; Walls.to_scad walls
-        ; (Connect.closed ~n_steps:4 walls).scad
+        ; connections.scad
         ; Plate.column_joins plate
+        ; List.map ~f:Vec3.to_vec2 connections.outline
+          |> Model.polygon
+          |> Model.linear_extrude ~height:2.
+          |> Model.translate (0., 0., -20.)
         ]
   ; plate
   ; walls
@@ -104,7 +97,7 @@ let all_caps =
   in
   Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
 
-let t = skel
+let t = closed
 let ports = Ports.make t.walls
 let t = { t with scad = Model.difference t.scad [ ports ] }
 

@@ -470,46 +470,46 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
   and prepend_corner w1 w2 =
     Util.prepend_opt @@ Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2
   in
-  let _, sides =
+  let east, west =
     let f = joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor) in
     let _, west = Map.fold ~init:(None, []) ~f body.sides.west in
-    Map.fold_right ~init:(None, west) ~f body.sides.east
+    let _, east = Map.fold_right ~init:(None, []) ~f body.sides.east in
+    ( prepend_corner
+        (col `N (n_cols - 1))
+        (Option.map ~f:snd (Map.max_elt body.sides.east))
+        (List.rev east)
+    , List.rev
+      @@ prepend_corner (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) west
+    )
   in
-  let _, sides_cols =
+  let north, south =
     let f side =
       joiner
         ~get:(Fn.flip Walls.Body.Cols.get @@ side)
         ~join:(join_walls ?n_steps ?fudge_factor)
     in
-    let _, north = Map.fold ~init:(None, sides) ~f:(f `N) body.cols in
-    Map.fold_right ~init:(None, north) ~f:(f `S) body.cols
+    let _, north = Map.fold ~init:(None, []) ~f:(f `N) body.cols in
+    let _, south = Map.fold_right ~init:(None, []) ~f:(f `S) body.cols in
+    ( List.rev north
+    , prepend_corner (Map.find body.sides.east 0) (col `S (n_cols - 1)) (List.rev south) )
   in
-  let all_body =
-    prepend_corner (Option.map ~f:snd (Map.max_elt body.sides.west)) (col `N 0) sides_cols
-    |> prepend_corner
-         (col `N (n_cols - 1))
-         (Option.map ~f:snd (Map.max_elt body.sides.east))
-    |> prepend_corner (Map.find body.sides.east 0) (col `S (n_cols - 1))
-  in
-  let all_walls =
-    let _, scads =
+  let thumb =
+    let _, south =
       let join = join_walls ?n_steps ?fudge_factor
       and get d = d.Walls.Thumb.south in
-      Map.fold_right ~init:(None, all_body) ~f:(joiner ~get ~join) thumb.keys
+      Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
     in
     let southwest =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.min_elt thumb.keys)
     and northwest =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.north) (Map.min_elt thumb.keys)
+    and southeast =
+      Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys)
     in
-    prepend_corner
-      thumb.sides.east
-      (Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys))
-      scads
-    |> prepend_corner southwest thumb.sides.west
+    prepend_corner southwest thumb.sides.west south
     |> prepend_corner thumb.sides.west northwest
     |> prepend_corner northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
+    |> List.rev
+    |> prepend_corner thumb.sides.east southeast
   in
-  (* TODO: actually make this clockwise, it is totally un-retouched to adjust for
-     the introduction of type t at the moment. *)
-  clockwise_union all_walls
+  List.join [ west; north; east; south; thumb ] |> clockwise_union
