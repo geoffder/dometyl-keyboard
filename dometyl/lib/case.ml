@@ -6,6 +6,7 @@ type 'k t =
   { scad : Model.t
   ; plate : 'k Plate.t
   ; walls : Walls.t
+  ; connections : Connect.t
   }
 
 let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
@@ -21,8 +22,9 @@ let skel =
       { body = Body.make plate
       ; thumb =
           Thumb.make
-            ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
+            ~south_lookup:(fun _ -> Yes)
             ~east:No
+            ~west:Screw
             ~n_steps:(`Flat 3)
             plate
       }
@@ -47,13 +49,10 @@ let skel =
         ; Walls.to_scad walls
         ; connections.scad
         ; Plate.skeleton_bridges plate (* ; Plate.column_joins plate *)
-        ; List.map ~f:Vec3.to_vec2 connections.outline
-          |> Model.polygon
-          |> Model.linear_extrude ~height:2.
-          |> Model.translate (0., 0., -20.)
         ]
   ; plate
   ; walls
+  ; connections
   }
 
 let closed =
@@ -72,17 +71,10 @@ let closed =
   let connections = Connect.closed ~n_steps:4 walls in
   { scad =
       Model.union
-        [ plate.scad
-        ; Walls.to_scad walls
-        ; connections.scad
-        ; Plate.column_joins plate
-        ; List.map ~f:Vec3.to_vec2 connections.outline
-          |> Model.polygon
-          |> Model.linear_extrude ~height:2.
-          |> Model.translate (0., 0., -20.)
-        ]
+        [ plate.scad; Walls.to_scad walls; connections.scad; Plate.column_joins plate ]
   ; plate
   ; walls
+  ; connections
   }
 
 let all_caps =

@@ -24,6 +24,8 @@ let clockwise_union ts =
   let scads, pts = List.fold ~init:([], []) ~f ts in
   { scad = Model.union scads; outline = List.rev pts }
 
+let outline_2d t = List.map ~f:Vec3.to_vec2 t.outline
+
 (* TODO: calculate multiple points up z, so that it lines up with the wall edge
    better. straight_base and join_walls does not use this helper, and
    inward_elbow_base uses a hybrid, so I will have to make the same upgrades there,
