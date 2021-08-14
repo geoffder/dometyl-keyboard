@@ -30,8 +30,11 @@ let write_thing ?(export = false) name scad =
 let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
   write_thing "keyhole" Case.keyhole.scad;
-  (* write_thing ~export:false "case" Case.t.scad; *)
-  write_thing ~export:false "case" (Model.union [ Case.t.scad; Bottom.make Case.t ]);
+  write_thing ~export:false "case" Case.t.scad;
+  (* write_thing
+   *   ~export:false
+   *   "case"
+   *   (Model.union [ Case.t.scad; Bottom.make Case.t |> Model.translate (0., 0., -10.) ]); *)
   (* write_thing "niz_bottom" Niz.Bottom.scad; *)
   write_thing "niz_platform" Case.niz_platform.scad;
   write_thing "tent" (Tent.make Case.t);
