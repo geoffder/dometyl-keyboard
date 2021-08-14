@@ -19,12 +19,13 @@ let skel =
      very thin / losing sturdiness. *)
   let walls =
     Walls.
-      { body = Body.make plate
+      { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
       ; thumb =
           Thumb.make
             ~south_lookup:(fun _ -> Yes)
             ~east:No
             ~west:Screw
+            ~clearance:1.5
             ~n_steps:(`Flat 3)
             plate
       }
@@ -33,11 +34,13 @@ let skel =
     Connect.skeleton
       ~height:7.
       ~thumb_height:11.
-      ~snake_scale:2.
+      ~snake_scale:1.5
       ~snake_d:1.
-      ~cubic_d:4.
-      ~cubic_scale:1.5
-      ~join_steps:4
+      ~cubic_d:2.
+      ~cubic_scale:1.
+      ~thumb_cubic_d:1.
+      ~thumb_cubic_scale:0.5
+      ~join_steps:3
       ~fudge_factor:8.
       ~close_thumb:true
       ~close_pinky:false

@@ -1,6 +1,8 @@
 open! Base
 open! Scad_ml
 
+(* TODO: cubic base for w_link of skeleton thumb is unreliable. Worked before,
+   but with current rotation and closeness to the body it is faltering. *)
 type t =
   { scad : Model.t
   ; outline : Vec3.t list
@@ -323,6 +325,8 @@ let skeleton
     ?snake_scale
     ?cubic_d
     ?cubic_scale
+    ?thumb_cubic_d
+    ?thumb_cubic_scale
     ?thumb_height
     ?(pinky_idx = 4)
     ?(close_thumb = false)
@@ -407,7 +411,7 @@ let skeleton
       then
         if close_pinky
         then join_walls ?n_steps:join_steps ?fudge_factor
-        else inward_elbow_base ~d:1. ?height ?n_steps
+        else inward_elbow_base ~d:1.5 ?height ?n_steps
       else straight_base ?height ?fudge_factor ?min_width:min_straight_width
     in
     List.init
@@ -437,8 +441,8 @@ let skeleton
         ~f:
           (cubic_base
              ?height:thumb_height
-             ?scale:cubic_scale
-             ?d:cubic_d
+             ?scale:thumb_cubic_scale
+             ?d:thumb_cubic_d
              ?n_steps
              ~bow_out:false )
         w_n
@@ -460,6 +464,10 @@ let skeleton
     in
     east_swoop, List.filter_opt [ sw; nw; w_link ]
   in
+  (* TODO: Do unions of each of these separately, then clockwise union them.
+     Test whether breakage leads to just part of the connection "disappearing" on
+     CGAL failure, rather than the whole thing. (make it easier to pin point what
+     is actually failing.) *)
   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
 let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =

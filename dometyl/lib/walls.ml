@@ -126,6 +126,7 @@ module Body = struct
       ?d2
       ?z_off
       ?thickness
+      ?clearance
       ?n_steps
       ?north_lookup
       ?south_lookup
@@ -140,6 +141,7 @@ module Body = struct
           ?d2
           ?z_off
           ?thickness
+          ?clearance
           ?n_steps
           ?north_lookup
           ?south_lookup
@@ -151,6 +153,7 @@ module Body = struct
           ?d2
           ?z_off
           ?thickness
+          ?clearance
           ?n_steps
           ?west_lookup
           ?east_lookup
@@ -185,7 +188,7 @@ module Thumb = struct
       ?(d2 = 3.)
       ?(z_off = 0.)
       ?(thickness = 3.5)
-      ?(clearance = 4.)
+      ?(clearance = 2.)
       ?(n_steps = `PerZ 4.)
       ?(north_lookup = fun i -> if i = 0 then Yes else No)
       ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Screw else No)
