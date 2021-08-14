@@ -92,6 +92,7 @@ type 'k config =
   { spec : 'k Kind.t
   ; outer_w : float
   ; inner_w : float
+  ; inner_h : float
   ; thickness : float
   ; clip : Model.t -> Model.t
   ; cap_height : float
@@ -141,10 +142,10 @@ let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
   Vec3.(normalize (top_left <-> bot_left))
 
-let make ?cap ({ outer_w; inner_w; thickness; clip; cap_height; _ } as config) =
+let make ?cap ({ outer_w; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
   let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
-    let inner = Model.cube ~center:true (inner_w, inner_w, thickness +. 0.1) in
+    let inner = Model.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
     Model.difference outer [ inner ]
   in
   { config

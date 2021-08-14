@@ -50,6 +50,7 @@ let hole_config =
   and snap_outer_wall = 0.2
   and outer_w = 19.5
   and inner_w = 14.
+  and inner_h = 14.
   and thickness = 4.
   and cap_height = 5. (* mx is 6.25, but niz seems to measure at 4.9 ~ 5. *) in
   let clip hole =
@@ -84,6 +85,7 @@ let hole_config =
     { spec = Kind.Niz { clip_height; snap_slot_h }
     ; outer_w
     ; inner_w
+    ; inner_h
     ; thickness
     ; clip
     ; cap_height
