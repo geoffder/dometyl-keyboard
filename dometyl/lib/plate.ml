@@ -10,10 +10,8 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 7., -6. (* middle *)
-    (* | 3 -> 0., 3., -2. (\* ring *\) *)
-    | 3 -> 1.5, 0., -2. (* ring *)
-    (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
-    | i when i >= 4 -> 0.25, -21., 6. (* pinky *)
+    | 3 -> 2., 0., -2. (* ring *)
+    | i when i >= 4 -> -0.25, -22., 6. (* pinky *)
     | 0 -> -1., 0., 5.5
     | _ -> 0., 0., 0.
 
@@ -26,7 +24,7 @@ module Lookups = struct
     | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
 
   let default_splay = function
-    | i when i = 3 -> Float.pi /. -30. (* ring *)
+    | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -15. (* pinky *)
     | _ -> 0.
 
