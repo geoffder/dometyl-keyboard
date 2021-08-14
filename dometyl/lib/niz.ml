@@ -9,6 +9,7 @@ module Bottom = struct
   let bulge_thickness = 0.5
   let bulge_length = 6.5
   let bulge_height = 3.2
+  let ellipse_offset = -0.25
   let ellipse_inset_x_rad = 1.6 (* was 1.4 *)
 
   let ellipse_inset_y_scale = 1.2
@@ -16,15 +17,15 @@ module Bottom = struct
   let corner_cut_off = 2.75
 
   let ellipse =
-    Model.scale (1., ellipse_inset_y_scale, 1.) (Model.circle ellipse_inset_x_rad)
-    |> Model.translate (x /. 2., 0., 0.)
+    Model.scale (1., ellipse_inset_y_scale, 1.) (Model.circle ~fn:32 ellipse_inset_x_rad)
+    |> Model.translate ((x /. 2.) +. ellipse_offset, 0., 0.)
 
   let bulge =
     Model.cube (bulge_length, bulge_thickness +. 0.1, bulge_height)
     |> Model.translate (bulge_length /. -2., (y /. 2.) -. 0.1, 0.)
 
   let cutter =
-    Model.circle corner_cut_rad
+    Model.circle ~fn:64 corner_cut_rad
     |> Model.translate ((x /. 2.) +. corner_cut_off, (y /. 2.) +. corner_cut_off, 0.)
 
   let scad =
@@ -155,11 +156,11 @@ module Platform = struct
           (Bottom.ellipse |> Model.linear_extrude ~height:wall_height)
           [ Model.cube
               ( Bottom.ellipse_inset_x_rad
-              , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale
+              , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2.
               , wall_height )
             |> Model.translate
                  ( w /. 2.
-                 , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale /. -2.
+                 , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. -1.
                  , 0. )
           ]
       in
