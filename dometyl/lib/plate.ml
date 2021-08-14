@@ -13,7 +13,7 @@ module Lookups = struct
     (* | 3 -> 0., 3., -2. (\* ring *\) *)
     | 3 -> 1.5, 0., -2. (* ring *)
     (* | i when i >= 4 -> 0., -12., 6. (\* pinky *\) *)
-    | i when i >= 4 -> -0.5, -21., 6. (* pinky *)
+    | i when i >= 4 -> 0.25, -21., 6. (* pinky *)
     | 0 -> -1., 0., 5.5
     | _ -> 0., 0., 0.
 
@@ -27,7 +27,7 @@ module Lookups = struct
 
   let default_splay = function
     | i when i = 3 -> Float.pi /. -30. (* ring *)
-    | i when i >= 4 -> Float.pi /. -20. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -15. (* pinky *)
     | _ -> 0.
 
   let make ?(offset = default_offset) ?(well = default_well) ?(splay = default_splay) () =
@@ -71,8 +71,8 @@ let make
     ?(spacing = 2.)
     ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -2., -48., 8.)
-    ?(thumb_angle = Float.(0., pi /. -4.75, pi /. 7.))
+    ?(thumb_offset = -3.5, -45.5, 10.)
+    ?(thumb_angle = Float.(0., pi /. -4.75, pi /. 8.))
     ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.25; radius = 70.; tilt = 0. })
     ?(thumb_well = Curvature.{ angle = Float.pi /. 6.; radius = 50.; tilt = 0. })
     ?(lookups = Lookups.make ())
