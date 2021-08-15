@@ -34,7 +34,7 @@ let skel =
     Connect.skeleton
       ~height:7.
       ~thumb_height:11.
-      ~snake_scale:1.25
+      ~snake_scale:1.75
       ~snake_d:1.5
       ~cubic_d:2.
       ~cubic_scale:1.
