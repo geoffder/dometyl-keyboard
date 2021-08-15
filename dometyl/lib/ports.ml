@@ -13,8 +13,8 @@ let make
     ?(jack_width = 6.2)
     ?(usb_height = 3.6)
     ?(usb_width = 9.5)
-    ?(board_width = 18.)
-    ?(board_thickness = 1.)
+    ?(board_width = 20.)
+    ?(board_thickness = 2.)
     ?(dist = 15.5)
     ?(x_off = 6.)
     ?(z_off = 7.)
@@ -38,12 +38,12 @@ let make
   and inset =
     let w = ((jack_width +. board_width) /. 2.) +. dist
     and l = (Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.) -. inner_y
-    and h =
-      jack_radius +. Float.max ((usb_height /. 2.) +. board_thickness) jack_radius
-    in
-    Model.cube ~center:true (w, l, h)
+    and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
+    Model.cube ~center:true (w, l, jack_radius +. below)
     |> Model.translate
-         ((w -. jack_width) /. 2., Float.max 0. (l -. length) -. (l /. 2.), 0.)
+         ( (w -. jack_width) /. 2.
+         , Float.max 0. (l -. length) -. (l /. 2.)
+         , (jack_radius -. below) /. 2. )
   in
   Model.union [ jack; usb; inset ]
   |> Model.translate Vec3.(get_x foot.bot_left +. x_off, inner_y, z_off)
