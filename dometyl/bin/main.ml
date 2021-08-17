@@ -36,8 +36,8 @@ let () =
    *   "case"
    *   (Model.union [ Case.t.scad; Bottom.make Case.t |> Model.translate (0., 0., -10.) ]); *)
   (* write_thing "niz_bottom" Niz.Bottom.scad; *)
-  write_thing "niz_platform" Case.niz_platform.scad;
   write_thing "tent" (Tent.make Case.t);
-  (* write_thing "niz_cross_section" Case.niz_cross_section; *)
-  (* write_thing "niz_sensor" Case.niz_sensor.scad; *)
+  (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
+  (* write_thing "niz_cross_section" Niz.example_cross_section; *)
+  (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
   Stdio.print_endline "Done!"

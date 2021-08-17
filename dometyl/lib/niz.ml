@@ -105,6 +105,21 @@ module Platform = struct
     ; sensor_config : Sensor.Config.t
     }
 
+  (* NOTE: BKE ~= 0.95mm; DES ~= 0.73mm. A value of 1.15 seems to fit both without
+   * being too tight or loose on either. *)
+  let default_config =
+    { w = 20.
+    ; dome_w = 19.
+    ; dome_waist = 15. (* width at narrow point, ensure enough space at centre *)
+    ; dome_thickness = 1.15
+    ; base_thickness = 2.25
+    ; sensor_depth = 1.5
+    ; snap_clearance = 0.3
+    ; snap_len = 0.8 (* Try 1.2, see if it's possiblle *)
+    ; lug_height = 1.5
+    ; sensor_config = Sensor.Config.a3144_print
+    }
+
   type t =
     { config : config
     ; wall_height : float
@@ -276,3 +291,15 @@ module Platform = struct
         Model.union [ base; Model.translate (0., 0., -0.001) walls; pillars; snap_heads ]
     }
 end
+
+let example_cross_section =
+  let platform = Platform.(make default_config)
+  and keyhole = KeyHole.make hole_config in
+  Model.difference
+    (Model.union
+       [ Model.translate
+           (0., 0., platform.wall_height +. (keyhole.config.thickness /. 2.))
+           keyhole.scad
+       ; platform.scad
+       ] )
+    [ Model.cube ~center:true (25., 15., 20.) |> Model.translate (0., -7.5, 0.) ]
