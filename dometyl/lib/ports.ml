@@ -13,7 +13,7 @@ let make
     ?(jack_width = 6.2)
     ?(usb_height = 3.6)
     ?(usb_width = 9.5)
-    ?(board_width = 20.)
+    ?(board_width = 21.)
     ?(board_thickness = 2.)
     ?(dist = 15.5)
     ?(x_off = 6.)

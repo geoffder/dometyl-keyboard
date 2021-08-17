@@ -34,12 +34,12 @@ let skel =
     Connect.skeleton
       ~height:7.
       ~thumb_height:11.
-      ~snake_scale:1.75
+      ~snake_scale:1.3
       ~snake_d:1.5
       ~cubic_d:2.
       ~cubic_scale:1.
       ~thumb_cubic_d:1.
-      ~thumb_cubic_scale:0.5
+      ~thumb_cubic_scale:1.25
       ~join_steps:3
       ~fudge_factor:8.
       ~close_thumb:true
@@ -52,6 +52,7 @@ let skel =
         ; Walls.to_scad walls
         ; connections.scad
         ; Plate.skeleton_bridges plate (* ; Plate.column_joins plate *)
+        ; Bridge.cols ~columns:plate.columns 1 2
         ]
   ; plate
   ; walls

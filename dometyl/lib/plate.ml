@@ -10,10 +10,10 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 5., -6. (* middle *)
-    | 3 -> 3.25, -1., -2. (* ring *)
-    | i when i >= 4 -> 2., -22., 6. (* pinky *)
-    | 0 -> -2.5, 0., 5.5
-    | _ -> 0., 0., 0.
+    | 3 -> 2.5, -1., -2. (* ring *)
+    | i when i >= 4 -> 1., -22., 6. (* pinky *)
+    | 0 -> -2., 0., 7.
+    | _ -> 0., 0., 1.5
 
   (* skeletyl is in neighbourhood of { angle = Float.pi /. 12.; radius = 85. } *)
   let default_well = function
@@ -66,13 +66,14 @@ let make
     ?(centre_row = 1)
     ?(n_cols = 5)
     ?(centre_col = 2)
-    ?(spacing = 0.5)
+    ?(spacing = 1.)
     ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -4., -43., 10.5)
-    ?(thumb_angle = Float.(0., pi /. -4.75, pi /. 8.))
-    ?(thumb_fan = Curvature.{ angle = Float.pi /. 8.25; radius = 70.; tilt = 0. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 6.; radius = 40.; tilt = 0. })
+    ?(thumb_offset = -6., -43., 7.5)
+    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 8.))
+    ?(thumb_fan =
+      Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
+    ?(thumb_well = Curvature.{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
@@ -158,7 +159,6 @@ let column_joins { config = { n_cols; _ }; columns; _ } =
   let join = Bridge.cols ~columns in
   Model.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
-(* TODO: testing *)
 let skeleton_bridges { config = { n_rows; n_cols; _ }; columns; _ } =
   let bridge c k =
     Bridge.keys (Columns.key_exn columns c k) (Columns.key_exn columns (c + 1) k)
