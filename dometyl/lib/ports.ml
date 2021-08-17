@@ -1,12 +1,6 @@
 open! Base
 open! Scad_ml
 
-(* NOTE: This is still rough, as it is using a rectangle as inset and it along
-   with the ports are oriented exactly along the y-axis. This is despite the fact
-   the inner index column (leftmost) can be angled, and that it is independent from
-   the main index column. Thus, the walls that the jack and usb are distributed
-   across can be "kinked", leading to uneven penetration of the inset into the walls,
-   and thus resulting in uneven outer wall thickness and port length. *)
 let make
     ?(length = 2.)
     ?(jack_radius = 2.65)
@@ -20,8 +14,11 @@ let make
     ?(z_off = 7.)
     Walls.{ body = { cols; _ }; _ }
   =
-  let foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
-  let inner_y = Vec3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2. in
+  let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
+  let right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+  let inner_y (foot : Points.t) =
+    Vec3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2.
+  in
   let jack =
     Model.cylinder ~center:true ~fn:16 jack_radius 20.
     |> Model.rotate (Float.pi /. 2., 0., 0.)
@@ -36,14 +33,28 @@ let make
       ]
     |> Model.translate (dist, 0., 0.)
   and inset =
-    let w = ((jack_width +. board_width) /. 2.) +. dist
-    and l = (Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.) -. inner_y
-    and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
-    Model.cube ~center:true (w, l, jack_radius +. below)
-    |> Model.translate
-         ( (w -. jack_width) /. 2.
-         , Float.max 0. (l -. length) -. (l /. 2.)
-         , (jack_radius -. below) /. 2. )
+    let below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
+    let h = jack_radius +. below
+    and len (foot : Points.t) =
+      (Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.) -. inner_y foot
+    in
+    let left =
+      let l = len left_foot in
+      Model.cube ~center:true (jack_width, l, h)
+      |> Model.translate
+           (0., Float.max 0. (l -. length) -. (l /. 2.), (jack_radius -. below) /. 2.)
+    in
+    let right =
+      let l = len right_foot
+      (* bring right into frame of reference of left inner_y *)
+      and y_diff = inner_y right_foot -. inner_y left_foot in
+      Model.cube ~center:true (board_width, l, h)
+      |> Model.translate
+           ( dist
+           , Float.max 0. (l -. length) -. (l /. 2.) +. y_diff
+           , (jack_radius -. below) /. 2. )
+    in
+    Model.hull [ left; right ]
   in
   Model.union [ jack; usb; inset ]
-  |> Model.translate Vec3.(get_x foot.bot_left +. x_off, inner_y, z_off)
+  |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
