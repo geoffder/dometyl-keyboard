@@ -66,10 +66,14 @@ let closed =
           Body.make
             ~west_lookup:(fun i -> if i = 0 then Screw else Yes)
             ~east_lookup:(fun _ -> Yes)
-            ~n_steps:(`PerZ 3.5)
+            ~n_steps:(`PerZ 6.)
             plate
       ; thumb =
-          Thumb.make ~east:No ~south_lookup:(fun i -> if i = 1 then Screw else Yes) plate
+          Thumb.make
+            ~east:No
+            ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
+            ~n_steps:(`PerZ 6.)
+            plate
       }
   in
   let connections = Connect.closed ~n_steps:4 walls in
