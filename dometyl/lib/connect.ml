@@ -255,14 +255,22 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     in
     if Float.(abs dx > abs dy) then x, y else y, x
   in
-  (* Move the destination points along the outer face of the wall to improve angle. *)
+  (* Move the start or destination points along the outer face of the wall to improve angle. *)
+  let outward =
+    (* away from the centre of mass, or not? *)
+    Float.(
+      Vec3.(norm (w1.foot.top_right <-> w2.foot.top_left))
+      > Vec3.(norm (w1.foot.top_right <-> w2.foot.bot_left)))
+  in
   let fudge =
+    let dir = if outward then Vec3.zero else dir2 in
+    (* let dir = if outward then Vec3.negate dir1 else dir2 in *)
     let extra =
       if Float.(abs minor_diff > fudge_factor)
       then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
       else 0.
     in
-    Vec3.(add (mul dir2 (-.extra, -.extra, 0.)))
+    Vec3.(add (mul dir (-.extra, -.extra, 0.)))
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy in
     if (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
@@ -275,11 +283,11 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     Bezier.curve_rev
       ~n_steps
       ~init:(Bezier.curve ~n_steps w1.edges.bot_right)
-      w1.edges.top_right
+      (fun step -> (if outward then fudge else Fn.id) @@ w1.edges.top_right step)
     |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
   and dests =
     Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
-        fudge @@ w2.edges.top_left step )
+        (if outward then Fn.id else fudge) @@ w2.edges.top_left step )
     |> List.map ~f:Vec3.(add (mul dir2 (-0.001, -0.001, 0.)))
   and wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
@@ -290,18 +298,21 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
          [ w1.start.top_right
          ; w1.start.bot_right
          ; w1.edges.bot_right 0.
-         ; w1.edges.top_right 0.0001
+         ; (if outward then fudge else Fn.id) @@ w1.edges.top_right 0.0001
          ] )
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, -0.01)))
          [ w2.start.top_left
          ; w2.start.bot_left
          ; w2.edges.bot_left 0.
-         ; fudge @@ w2.edges.top_left 0.0001
+         ; (if outward then Fn.id else fudge) @@ w2.edges.top_left 0.0001
          ] )
   in
   { scad = Model.union [ Util.prism_exn starts dests; wedge ]
-  ; outline = [ w1.foot.top_right; fudge w2.foot.top_left ]
+  ; outline =
+      [ (if outward then fudge else Fn.id) w1.foot.top_right
+      ; (if outward then Fn.id else fudge) w2.foot.top_left
+      ]
   }
 
 let joiner ~get ~join ~key:_ ~data (last, scads) =
