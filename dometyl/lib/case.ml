@@ -32,7 +32,7 @@ let rotate_about_pt r p t =
 
 let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
 let keyhole = KeyHole.make ~cap Mx.hole_config
-let plate = Plate.make ~clearance:Mx.plate_clearance keyhole
+let plate = Plate.make ~n_rows:3 ~n_cols:5 ~clearance:Mx.plate_clearance keyhole
 
 let skel =
   let walls =
@@ -53,7 +53,7 @@ let skel =
       ~height:7.
       ~thumb_height:11.
       ~snake_scale:1.3
-      ~snake_d:1.5
+      ~snake_d:1.4
       ~cubic_d:2.
       ~cubic_scale:1.
       ~thumb_cubic_d:1.
@@ -118,4 +118,4 @@ let all_caps =
 let t = skel
 let ports = Ports.make t.walls
 let t = { t with scad = Model.difference t.scad [ ports ] }
-let t = { t with scad = Model.union [ t.scad; all_caps ] }
+(* let t = { t with scad = Model.union [ t.scad; all_caps ] } *)

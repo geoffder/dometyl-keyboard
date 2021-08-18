@@ -11,7 +11,7 @@ module Lookups = struct
   let default_offset = function
     | 2 -> 0., 5., -6. (* middle *)
     | 3 -> 2.5, -1., -2. (* ring *)
-    | i when i >= 4 -> 1., -22., 6. (* pinky *)
+    | i when i >= 4 -> 0.5, -22., 6. (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
@@ -90,7 +90,7 @@ let make
     ?(spacing = 1.)
     ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -6., -42., 7.5)
+    ?(thumb_offset = -6., -42.5, 7.5)
     ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 8.))
     ?(thumb_fan =
       Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
@@ -116,9 +116,17 @@ let make
   let apply_tent off col =
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
   in
+  (* let place_col ~key:i ~data:off =
+   *   apply_tent off (well_column @@ lookups.well i)
+   *   |> Column.rotate (0., 0., lookups.splay i)
+   *   |> Column.translate off
+   * in *)
   let place_col ~key:i ~data:off =
-    apply_tent off (well_column @@ lookups.well i)
-    |> Column.rotate (0., 0., lookups.splay i)
+    let tented = apply_tent off (well_column @@ lookups.well i) in
+    Column.rotate_about_pt
+      (0., 0., lookups.splay i)
+      (Vec3.negate (Map.find_exn tented.keys centre_row).origin)
+      tented
     |> Column.translate off
   in
   let columns, thumb =

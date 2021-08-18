@@ -8,6 +8,18 @@ type t =
   ; outline : Vec3.t list
   }
 
+let bounding_box { outline; _ } =
+  let f (top, right, bot, left) (x, y, _) =
+    let top' = Float.max top y
+    and right' = Float.max right x
+    and bot' = Float.min bot y
+    and left' = Float.min left x in
+    top', right', bot', left'
+  in
+  List.fold ~f ~init:Float.(min_value, min_value, max_value, max_value) outline
+
+let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
+
 let translate p t =
   { scad = Model.translate p t.scad; outline = List.map ~f:(Vec3.add p) t.outline }
 
