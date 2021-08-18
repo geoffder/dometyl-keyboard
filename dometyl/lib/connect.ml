@@ -8,6 +8,17 @@ type t =
   ; outline : Vec3.t list
   }
 
+let translate p t =
+  { scad = Model.translate p t.scad; outline = List.map ~f:(Vec3.add p) t.outline }
+
+let rotate r t =
+  { scad = Model.rotate r t.scad; outline = List.map ~f:(Vec3.rotate r) t.outline }
+
+let rotate_about_pt r p t =
+  { scad = Model.rotate_about_pt r p t.scad
+  ; outline = List.map ~f:(Vec3.rotate_about_pt r p) t.outline
+  }
+
 (* Assumes lists are lead with the outer (top) line along the xy plane. *)
 let prism_connection bezs steps =
   let n_steps =

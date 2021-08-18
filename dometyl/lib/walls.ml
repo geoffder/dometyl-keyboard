@@ -13,7 +13,13 @@ module Body = struct
       ; south : Wall.t option
       }
 
+    let map_col ~f c = { north = Option.map ~f c.north; south = Option.map ~f c.south }
+
     type t = col Map.M(Int).t
+
+    let translate p = Map.map ~f:(map_col ~f:(Wall.translate p))
+    let rotate r = Map.map ~f:(map_col ~f:(Wall.rotate r))
+    let rotate_about_pt r p = Map.map ~f:(map_col ~f:(Wall.rotate_about_pt r p))
 
     let make
         ?(d1 = 2.)
@@ -73,6 +79,11 @@ module Body = struct
       ; east : Wall.t Map.M(Int).t
       }
 
+    let map ~f t = { west = Map.map ~f t.west; east = Map.map ~f t.east }
+    let translate p = map ~f:(Wall.translate p)
+    let rotate r = map ~f:(Wall.rotate r)
+    let rotate_about_pt r p = map ~f:(Wall.rotate_about_pt r p)
+
     let make
         ?(d1 = 2.)
         ?(d2 = 5.)
@@ -118,6 +129,14 @@ module Body = struct
     { cols : Cols.t
     ; sides : Sides.t
     }
+
+  let translate p t =
+    { cols = Cols.translate p t.cols; sides = Sides.translate p t.sides }
+
+  let rotate r t = { cols = Cols.rotate r t.cols; sides = Sides.rotate r t.sides }
+
+  let rotate_about_pt r p t =
+    { cols = Cols.rotate_about_pt r p t.cols; sides = Sides.rotate_about_pt r p t.sides }
 
   (* TODO: rough draft. This impl does not allow for different settings between cols
    * and siding. Is that fine? Or should I add more params here, or just make separately? *)
@@ -173,15 +192,24 @@ module Thumb = struct
     ; south : Wall.t option
     }
 
+  let map_key ~f k = { north = Option.map ~f k.north; south = Option.map ~f k.south }
+
   type sides =
     { west : Wall.t option
     ; east : Wall.t option
     }
 
+  let map_sides ~f s = { west = Option.map ~f s.west; east = Option.map ~f s.east }
+
   type t =
     { keys : key Map.M(Int).t
     ; sides : sides
     }
+
+  let map ~f t = { keys = Map.map ~f:(map_key ~f) t.keys; sides = map_sides ~f t.sides }
+  let translate p = map ~f:(Wall.translate p)
+  let rotate r = map ~f:(Wall.rotate r)
+  let rotate_about_pt r p = map ~f:(Wall.rotate_about_pt r p)
 
   let make
       ?(d1 = 1.)
@@ -236,6 +264,12 @@ type t =
   { body : Body.t
   ; thumb : Thumb.t
   }
+
+let translate p t = { body = Body.translate p t.body; thumb = Thumb.translate p t.thumb }
+let rotate r t = { body = Body.rotate r t.body; thumb = Thumb.rotate r t.thumb }
+
+let rotate_about_pt r p t =
+  { body = Body.rotate_about_pt r p t.body; thumb = Thumb.rotate_about_pt r p t.thumb }
 
 let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
 

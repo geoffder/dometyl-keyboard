@@ -9,14 +9,32 @@ type 'k t =
   ; connections : Connect.t
   }
 
+let translate p t =
+  { scad = Model.translate p t.scad
+  ; plate = Plate.translate p t.plate
+  ; walls = Walls.translate p t.walls
+  ; connections = Connect.translate p t.connections
+  }
+
+let rotate r t =
+  { scad = Model.rotate r t.scad
+  ; plate = Plate.rotate r t.plate
+  ; walls = Walls.rotate r t.walls
+  ; connections = Connect.rotate r t.connections
+  }
+
+let rotate_about_pt r p t =
+  { scad = Model.rotate_about_pt r p t.scad
+  ; plate = Plate.rotate_about_pt r p t.plate
+  ; walls = Walls.rotate_about_pt r p t.walls
+  ; connections = Connect.rotate_about_pt r p t.connections
+  }
+
 let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
 let keyhole = KeyHole.make ~cap Mx.hole_config
 let plate = Plate.make ~clearance:Mx.plate_clearance keyhole
 
 let skel =
-  (* NOTE: temporary inclusion of east wall on thumb, and the incl east thumb param.
-     Need handle very vertical keys better. Smarter clearance, as well as not becoming
-     very thin / losing sturdiness. *)
   let walls =
     Walls.
       { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
