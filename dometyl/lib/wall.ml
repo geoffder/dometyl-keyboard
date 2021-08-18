@@ -17,6 +17,10 @@ end
 module Edge = struct
   type t = float -> Vec3.t
 
+  let translate p = Fn.compose (Vec3.add p)
+  let rotate r = Fn.compose (Vec3.rotate r)
+  let rotate_about_pt r p = Fn.compose (Vec3.rotate_about_pt r p)
+
   let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
     let bez_frac =
       Util.bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
@@ -31,6 +35,17 @@ module Edges = struct
     ; bot_left : Edge.t
     ; bot_right : Edge.t
     }
+
+  let map ~f t =
+    { top_left = f t.top_left
+    ; top_right = f t.top_right
+    ; bot_left = f t.bot_left
+    ; bot_right = f t.bot_right
+    }
+
+  let translate p = map ~f:(Edge.translate p)
+  let rotate r = map ~f:(Edge.rotate r)
+  let rotate_about_pt r p = map ~f:(Edge.rotate_about_pt r p)
 
   let of_clockwise_list_exn = function
     | [ top_left; top_right; bot_right; bot_left ] ->
@@ -54,6 +69,30 @@ type t =
   ; foot : Points.t
   ; edges : Edges.t
   ; screw : Screw.t option
+  }
+
+let translate p t =
+  { scad = Model.translate p t.scad
+  ; start = Points.translate p t.start
+  ; foot = Points.translate p t.foot
+  ; edges = Edges.translate p t.edges
+  ; screw = Option.map ~f:(Screw.translate p) t.screw
+  }
+
+let rotate r t =
+  { scad = Model.rotate r t.scad
+  ; start = Points.rotate r t.start
+  ; foot = Points.rotate r t.foot
+  ; edges = Edges.rotate r t.edges
+  ; screw = Option.map ~f:(Screw.rotate r) t.screw
+  }
+
+let rotate_about_pt r p t =
+  { scad = Model.rotate_about_pt r p t.scad
+  ; start = Points.rotate_about_pt r p t.start
+  ; foot = Points.rotate_about_pt r p t.foot
+  ; edges = Edges.rotate_about_pt r p t.edges
+  ; screw = Option.map ~f:(Screw.rotate_about_pt r p) t.screw
   }
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =

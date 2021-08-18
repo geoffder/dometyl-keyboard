@@ -13,6 +13,17 @@ type t =
   ; config : config
   }
 
+let translate p t =
+  { t with scad = Model.translate p t.scad; centre = Vec3.add p t.centre }
+
+let rotate r t = { t with scad = Model.rotate r t.scad; centre = Vec3.rotate r t.centre }
+
+let rotate_about_pt r p t =
+  { t with
+    scad = Model.rotate_about_pt r p t.scad
+  ; centre = Vec3.rotate_about_pt r p t.centre
+  }
+
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0 }
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0 }
 

@@ -51,6 +51,27 @@ type 'k t =
   ; thumb : 'k Column.t
   }
 
+let translate p t =
+  { t with
+    scad = Model.translate p t.scad
+  ; columns = Columns.translate p t.columns
+  ; thumb = Column.translate p t.thumb
+  }
+
+let rotate r t =
+  { t with
+    scad = Model.rotate r t.scad
+  ; columns = Columns.rotate r t.columns
+  ; thumb = Column.rotate r t.thumb
+  }
+
+let rotate_about_pt r p t =
+  { t with
+    scad = Model.rotate_about_pt r p t.scad
+  ; columns = Columns.rotate_about_pt r p t.columns
+  ; thumb = Column.rotate_about_pt r p t.thumb
+  }
+
 let make_thumb ?well ?fan keyhole =
   Column.(
     make
@@ -69,7 +90,7 @@ let make
     ?(spacing = 1.)
     ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -6., -43., 7.5)
+    ?(thumb_offset = -6., -42., 7.5)
     ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 8.))
     ?(thumb_fan =
       Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
