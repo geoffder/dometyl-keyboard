@@ -1,30 +1,84 @@
 open! Base
 open! Scad_ml
 
+let bumpon ~normal ~outer_rad ~inner_rad ~thickness ~inset p1 p2 =
+  let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1))
+  and hole_offset = Vec3.map (( *. ) outer_rad) normal
+  and foot_offset = Vec3.map (( *. ) (-0.1)) normal in
+  let centre = Vec3.(base_centre <+> hole_offset) in
+  let circ = Model.circle ~fn:16 outer_rad |> Model.translate centre
+  and swoop p =
+    let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
+    centre
+    :: base_centre
+    :: Vec3.add p foot_offset
+    :: Bezier.curve
+         ~n_steps:10
+         (Bezier.quad_vec3
+            ~p1:p
+            ~p2:Vec3.(base_centre <+> rad_offset)
+            ~p3:Vec3.(centre <+> rad_offset) )
+    |> List.map ~f:Vec3.to_vec2
+    |> Model.polygon
+  in
+  Model.difference
+    (Model.union [ circ; swoop p1; swoop p2 ] |> Model.linear_extrude ~height:thickness)
+    [ Model.cylinder ~fn:16 inner_rad inset |> Model.translate centre ]
+
 (* TODO:
-   - either remake the screw-holes protrusions from scratch, or alter the existing
-     ones to make them the appropriate radius, with countersink as a nice touch.
-   - add protusions with insets for feet (place similar to screws, protruding from
-     the centre of Wall.t's?). Most places are fair game, other than under a screw
-     on the last pinky column I imagin. *)
-let make ?(degrees = 30.) ?(z_offset = 0.) ?(screw_height = 2.) (case : _ Case.t) =
-  let _, bb_right, _, bb_left = Connect.bounding_box case.connections in
+   - make the positioning of bumpons more flexible, right now just using wall
+     positions, as with screw placement on the case.
+   - paramaterizable / smarter bumpon placement, right now the important pinky
+     position is obscuring the screw hole above.
+*)
+let make
+    ?(degrees = 30.)
+    ?(z_offset = 0.)
+    ?(screw_height = 2.)
+    ?(outer_screw_rad = 4.1)
+    ?(inner_screw_rad = 2.0)
+    ?(foot_thickness = 2.)
+    ?(foot_rad = 5.8)
+    ?(bumpon_rad = 5.)
+    ?(bumpon_inset = 0.5)
+    (case : _ Case.t)
+  =
+  let _, bb_right, _, bb_left = Connect.bounding_box case.connections
+  and screws = Walls.collect_screws case.Case.walls
+  and base_cut = Model.projection ~cut:true (Model.translate (0., 0., -0.01) case.scad) in
   let rot = 0., degrees *. Float.pi /. 180., 0.
-  and pivot_pt = -.bb_right, 0., 0.
-  and screwed = Model.projection ~cut:true (Model.translate (0., 0., -0.01) case.scad) in
-  let screwless =
-    let screws =
-      Walls.collect_screws case.walls
+  and pivot_pt = -.bb_right, 0., 0. in
+  let screws_filled =
+    let hole_fills =
+      List.map
+        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; _ } ->
+          Model.circle inner_rad |> Model.translate centre )
+        screws
+    in
+    Model.union (base_cut :: hole_fills)
+  and screwless =
+    let cuts =
+      screws
       |> List.map ~f:Screw.to_scad
       |> Model.union
       |> Fn.flip Model.difference [ case.connections.scad ]
       |> Model.translate (0., 0., -0.01)
       |> Model.projection ~cut:true
     in
-    Model.difference screwed [ screws ]
+    Model.difference base_cut [ cuts ]
   and trans s = Model.rotate_about_pt rot pivot_pt s |> Model.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_left, 0., 0.))) in
-  let top = trans (Model.linear_extrude ~height:screw_height screwed)
+  let top =
+    let screw_hole =
+      Model.circle outer_screw_rad
+      |> Model.linear_extrude
+           ~height:screw_height
+           ~scale:(inner_screw_rad /. outer_screw_rad)
+    in
+    Model.difference
+      (Model.linear_extrude ~height:screw_height screws_filled)
+      (List.map ~f:(fun Screw.{ centre; _ } -> Model.translate centre screw_hole) screws)
+    |> trans
   and shell =
     trans (Model.linear_extrude ~height:0.001 screwless)
     |> Model.projection
@@ -32,11 +86,45 @@ let make ?(degrees = 30.) ?(z_offset = 0.) ?(screw_height = 2.) (case : _ Case.t
   in
   let cut =
     let bulked_top =
-      Model.offset (`Delta 2.) screwed
+      Model.offset (`Delta 2.) screws_filled
       |> Model.linear_extrude ~height:screw_height
       |> trans
     in
     Model.hull [ bulked_top; Model.translate (0., 0., base_height) bulked_top ]
+  in
+  let bumpons =
+    let tilted =
+      Case.rotate_about_pt rot pivot_pt case |> Case.translate (0., 0., z_offset)
+    in
+    let top_left =
+      let%bind.Option c = Map.find tilted.walls.body.cols 0 in
+      c.north
+    and top_ring =
+      let%bind.Option c = Map.find tilted.walls.body.cols 3 in
+      c.north
+    and bot_mid =
+      let%bind.Option c = Map.find tilted.walls.body.cols 2 in
+      c.south
+    and bot_left = tilted.walls.thumb.sides.west
+    and right =
+      match Map.max_elt tilted.walls.body.cols with
+      | Some (_, c) -> [ c.north; c.south ]
+      | None        -> []
+    and f Wall.{ foot = { centre; bot_left; bot_right; _ }; _ } =
+      let flatten (x, y, _) = x, y, 0. in
+      bumpon
+        ~normal:Vec3.(mean [ bot_left; bot_right ] <-> centre |> flatten |> normalize)
+        ~outer_rad:foot_rad
+        ~inner_rad:bumpon_rad
+        ~thickness:foot_thickness
+        ~inset:bumpon_inset
+        (flatten bot_left)
+        (flatten bot_right)
+    in
+    bot_mid :: bot_left :: top_left :: top_ring :: right
+    |> List.filter_opt
+    |> List.map ~f
+    |> Model.union
   in
   Model.union
     [ Model.difference
@@ -47,4 +135,5 @@ let make ?(degrees = 30.) ?(z_offset = 0.) ?(screw_height = 2.) (case : _ Case.t
           |> Model.translate (0., 0., -10.)
         ]
     ; Model.difference shell [ Model.translate (0., 0., -0.00001) cut ]
+    ; bumpons
     ]
