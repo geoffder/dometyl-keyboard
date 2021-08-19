@@ -1,17 +1,20 @@
 open! Base
 open! Scad_ml
 
-let bumpon ~normal ~outer_rad ~inner_rad ~thickness ~inset p1 p2 =
-  let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1))
-  and hole_offset = Vec3.map (( *. ) outer_rad) normal
-  and foot_offset = Vec3.map (( *. ) (-0.1)) normal in
+let bumpon ~outer_rad ~inner_rad ~thickness ~inset foot =
+  let Points.{ top_left; top_right; bot_left; bot_right; centre } =
+    Points.map ~f:(Vec3.mul (1., 1., 0.)) foot
+  in
+  let normal = Vec3.(centre <-> mean [ top_left; top_right ] |> normalize) in
+  let base_centre = Vec3.(map (( *. ) 0.5) (top_left <+> top_right) |> mul (1., 1., 0.))
+  and hole_offset = Vec3.map (( *. ) outer_rad) normal in
   let centre = Vec3.(base_centre <+> hole_offset) in
-  let circ = Model.circle ~fn:16 outer_rad |> Model.translate centre
+  let circ = Model.circle ~fn:32 outer_rad |> Model.translate centre
   and swoop p =
     let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
     centre
     :: base_centre
-    :: Vec3.add p foot_offset
+    :: p
     :: Bezier.curve
          ~n_steps:10
          (Bezier.quad_vec3
@@ -21,9 +24,15 @@ let bumpon ~normal ~outer_rad ~inner_rad ~thickness ~inset p1 p2 =
     |> List.map ~f:Vec3.to_vec2
     |> Model.polygon
   in
-  Model.difference
-    (Model.union [ circ; swoop p1; swoop p2 ] |> Model.linear_extrude ~height:thickness)
-    [ Model.cylinder ~fn:16 inner_rad inset |> Model.translate centre ]
+  let bump =
+    Model.union
+      [ circ
+      ; swoop (Vec3.mul bot_left (1., 1., 0.))
+      ; swoop (Vec3.mul bot_right (1., 1., 0.))
+      ]
+    |> Model.linear_extrude ~height:thickness
+  and inset_cut = Model.cylinder ~fn:16 inner_rad inset |> Model.translate centre in
+  bump, inset_cut
 
 (* TODO:
    - make the positioning of bumpons more flexible, right now just using wall
@@ -92,7 +101,7 @@ let make
     in
     Model.hull [ bulked_top; Model.translate (0., 0., base_height) bulked_top ]
   in
-  let bumpons =
+  let feet, insets =
     let tilted =
       Case.rotate_about_pt rot pivot_pt case |> Case.translate (0., 0., z_offset)
     in
@@ -110,30 +119,34 @@ let make
       match Map.max_elt tilted.walls.body.cols with
       | Some (_, c) -> [ c.north; c.south ]
       | None        -> []
-    and f Wall.{ foot = { centre; bot_left; bot_right; _ }; _ } =
-      let flatten (x, y, _) = x, y, 0. in
-      bumpon
-        ~normal:Vec3.(mean [ bot_left; bot_right ] <-> centre |> flatten |> normalize)
-        ~outer_rad:foot_rad
-        ~inner_rad:bumpon_rad
-        ~thickness:foot_thickness
-        ~inset:bumpon_inset
-        (flatten bot_left)
-        (flatten bot_right)
+    and f (bumps, insets) Wall.{ foot; _ } =
+      let bump, inset =
+        bumpon
+          ~outer_rad:foot_rad
+          ~inner_rad:bumpon_rad
+          ~thickness:foot_thickness
+          ~inset:bumpon_inset
+          foot
+      in
+      bump :: bumps, inset :: insets
     in
-    bot_mid :: bot_left :: top_left :: top_ring :: right
-    |> List.filter_opt
-    |> List.map ~f
-    |> Model.union
+    let feet, insets =
+      bot_mid :: bot_left :: top_left :: top_ring :: right
+      |> List.filter_opt
+      |> List.fold ~init:([], []) ~f
+    in
+    Model.union feet, insets
   in
-  Model.union
-    [ Model.difference
-        top
-        [ Model.projection top
-          |> Model.offset (`Delta 2.)
-          |> Model.linear_extrude ~height:10.
-          |> Model.translate (0., 0., -10.)
-        ]
-    ; Model.difference shell [ Model.translate (0., 0., -0.00001) cut ]
-    ; bumpons
-    ]
+  Model.difference
+    (Model.union
+       [ Model.difference
+           top
+           [ Model.projection top
+             |> Model.offset (`Delta 2.)
+             |> Model.linear_extrude ~height:10.
+             |> Model.translate (0., 0., -10.)
+           ]
+       ; Model.difference shell [ Model.translate (0., 0., -0.00001) cut ]
+       ; feet
+       ] )
+    insets
