@@ -13,7 +13,7 @@ let make
     case
   =
   let inset_loc KeyHole.{ origin = x, y, _; _ } = x, y, 0. in
-  let screw_locs = Walls.collect_screws case.Case.walls
+  let screws = Walls.collect_screws case.Case.walls
   and screw_hole =
     Model.circle outer_screw_rad
     |> Model.linear_extrude ~height:thickness ~scale:(inner_screw_rad /. outer_screw_rad)
@@ -43,4 +43,4 @@ let make
   in
   Model.difference
     plate
-    (insets :: List.map ~f:(fun l -> Model.translate l.centre screw_hole) screw_locs)
+    (insets :: List.map ~f:(fun l -> Model.translate l.centre screw_hole) screws)
