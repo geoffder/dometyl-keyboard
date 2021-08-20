@@ -24,6 +24,40 @@ module Hotswap = struct
   let holder_y = inner_h +. (holder_thickness *. 2.)
   let swap_z = 3.
   let square_led_size = 6.
+  let hotswap_x2 = holder_x /. 3. *. 1.95
+  let hotswap_y1 = 4.3 (* first y-size of kailh hotswap holder *)
+
+  let hotswap_y2 = 6.2 (* second y-size of kailh hotswap holder *)
+
+  let hotswap_z = swap_z +. 0.5
+  (* thickness of kailh hotswap holder + some margin of printing error (0.5mm) *)
+
+  (* let hotswap_cutout_z_offset = -2.6
+   * let hotswap_cutout_2_x_offset = -.(holder_x /. 4.5)
+   * let hotswap_cutout_1_y_offset = 4.95
+   * let hotswap_cutout_2_y_offset = 4.
+   * let hotswap_case_cutout_x_extra = 3.01 *)
+
+  let cutout facing =
+    let sign =
+      match facing with
+      | `North -> -1.
+      | `South -> 1.
+    in
+    let extra_w = 3.01
+    and big_x = 0.
+    and big_y = 4.95
+    and small_x = holder_x /. -4.5
+    and small_y = 4.
+    and z = -2.6 in
+    Model.union
+      [ Model.cube ~center:true (inner_w +. extra_w, hotswap_y1, hotswap_z)
+        |> Model.translate (big_x *. sign, big_y *. sign, z)
+      ; Model.cube ~center:true (hotswap_x2, hotswap_y2, hotswap_z)
+        |> Model.translate (small_x *. sign, small_y *. sign, z)
+      ]
+
+  let combo_ex = Model.union [ combo_ex; cutout `North ]
 end
 
 let hole_config =
