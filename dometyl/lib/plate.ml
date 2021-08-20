@@ -198,3 +198,15 @@ let skeleton_bridges { config = { n_rows; n_cols; _ }; columns; _ } =
        (n_cols - 1)
 
 let to_scad t = t.scad
+
+let collect_caps t =
+  let collect ~key:_ ~data acc =
+    Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap
+  in
+  let body_caps =
+    Map.fold
+      ~init:[]
+      ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f:collect data.Column.keys)
+      t.columns
+  in
+  Model.union @@ Map.fold ~init:body_caps ~f:collect t.thumb.keys

@@ -30,92 +30,22 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
-let cap = Model.import "../things/SA-R3.stl" |> Model.color Color.DarkSlateBlue
-let keyhole = KeyHole.make ~cap Mx.hole_config
-let plate = Plate.make ~n_rows:3 ~n_cols:5 ~clearance:Mx.plate_clearance keyhole
-
-let skel =
-  let walls =
-    Walls.
-      { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
-      ; thumb =
-          Thumb.make
-            ~south_lookup:(fun _ -> Yes)
-            ~east:No
-            ~west:Screw
-            ~clearance:1.5
-            ~n_steps:(`Flat 3)
-            plate
-      }
-  in
-  let connections =
-    Connect.skeleton
-      ~height:7.
-      ~thumb_height:11.
-      ~snake_scale:1.3
-      ~snake_d:1.4
-      ~cubic_d:2.
-      ~cubic_scale:1.
-      ~thumb_cubic_d:1.
-      ~thumb_cubic_scale:1.25
-      ~join_steps:3
-      ~fudge_factor:8.
-      ~close_thumb:true
-      ~close_pinky:false
-      walls
-  in
+let make ~plate_welder ~wall_builder ~base_connector plate =
+  let walls = wall_builder plate in
+  let connections = base_connector walls in
   { scad =
-      Model.union
-        [ plate.scad
-        ; Walls.to_scad walls
-        ; connections.scad
-        ; Plate.skeleton_bridges plate (* ; Plate.column_joins plate *)
-        ; Bridge.cols ~columns:plate.columns 1 2
-        ]
+      Model.difference
+        (Model.union
+           [ Plate.to_scad plate
+           ; Walls.to_scad walls
+           ; Connect.to_scad connections
+           ; plate_welder plate
+           ] )
+        [ Ports.make walls ]
   ; plate
   ; walls
   ; connections
   }
 
-let closed =
-  let walls =
-    Walls.
-      { body =
-          Body.make
-            ~west_lookup:(fun i -> if i = 0 then Screw else Yes)
-            ~east_lookup:(fun _ -> Yes)
-            ~n_steps:(`PerZ 6.)
-            plate
-      ; thumb =
-          Thumb.make
-            ~east:No
-            ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
-            ~n_steps:(`PerZ 6.)
-            plate
-      }
-  in
-  let connections = Connect.closed ~n_steps:4 walls in
-  { scad =
-      Model.union
-        [ plate.scad; Walls.to_scad walls; connections.scad; Plate.column_joins plate ]
-  ; plate
-  ; walls
-  ; connections
-  }
-
-let all_caps =
-  let collect ~key:_ ~data acc =
-    Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap
-  in
-  let body_caps =
-    Map.fold
-      ~init:[]
-      ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f:collect data.Column.keys)
-      plate.columns
-  in
-  Model.union @@ Map.fold ~init:body_caps ~f:collect plate.thumb.keys
-
-let t = skel
-let ports = Ports.make t.walls
-let t = { t with scad = Model.difference t.scad [ ports ] }
-(* let t = { t with scad = Model.union [ t.scad; all_caps ] } *)
+let to_scad t = t.scad
+let to_scad_with_caps t = Model.union [ t.scad; Plate.collect_caps t.plate ]

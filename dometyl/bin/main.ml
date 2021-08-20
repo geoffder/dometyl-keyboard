@@ -27,17 +27,21 @@ let write_thing ?(export = false) name scad =
     | _ -> Stdio.print_endline "Openscad export shell command failed." )
   else Stdio.print_endline ""
 
+let case = Splaytyl.build ()
+
 let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
-  write_thing "keyhole" Case.keyhole.scad;
-  write_thing ~export:false "case" Case.t.scad;
+  (* write_thing "mx_keyhole" (KeyHole.make Mx.hole_config).scad; *)
+  (* write_thing "niz_keyhole" (KeyHole.make Niz.hole_config).scad; *)
+  write_thing ~export:false "case" case.scad;
   (* write_thing
    *   ~export:false
    *   "case"
-   *   (Model.union [ Case.t.scad; Bottom.make Case.t |> Model.translate (0., 0., -10.) ]); *)
+   *   (Model.union [ case.scad; Bottom.make case |> Model.translate (0., 0., -10.) ]); *)
   (* write_thing "niz_bottom" Niz.Bottom.scad; *)
-  write_thing "tent" (Tent.make Case.t);
+  write_thing "tent" (Tent.make case);
   (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
   (* write_thing "niz_cross_section" Niz.example_cross_section; *)
   (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
+  (* write_thing "hotswap_ex" Hotswap.combo_ex; *)
   Stdio.print_endline "Done!"

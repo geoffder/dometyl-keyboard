@@ -557,3 +557,5 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
     |> prepend_corner thumb.sides.east southeast
   in
   List.join [ west; north; east; south; thumb ] |> clockwise_union
+
+let to_scad t = t.scad
