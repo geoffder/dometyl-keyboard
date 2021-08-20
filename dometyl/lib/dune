@@ -2,3 +2,5 @@
  (name dometyl)
  (libraries scad_ml base stdio)
  (preprocess (pps ppx_jane)))
+
+(include_subdirs unqualified)
