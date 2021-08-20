@@ -1,6 +1,15 @@
 open! Base
 open! Scad_ml
 
+module Hotswap = struct
+  let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
+
+  let cutout_ex =
+    Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
+
+  let combo_ex = Model.union [ ex; cutout_ex ]
+end
+
 let plate_clearance = 3.
 
 let hole_config =

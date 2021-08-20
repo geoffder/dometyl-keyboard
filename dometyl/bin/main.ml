@@ -43,5 +43,5 @@ let () =
   (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
   (* write_thing "niz_cross_section" Niz.example_cross_section; *)
   (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
-  (* write_thing "hotswap_ex" Hotswap.combo_ex; *)
+  (* write_thing "hotswap_ex" Mx.Hotswap.combo_ex; *)
   Stdio.print_endline "Done!"
