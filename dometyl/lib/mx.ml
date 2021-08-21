@@ -9,34 +9,14 @@ let cap_height = 6.25
 let plate_clearance = 3.
 
 module Hotswap = struct
-  let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
+  let w = inner_w +. 3.
+  let h = inner_h +. 3.
+  let holder_thickness = 3.
+  let z = holder_thickness /. -2. (* the bottom of the hole.  *)
 
-  let cutout_ex =
-    Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
-
-  let combo_ex = Model.union [ ex; cutout_ex ]
-
-  (* NOTE: for now, mimic val bindings from cloj, then simplify, and rename *)
-  let mount_width = inner_w +. 3.
-  let mount_height = inner_h +. 3.
-  let holder_x = mount_width
-  let holder_thickness = (holder_x -. inner_w) /. 2.
-  let holder_y = inner_h +. (holder_thickness *. 2.)
-  let swap_z = 3.
-  let square_led_size = 6.
-  let hotswap_x2 = holder_x /. 3. *. 1.95
-  let hotswap_y1 = 4.3 (* first y-size of kailh hotswap holder *)
-
-  let hotswap_y2 = 6.2 (* second y-size of kailh hotswap holder *)
-
-  let hotswap_z = swap_z +. 0.5
   (* thickness of kailh hotswap holder + some margin of printing error (0.5mm) *)
-
-  (* let hotswap_cutout_z_offset = -2.6
-   * let hotswap_cutout_2_x_offset = -.(holder_x /. 4.5)
-   * let hotswap_cutout_1_y_offset = 4.95
-   * let hotswap_cutout_2_y_offset = 4.
-   * let hotswap_case_cutout_x_extra = 3.01 *)
+  let socket_thickness = holder_thickness +. 0.5
+  let socket_z = -2.6
 
   let cutout facing =
     let sign =
@@ -47,17 +27,66 @@ module Hotswap = struct
     let extra_w = 3.01
     and big_x = 0.
     and big_y = 4.95
-    and small_x = holder_x /. -4.5
-    and small_y = 4.
-    and z = -2.6 in
+    and small_x = w /. -4.5
+    and small_y = 4. in
     Model.union
-      [ Model.cube ~center:true (inner_w +. extra_w, hotswap_y1, hotswap_z)
-        |> Model.translate (big_x *. sign, big_y *. sign, z)
-      ; Model.cube ~center:true (hotswap_x2, hotswap_y2, hotswap_z)
-        |> Model.translate (small_x *. sign, small_y *. sign, z)
+      [ Model.cube ~center:true (inner_w +. extra_w, 4.3, socket_thickness)
+        |> Model.translate (big_x *. sign, big_y *. sign, socket_z)
+      ; Model.cube ~center:true (w /. 3. *. 1.95, 6.2, socket_thickness)
+        |> Model.translate (small_x *. sign, small_y *. sign, socket_z)
       ]
 
-  let combo_ex = Model.union [ combo_ex; cutout `North ]
+  let hotswap facing =
+    let sign =
+      match facing with
+      | `North -> -1.
+      | `South -> 1.
+    in
+    let access_cuts =
+      let x = (w /. 2.) -. (w /. 8.04)
+      and y = 7.4 in
+      let block = Model.cube ~center:true (w /. 4., 2.01, socket_thickness) in
+      Model.union
+        [ Model.translate (x, y *. sign, socket_z) block
+        ; Model.translate (-.x, y *. sign, socket_z) block
+        ]
+    and led_cut =
+      Model.cube ~center:true (6., 6., holder_thickness +. 0.01)
+      |> Model.translate (0., -6. *. sign, z)
+    and holes =
+      let cyl r = Model.cylinder ~center:true ~fn:30 r (thickness +. 0.01) in
+      let main = cyl 2.05 |> Model.translate (0., 0., z)
+      and pin = cyl 1.65
+      and friction = cyl 0.975 in
+      let plus = Model.translate (-3.81 *. sign, 2.54 *. sign, z) pin
+      and minus = Model.translate (2.54 *. sign, 5.08 *. sign, z) pin
+      and fric_left = Model.translate (-5., 0., z) friction
+      and fric_right = Model.translate (5., 0., z) friction in
+      Model.union [ main; plus; minus; fric_left; fric_right ]
+    and holder =
+      let slab =
+        Model.cube ~center:true (w, h, holder_thickness) |> Model.translate (0., 0., z)
+      and tab =
+        Model.cube ~center:true (w /. 2., 1., holder_thickness)
+        |> Model.translate (0., h /. -2., z)
+      in
+      Model.union [ slab; tab ]
+    in
+    Model.difference holder [ access_cuts; led_cut; holes; cutout facing ]
+
+  let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
+
+  let cutout_ex =
+    Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
+
+  (* let combo_ex =
+   *   Model.union [ ex; cutout_ex ] |> Model.translate (0., 0., thickness /. -2.) *)
+
+  let combo_ex =
+    Model.union
+      [ Model.color Color.FireBrick (hotswap `North)
+      ; Model.color Color.DarkMagenta (cutout `North)
+      ]
 end
 
 let hole_config =
