@@ -24,17 +24,14 @@ module Hotswap = struct
       | `North -> -1.
       | `South -> 1.
     in
-    let extra_w = 3.01
-    and big_x = 0.
-    and big_y = 4.95
-    and small_x = w /. -4.5
-    and small_y = 4. in
-    Model.union
-      [ Model.cube ~center:true (inner_w +. extra_w, 4.3, socket_thickness)
-        |> Model.translate (big_x *. sign, big_y *. sign, socket_z)
-      ; Model.cube ~center:true (w /. 3. *. 1.95, 6.2, socket_thickness)
-        |> Model.translate (small_x *. sign, small_y *. sign, socket_z)
-      ]
+    let big =
+      Model.cube ~center:true (inner_w +. 3.01, 4.3, socket_thickness)
+      |> Model.translate (0., 4.95 *. sign, socket_z)
+    and small =
+      Model.cube ~center:true (w /. 3. *. 1.95, 6.2, socket_thickness)
+      |> Model.translate (w /. -4.5 *. sign, 4. *. sign, socket_z)
+    in
+    Model.union [ big; small ]
 
   let hotswap facing =
     let sign =
@@ -45,10 +42,10 @@ module Hotswap = struct
     let access_cuts =
       let x = (w /. 2.) -. (w /. 8.04)
       and y = 7.4 in
-      let block = Model.cube ~center:true (w /. 4., 2.01, socket_thickness) in
+      let cut = Model.cube ~center:true (w /. 4., 2.01, socket_thickness) in
       Model.union
-        [ Model.translate (x, y *. sign, socket_z) block
-        ; Model.translate (-.x, y *. sign, socket_z) block
+        [ Model.translate (x, y *. sign, socket_z) cut
+        ; Model.translate (-.x, y *. sign, socket_z) cut
         ]
     and led_cut =
       Model.cube ~center:true (6., 6., holder_thickness +. 0.01)
