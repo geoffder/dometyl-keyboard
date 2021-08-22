@@ -30,7 +30,6 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
-(* TODO: collect all the cutouts from the keyholes, and difference them out. *)
 let make ~plate_welder ~wall_builder ~base_connector plate =
   let walls = wall_builder plate in
   let connections = base_connector walls in
@@ -42,11 +41,17 @@ let make ~plate_welder ~wall_builder ~base_connector plate =
            ; Connect.to_scad connections
            ; plate_welder plate
            ] )
-        [ Ports.make walls ]
+        [ Ports.make walls; Plate.collect_cutouts plate ]
   ; plate
   ; walls
   ; connections
   }
 
-let to_scad t = t.scad
-let to_scad_with_caps t = Model.union [ t.scad; Plate.collect_caps t.plate ]
+let to_scad ?(show_caps = false) ?(show_cutouts = false) t =
+  let caps = if show_caps then Some (Plate.collect_caps t.plate) else None
+  and cutouts =
+    if show_cutouts
+    then Some (Model.color Color.Black (Plate.collect_cutouts t.plate))
+    else None
+  in
+  [ t.scad ] |> Util.prepend_opt caps |> Util.prepend_opt cutouts |> Model.union

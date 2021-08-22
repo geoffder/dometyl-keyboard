@@ -33,7 +33,10 @@ let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
   (* write_thing "mx_keyhole" (KeyHole.make Mx.hole_config).scad; *)
   (* write_thing "niz_keyhole" (KeyHole.make Niz.hole_config).scad; *)
-  write_thing ~export:false "case" case.scad;
+  write_thing
+    ~export:false
+    "case"
+    (Case.to_scad ~show_cutouts:false ~show_caps:false case);
   (* write_thing
    *   ~export:false
    *   "case"
@@ -43,10 +46,5 @@ let () =
   (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
   (* write_thing "niz_cross_section" Niz.example_cross_section; *)
   (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
-  write_thing
-    "hotswap_ex"
-    (Model.union
-       [ Model.translate (0., 0., Mx.hole_config.thickness /. -2.) Mx.Hotswap.combo_ex
-       ; (KeyHole.make Mx.hole_config).scad
-       ] );
+  write_thing "hotswap_ex" (Mx.make_hole ~hotswap:`South ()).scad;
   Stdio.print_endline "Done!"

@@ -83,30 +83,9 @@ module Kind = struct
     ; snap_slot_h : float
     }
 
-  (* type mx = { hotswap_cutout : Model.t option } *)
-
   type _ t =
     | Mx : unit -> unit t
     | Niz : niz -> niz t
-
-  (* let translate : type a. Vec3.t -> a t -> a t =
-   *  fun p -> function
-   *   | Mx { hotswap_cutout = Some s } -> Mx { hotswap_cutout = Some (Model.translate p s) }
-   *   | Mx _ as t -> t
-   *   | Niz _ as t -> t
-   *
-   * let rotate : type a. Vec3.t -> a t -> a t =
-   *  fun r -> function
-   *   | Mx { hotswap_cutout = Some s } -> Mx { hotswap_cutout = Some (Model.rotate r s) }
-   *   | Mx _ as t -> t
-   *   | Niz _ as t -> t
-   *
-   * let rotate_about_pt : type a. Vec3.t -> Vec3.t -> a t -> a t =
-   *  fun r p -> function
-   *   | Mx { hotswap_cutout = Some s } ->
-   *     Mx { hotswap_cutout = Some (Model.rotate_about_pt r p s) }
-   *   | Mx _ as t -> t
-   *   | Niz _ as t -> t *)
 end
 
 type 'k config =
@@ -156,13 +135,8 @@ let rotate_about_pt r p t =
   ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
   }
 
-(* TODO: need to cycle faces on the thumb, but should make it optional whether
-   the clips (and hotswap are rotated). *)
-let cycle_faces t =
-  let { faces = { north; south; east; west }; _ } = t in
-  { t with faces = { north = east; south = west; east = south; west = north } }
-
-let rotate_clips t = cycle_faces (rotate (0., 0., Float.pi /. 2.) t)
+let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
+  { t with faces = { north = west; south = east; east = north; west = south } }
 
 let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))

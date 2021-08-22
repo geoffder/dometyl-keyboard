@@ -71,13 +71,15 @@ let rotate_about_pt r p t =
   ; thumb = Column.rotate_about_pt r p t.thumb
   }
 
-let make_thumb ?well ?fan keyhole =
+let make_thumb ?well ?fan ~rotate_clips keyhole =
   Column.(
     make
       ~join_ax:`EW
       ~n_keys:3
       ~curve:Curvature.(place ?well ?fan ~centre_idx:1)
-      (KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole)
+      ( if rotate_clips
+      then KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole
+      else KeyHole.cycle_faces keyhole )
     (* orient along x-axis *)
     |> rotate (0., 0., Float.pi /. -2.))
 
@@ -93,6 +95,7 @@ let make
     ?(thumb_fan =
       Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
     ?(thumb_well = Curvature.{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
+    ?(rotate_thumb_clips = false)
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
@@ -156,7 +159,11 @@ let make
     let thumb =
       let placed =
         Column.(
-          make_thumb ~fan:thumb_fan ~well:thumb_well keyhole
+          make_thumb
+            ~fan:thumb_fan
+            ~well:thumb_well
+            ~rotate_clips:rotate_thumb_clips
+            keyhole
           |> rotate thumb_angle
           |> translate thumb_offset)
       in
@@ -188,14 +195,23 @@ let skeleton_bridges { config = { n_rows; n_cols; _ }; columns; _ } =
 
 let to_scad t = t.scad
 
-let collect_caps t =
-  let collect ~key:_ ~data acc =
-    Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap
-  in
-  let body_caps =
+let collect ~f t =
+  let body =
     Map.fold
       ~init:[]
-      ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f:collect data.Column.keys)
+      ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
       t.columns
   in
-  Model.union @@ Map.fold ~init:body_caps ~f:collect t.thumb.keys
+  Model.union @@ Map.fold ~init:body ~f t.thumb.keys
+
+let collect_caps t =
+  collect
+    ~f:(fun ~key:_ ~data acc ->
+      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap )
+    t
+
+let collect_cutouts t =
+  collect
+    ~f:(fun ~key:_ ~data acc ->
+      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cutout )
+    t
