@@ -10,7 +10,7 @@ let make
     ?(board_width = 21.)
     ?(board_thickness = 2.)
     ?(dist = 15.5)
-    ?(x_off = 6.)
+    ?(x_off = 4.)
     ?(z_off = 7.)
     Walls.{ body = { cols; _ }; _ }
   =
