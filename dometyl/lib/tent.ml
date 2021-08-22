@@ -54,27 +54,22 @@ let make
   =
   let _, bb_right, _, bb_left = Connect.bounding_box case.connections
   and screws = Walls.collect_screws case.Case.walls
-  and base_cut = Model.projection ~cut:true (Model.translate (0., 0., -0.01) case.scad) in
+  and perimeter =
+    Model.difference
+      (Model.polygon (Connect.outline_2d case.connections))
+      [ Model.polygon (Connect.inline_2d case.connections) ]
+  in
   let rot = 0., degrees *. Float.pi /. 180., 0.
   and pivot_pt = -.bb_right, 0., 0. in
   let screws_filled =
     let hole_fills =
       List.map
-        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; _ } ->
-          Model.circle inner_rad |> Model.translate centre )
+        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; scad } ->
+          Model.union
+            [ Model.translate centre (Model.circle inner_rad); Model.projection scad ] )
         screws
     in
-    Model.union (base_cut :: hole_fills)
-  and screwless =
-    let cuts =
-      screws
-      |> List.map ~f:Screw.to_scad
-      |> Model.union
-      |> Fn.flip Model.difference [ case.connections.scad ]
-      |> Model.translate (0., 0., -0.01)
-      |> Model.projection ~cut:true
-    in
-    Model.difference base_cut [ cuts ]
+    Model.union (perimeter :: hole_fills)
   and trans s = Model.rotate_about_pt rot pivot_pt s |> Model.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_left, 0., 0.))) in
   let top =
@@ -89,7 +84,7 @@ let make
       (List.map ~f:(fun Screw.{ centre; _ } -> Model.translate centre screw_hole) screws)
     |> trans
   and shell =
-    trans (Model.linear_extrude ~height:0.001 screwless)
+    trans (Model.linear_extrude ~height:0.001 perimeter)
     |> Model.projection
     |> Model.linear_extrude ~height:base_height
   in

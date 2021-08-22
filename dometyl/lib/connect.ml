@@ -6,6 +6,7 @@ open! Scad_ml
 type t =
   { scad : Model.t
   ; outline : Vec3.t list
+  ; inline : Vec3.t list
   }
 
 let bounding_box { outline; _ } =
@@ -21,14 +22,21 @@ let bounding_box { outline; _ } =
 let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
 
 let translate p t =
-  { scad = Model.translate p t.scad; outline = List.map ~f:(Vec3.add p) t.outline }
+  { scad = Model.translate p t.scad
+  ; outline = List.map ~f:(Vec3.add p) t.outline
+  ; inline = List.map ~f:(Vec3.add p) t.inline
+  }
 
 let rotate r t =
-  { scad = Model.rotate r t.scad; outline = List.map ~f:(Vec3.rotate r) t.outline }
+  { scad = Model.rotate r t.scad
+  ; outline = List.map ~f:(Vec3.rotate r) t.outline
+  ; inline = List.map ~f:(Vec3.rotate r) t.inline
+  }
 
 let rotate_about_pt r p t =
   { scad = Model.rotate_about_pt r p t.scad
   ; outline = List.map ~f:(Vec3.rotate_about_pt r p) t.outline
+  ; inline = List.map ~f:(Vec3.rotate_about_pt r p) t.inline
   }
 
 (* Assumes lists are lead with the outer (top) line along the xy plane. *)
@@ -40,16 +48,19 @@ let prism_connection bezs steps =
   in
   { scad = Bezier.prism_exn bezs steps
   ; outline = Bezier.curve ~n_steps (List.hd_exn bezs)
+  ; inline = Bezier.curve ~n_steps (List.last_exn bezs)
   }
 
 let clockwise_union ts =
-  let f (scads, pts) { scad; outline } =
-    scad :: scads, List.fold ~init:pts ~f:(fun ps p -> p :: ps) outline
+  let collect ~init line = List.fold ~init ~f:(fun ps p -> p :: ps) line in
+  let f (scads, out_pts, in_pts) { scad; outline; inline } =
+    scad :: scads, collect ~init:out_pts outline, collect ~init:in_pts inline
   in
-  let scads, pts = List.fold ~init:([], []) ~f ts in
-  { scad = Model.union scads; outline = List.rev pts }
+  let scads, out_pts, in_pts = List.fold ~init:([], [], []) ~f ts in
+  { scad = Model.union scads; outline = List.rev out_pts; inline = List.rev in_pts }
 
 let outline_2d t = List.map ~f:Vec3.to_vec2 t.outline
+let inline_2d t = List.map ~f:Vec3.to_vec2 t.inline
 
 (* TODO: calculate multiple points up z, so that it lines up with the wall edge
    better. straight_base and join_walls does not use this helper, and
@@ -227,6 +238,11 @@ let straight_base
       Vec3.(norm (w1.foot.top_right <-> w2.foot.top_left))
       > Vec3.(norm (w1.foot.top_right <-> w2.foot.bot_left)))
   in
+  (* The connector has two parts, and is drawn depending on whether it is going
+     outward (away from plate). If moving inward, the straight move (along wall
+     axis) occurs before turning towards the next wall, for outward, the
+     opposite. `og` indicates whether the points include the true inner wall
+     start/end positions, or are intermediaries. *)
   let starts og =
     let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
     [ ( if og
@@ -257,14 +273,22 @@ let straight_base
     ]
     |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
+  let extra_starts = starts false
+  and extra_dests = dests false in
   { scad =
       Model.union
-        [ Util.prism_exn (starts false) (dests false)
+        [ Util.prism_exn extra_starts extra_dests
         ; ( if outward
-          then Util.prism_exn (starts true) (starts false)
-          else Util.prism_exn (dests false) (dests true) )
+          then Util.prism_exn (starts true) extra_starts
+          else Util.prism_exn extra_dests (dests true) )
         ]
   ; outline = [ w1.foot.top_right; w2.foot.top_left ]
+  ; inline =
+      List.map
+        ~f:List.hd_exn
+        ( if outward
+        then [ starts true; extra_starts; extra_dests ]
+        else [ extra_starts; extra_dests; dests true ] )
   }
 
 let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
@@ -336,6 +360,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
       [ (if outward then fudge else Fn.id) w1.foot.top_right
       ; (if outward then Fn.id else fudge) w2.foot.top_left
       ]
+  ; inline = [ w1.foot.bot_right; w2.foot.bot_left ]
   }
 
 let joiner ~get ~join ~key:_ ~data (last, scads) =
