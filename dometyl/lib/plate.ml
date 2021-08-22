@@ -117,11 +117,6 @@ let make
   let apply_tent off col =
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
   in
-  (* let place_col ~key:i ~data:off =
-   *   apply_tent off (well_column @@ lookups.well i)
-   *   |> Column.rotate (0., 0., lookups.splay i)
-   *   |> Column.translate off
-   * in *)
   let place_col ~key:i ~data:off =
     let tented = apply_tent off (well_column @@ lookups.well i) in
     Column.rotate_about_pt
