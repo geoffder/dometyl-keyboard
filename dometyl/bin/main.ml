@@ -37,7 +37,7 @@ let () =
     ~export:false
     "case"
     (Case.to_scad ~show_cutouts:false ~show_caps:false case);
-  (* write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ()); *)
+  write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ());
   (* write_thing
    *   ~export:false
    *   "case"
