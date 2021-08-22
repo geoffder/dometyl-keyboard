@@ -42,8 +42,6 @@ module Bottom = struct
     |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
 end
 
-let plate_clearance = 6.5
-
 let hole_config =
   let clip_height = 1.0
   and snap_slot_h = 1.2
@@ -52,7 +50,8 @@ let hole_config =
   and inner_w = 14.
   and inner_h = 14.
   and thickness = 4.
-  and cap_height = 5. (* mx is 6.25, but niz seems to measure at 4.9 ~ 5. *) in
+  and cap_height = 5. (* mx is 6.25, but niz seems to measure at 4.9 ~ 5. *)
+  and clearance = 6.5 in
   let clip hole =
     let inset_depth = thickness -. clip_height in
     let inset =
@@ -89,6 +88,7 @@ let hole_config =
     ; thickness
     ; clip
     ; cap_height
+    ; clearance
     }
 
 module Platform = struct

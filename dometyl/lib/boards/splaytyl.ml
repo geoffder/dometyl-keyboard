@@ -33,6 +33,7 @@ let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
 let build () =
-  let keyhole = KeyHole.make ~cap:Caps.sa_r3 Mx.hole_config in
-  let plate = Plate.make ~n_rows:3 ~n_cols:5 ~clearance:Mx.plate_clearance keyhole in
+  (* let keyhole = KeyHole.make ~cap:Caps.sa_r3 Mx.hole_config in *)
+  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in
+  let plate = Plate.make ~n_rows:3 ~n_cols:5 keyhole in
   Case.make ~plate_welder ~wall_builder ~base_connector plate

@@ -6,6 +6,11 @@ let inner_w = 13.9
 let inner_h = 13.8
 let thickness = 4.
 let cap_height = 6.25
+
+(* TODO: instead of just having clearance as a reference default available in the
+   switch type modules like this, include them into the keyhole configs. This way,
+   there can be an mx hotswap config with the required (higher) clearance bundled
+   with it. *)
 let plate_clearance = 3.
 
 module Hotswap = struct
@@ -25,7 +30,7 @@ module Hotswap = struct
       | `South -> 1.
     in
     let big =
-      Model.cube ~center:true (inner_w +. 3.01, 4.3, socket_thickness)
+      Model.cube ~center:true (w +. 0.01, 4.3, socket_thickness)
       |> Model.translate (0., 4.95 *. sign, socket_z)
     and small =
       Model.cube ~center:true (w /. 3. *. 1.95, 6.2, socket_thickness)
@@ -65,18 +70,18 @@ module Hotswap = struct
         Model.cube ~center:true (w, h, holder_thickness) |> Model.translate (0., 0., z)
       and tab =
         Model.cube ~center:true (w /. 2., 1., holder_thickness)
-        |> Model.translate (0., h /. -2., z)
+        |> Model.translate (0., h /. 2. *. sign, z)
       in
       Model.union [ slab; tab ]
     in
     Model.difference holder [ access_cuts; led_cut; holes; cutout facing ]
 
-  let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
-
-  let cutout_ex =
-    Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
-
-  (* let combo_ex =
+  (* let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
+   *
+   * let cutout_ex =
+   *   Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
+   *
+   * let combo_ex =
    *   Model.union [ ex; cutout_ex ] |> Model.translate (0., 0., thickness /. -2.) *)
 
   let combo_ex =
@@ -86,14 +91,52 @@ module Hotswap = struct
       ]
 end
 
-let hole_config =
-  let clip hole =
-    let clip =
-      Model.rotate
-        (Float.pi /. 2., 0., 0.)
-        (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
-      |> Model.translate (0., inner_h /. 2., -1.3)
-    in
-    Model.difference hole [ clip; Model.mirror (0, 1, 0) clip ]
+let teeth hole =
+  let clip =
+    Model.rotate
+      (Float.pi /. 2., 0., 0.)
+      (Model.cube ~center:true (5., thickness -. 1.3, 0.5))
+    |> Model.translate (0., inner_h /. 2., -1.3)
   in
-  KeyHole.{ spec = Kind.Mx (); outer_w; inner_w; inner_h; thickness; clip; cap_height }
+  Model.difference hole [ clip; Model.mirror (0, 1, 0) clip ]
+
+let hole_config =
+  KeyHole.
+    { spec = Kind.Mx ()
+    ; outer_w
+    ; inner_w
+    ; inner_h
+    ; thickness
+    ; clip = teeth
+    ; cap_height
+    ; clearance = 3.
+    }
+
+let hotswap_config facing =
+  let clip hole =
+    Model.union
+      [ teeth hole; Model.translate (0., 0., thickness /. -2.) (Hotswap.hotswap facing) ]
+  in
+  KeyHole.
+    { spec = Kind.Mx ()
+    ; outer_w
+    ; inner_w
+    ; inner_h
+    ; thickness
+    ; clip
+    ; cap_height
+    ; clearance = 5.
+    }
+
+(* TODO: this kinda sucks due to how clip is in the config. Should to refactor to
+   make this less janky. *)
+let make_hole ?cap ?hotswap ?clearance () =
+  let conf, cutout =
+    match hotswap with
+    | Some facing ->
+      let conf = hotswap_config facing in
+      conf, Some (Model.translate (0., 0., conf.thickness /. -2.) (Hotswap.cutout facing))
+    | None        -> hole_config, None
+  in
+  Option.value_map ~default:conf ~f:(fun c -> { conf with clearance = c }) clearance
+  |> KeyHole.make ?cap ?cutout

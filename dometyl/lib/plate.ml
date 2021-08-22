@@ -39,7 +39,6 @@ type 'k config =
   ; centre_col : int
   ; spacing : float
   ; tent : float
-  ; clearance : float
   ; thumb_offset : Vec3.t
   ; thumb_angle : Vec3.t
   }
@@ -88,7 +87,6 @@ let make
     ?(n_cols = 5)
     ?(centre_col = 2)
     ?(spacing = 1.)
-    ?(clearance = Mx.plate_clearance)
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = -6., -42.5, 7.5)
     ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 8.))
@@ -153,7 +151,7 @@ let make
           ~init:Float.max_value
           placed_cols
       in
-      Column.translate (0., 0., clearance -. lowest_z)
+      Column.translate (0., 0., keyhole.config.clearance -. lowest_z)
     in
     let thumb =
       let placed =
@@ -167,16 +165,7 @@ let make
     Map.map ~f:lift placed_cols, thumb
   in
   { config =
-      { n_rows
-      ; centre_row
-      ; n_cols
-      ; centre_col
-      ; spacing
-      ; tent
-      ; clearance
-      ; thumb_offset
-      ; thumb_angle
-      }
+      { n_rows; centre_row; n_cols; centre_col; spacing; tent; thumb_offset; thumb_angle }
   ; scad =
       Model.union
         (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)

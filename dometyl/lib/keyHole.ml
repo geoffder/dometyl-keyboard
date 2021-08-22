@@ -83,9 +83,30 @@ module Kind = struct
     ; snap_slot_h : float
     }
 
+  (* type mx = { hotswap_cutout : Model.t option } *)
+
   type _ t =
     | Mx : unit -> unit t
     | Niz : niz -> niz t
+
+  (* let translate : type a. Vec3.t -> a t -> a t =
+   *  fun p -> function
+   *   | Mx { hotswap_cutout = Some s } -> Mx { hotswap_cutout = Some (Model.translate p s) }
+   *   | Mx _ as t -> t
+   *   | Niz _ as t -> t
+   *
+   * let rotate : type a. Vec3.t -> a t -> a t =
+   *  fun r -> function
+   *   | Mx { hotswap_cutout = Some s } -> Mx { hotswap_cutout = Some (Model.rotate r s) }
+   *   | Mx _ as t -> t
+   *   | Niz _ as t -> t
+   *
+   * let rotate_about_pt : type a. Vec3.t -> Vec3.t -> a t -> a t =
+   *  fun r p -> function
+   *   | Mx { hotswap_cutout = Some s } ->
+   *     Mx { hotswap_cutout = Some (Model.rotate_about_pt r p s) }
+   *   | Mx _ as t -> t
+   *   | Niz _ as t -> t *)
 end
 
 type 'k config =
@@ -96,6 +117,7 @@ type 'k config =
   ; thickness : float
   ; clip : Model.t -> Model.t
   ; cap_height : float
+  ; clearance : float
   }
 
 type 'k t =
@@ -104,6 +126,7 @@ type 'k t =
   ; origin : Vec3.t
   ; faces : Faces.t
   ; cap : Model.t option
+  ; cutout : Model.t option
   }
 
 let translate p t =
@@ -112,6 +135,7 @@ let translate p t =
   ; origin = Vec3.add p t.origin
   ; faces = Faces.translate p t.faces
   ; cap = Option.map ~f:(Model.translate p) t.cap
+  ; cutout = Option.map ~f:(Model.translate p) t.cutout
   }
 
 let rotate r t =
@@ -120,6 +144,7 @@ let rotate r t =
   ; origin = Vec3.rotate r t.origin
   ; faces = Faces.rotate r t.faces
   ; cap = Option.map ~f:(Model.rotate r) t.cap
+  ; cutout = Option.map ~f:(Model.rotate r) t.cutout
   }
 
 let rotate_about_pt r p t =
@@ -128,12 +153,16 @@ let rotate_about_pt r p t =
   ; origin = Vec3.rotate_about_pt r p t.origin
   ; faces = Faces.rotate_about_pt r p t.faces
   ; cap = Option.map ~f:(Model.rotate_about_pt r p) t.cap
+  ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
   }
 
-let rotate_clips t =
-  let t' = rotate (0., 0., Float.pi /. 2.) t in
-  let { faces = { north; south; east; west }; _ } = t' in
-  { t' with faces = { north = east; south = west; east = south; west = north } }
+(* TODO: need to cycle faces on the thumb, but should make it optional whether
+   the clips (and hotswap are rotated). *)
+let cycle_faces t =
+  let { faces = { north; south; east; west }; _ } = t in
+  { t with faces = { north = east; south = west; east = south; west = north } }
+
+let rotate_clips t = cycle_faces (rotate (0., 0., Float.pi /. 2.) t)
 
 let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
@@ -142,7 +171,11 @@ let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
   Vec3.(normalize (top_left <-> bot_left))
 
-let make ?cap ({ outer_w; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
+let make
+    ?cap
+    ?cutout
+    ({ outer_w; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
+  =
   let hole =
     let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
     let inner = Model.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
@@ -153,4 +186,5 @@ let make ?cap ({ outer_w; inner_w; inner_h; thickness; clip; cap_height; _ } as 
   ; origin = 0., 0., 0.
   ; faces = Faces.make outer_w thickness
   ; cap = Option.map ~f:(Model.translate (0., 0., cap_height)) cap
+  ; cutout
   }

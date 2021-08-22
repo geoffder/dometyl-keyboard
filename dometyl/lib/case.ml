@@ -30,6 +30,7 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
+(* TODO: collect all the cutouts from the keyholes, and difference them out. *)
 let make ~plate_welder ~wall_builder ~base_connector plate =
   let walls = wall_builder plate in
   let connections = base_connector walls in
