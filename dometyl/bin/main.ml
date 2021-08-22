@@ -37,6 +37,7 @@ let () =
     ~export:false
     "case"
     (Case.to_scad ~show_cutouts:false ~show_caps:false case);
+  (* write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ()); *)
   (* write_thing
    *   ~export:false
    *   "case"
@@ -46,5 +47,5 @@ let () =
   (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
   (* write_thing "niz_cross_section" Niz.example_cross_section; *)
   (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
-  write_thing "hotswap_ex" (Mx.make_hole ~hotswap:`South ()).scad;
+  (* write_thing "hotswap_ex" (Mx.make_hole ~hotswap:`South ()).scad; *)
   Stdio.print_endline "Done!"
