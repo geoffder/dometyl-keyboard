@@ -37,3 +37,9 @@ let build () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 () in
   let plate = Plate.make ~n_rows:3 ~n_cols:5 keyhole in
   Case.make ~plate_welder ~wall_builder ~base_connector plate
+
+let bastard_compare () =
+  Model.union
+    [ Skeletyl.bastard_skelly
+    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    ]

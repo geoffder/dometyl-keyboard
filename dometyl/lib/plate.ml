@@ -10,12 +10,11 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 5., -6. (* middle *)
-    | 3 -> 2.5, -1., -2. (* ring *)
-    | i when i >= 4 -> 0.5, -22., 6. (* pinky *)
+    | 3 -> 2.5, -1., 0. (* ring *)
+    | i when i >= 4 -> 0.5, -22., 9.5 (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
-  (* skeletyl is in neighbourhood of { angle = Float.pi /. 12.; radius = 85. } *)
   let default_well = function
     | i when i >= 3 ->
       Curvature.{ angle = Float.pi /. 7.; radius = 50.; tilt = 0. } (* pinky and ring *)
@@ -90,8 +89,8 @@ let make
     ?(centre_col = 2)
     ?(spacing = 1.)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -6., -42.5, 7.5)
-    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 8.))
+    ?(thumb_offset = -16., -44.5, 13.5)
+    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 5.5))
     ?(thumb_fan =
       Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
     ?(thumb_well = Curvature.{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
