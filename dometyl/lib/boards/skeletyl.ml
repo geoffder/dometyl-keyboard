@@ -49,7 +49,7 @@ let plate_welder = Plate.skeleton_bridges
 
 let build () =
   (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2. () in
+  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 () in
   let plate =
     Plate.make
       ~n_rows:3
