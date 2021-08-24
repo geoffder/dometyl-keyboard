@@ -49,6 +49,7 @@ end
 type 'k config =
   { spec : 'k Kind.t
   ; outer_w : float
+  ; outer_h : float
   ; inner_w : float
   ; inner_h : float
   ; thickness : float

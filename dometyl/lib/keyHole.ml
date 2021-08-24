@@ -93,6 +93,7 @@ end
 type 'k config =
   { spec : 'k Kind.t
   ; outer_w : float
+  ; outer_h : float
   ; inner_w : float
   ; inner_h : float
   ; thickness : float
@@ -150,10 +151,10 @@ let normal t =
 let make
     ?cap
     ?cutout
-    ({ outer_w; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
+    ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
   =
   let hole =
-    let outer = Model.cube ~center:true (outer_w, outer_w, thickness) in
+    let outer = Model.cube ~center:true (outer_w, outer_h, thickness) in
     let inner = Model.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
     Model.difference outer [ inner ]
   in

@@ -14,6 +14,7 @@ val make_hole
   :  ?cap:Model.t
   -> ?hotswap:[< `North | `South ]
   -> ?outer_w:float
+  -> ?outer_h:float
   -> ?inner_w:float
   -> ?inner_h:float
   -> ?thickness:float

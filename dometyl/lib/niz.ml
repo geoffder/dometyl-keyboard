@@ -47,6 +47,7 @@ let hole_config =
   and snap_slot_h = 1.2
   and snap_outer_wall = 0.2
   and outer_w = 19.5
+  and outer_h = 19.5
   and inner_w = 14.
   and inner_h = 14.
   and thickness = 4.
@@ -83,6 +84,7 @@ let hole_config =
   KeyHole.
     { spec = Kind.Niz { clip_height; snap_slot_h }
     ; outer_w
+    ; outer_h
     ; inner_w
     ; inner_h
     ; thickness
