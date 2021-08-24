@@ -5,6 +5,7 @@ module Lookups = struct
   type 'k t =
     { offset : int -> Vec3.t
     ; curve : int -> 'k Curvature.t
+    ; swing : int -> float
     ; splay : int -> float
     }
 
@@ -23,14 +24,23 @@ module Lookups = struct
         curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ())
     | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ())
 
+  (* post tenting, this can be used to undo tent angle (y-rotation) *)
+  let default_swing = function
+    | _ -> 0.
+
   let default_splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -15. (* pinky *)
     | _ -> 0.
 
-  let make ?(offset = default_offset) ?(curve = default_curve) ?(splay = default_splay) ()
+  let make
+      ?(offset = default_offset)
+      ?(curve = default_curve)
+      ?(swing = default_swing)
+      ?(splay = default_splay)
+      ()
     =
-    { offset; curve; splay }
+    { offset; curve; swing; splay }
 end
 
 type 'k config =
@@ -127,7 +137,7 @@ let make
   let place_col ~key:i ~data:off =
     let tented = apply_tent off (curve_column @@ lookups.curve i) in
     Column.rotate_about_pt
-      (0., 0., lookups.splay i)
+      (0., lookups.swing i, lookups.splay i)
       (Vec3.negate (Map.find_exn tented.keys centre_row).origin)
       tented
     |> Column.translate off

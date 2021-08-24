@@ -5,16 +5,19 @@ module Lookups : sig
   type 'k t =
     { offset : int -> Vec3.t
     ; curve : int -> 'k Curvature.t
+    ; swing : int -> float
     ; splay : int -> float
     }
 
   val default_offset : int -> Vec3.t
   val default_curve : int -> 'k Curvature.t
+  val default_swing : int -> float
   val default_splay : int -> float
 
   val make
     :  ?offset:(int -> Vec3.t)
     -> ?curve:(int -> 'k Curvature.t)
+    -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> unit
     -> 'k t
