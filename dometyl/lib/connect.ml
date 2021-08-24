@@ -432,7 +432,7 @@ let skeleton
           ~f:
             (( if i = 0
              then index
-             else if i >= 3 && close_pinky
+             else if i >= pinky_idx - 1 && close_pinky
              then join_walls ?n_steps:join_steps
              else straight_base ?height ?min_width:min_straight_width )
                ?fudge_factor )
@@ -466,7 +466,7 @@ let skeleton
   in
   let south =
     let base i =
-      if i = pinky_idx
+      if i >= pinky_idx
       then
         if close_pinky
         then join_walls ?n_steps:join_steps ?fudge_factor
