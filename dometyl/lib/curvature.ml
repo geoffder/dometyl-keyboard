@@ -7,6 +7,17 @@ type spec =
   ; tilt : float
   }
 
+type curve =
+  { well : spec option
+  ; fan : spec option
+  }
+
+type 'k t =
+  | Curve of curve
+  | Custom of (int -> 'k KeyHole.t -> 'k KeyHole.t)
+
+let spec ?(tilt = 0.) ~radius angle = { radius; angle; tilt }
+let curve ?well ?fan () = Curve { well; fan }
 let well_point { radius; _ } = 0., 0., -.radius
 let fan_point { radius; _ } = -.radius, 0., 0.
 let well_theta centre_idx { angle; _ } i = angle *. Int.to_float (i - centre_idx), 0., 0.
@@ -18,7 +29,6 @@ let place ?well ?fan ~centre_idx i key =
   match well, fan with
   | Some spec, None ->
     let r = well_theta' spec i in
-    (* KeyHole.rotate (0., spec.tilt, 0.) key *)
     KeyHole.rotate (0., spec.tilt, Vec3.get_x r *. spec.tilt /. -2.) key
     |> KeyHole.rotate_about_pt r (well_point spec)
   | None, Some spec ->
@@ -27,7 +37,6 @@ let place ?well ?fan ~centre_idx i key =
   | Some w, Some f  ->
     let welled =
       let r = well_theta' w i in
-      (* KeyHole.rotate (0., w.tilt, 0.) key *)
       KeyHole.rotate (0., w.tilt, Vec3.get_x r *. w.tilt /. -2.) key
       |> KeyHole.rotate_about_pt r (well_point w)
     in

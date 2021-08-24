@@ -41,9 +41,9 @@ let lookups =
     | 3 -> 0., -1., -1.5 (* ring *)
     | i when i >= 4 -> 0., -12., 7. (* pinky *)
     | _ -> 0., 0., -3.
-  and well _ = Curvature.{ angle = Float.pi /. 12.; radius = 85.; tilt = 0. }
+  and curve _ = Curvature.(curve ~well:(spec ~radius:85. (Float.pi /. 12.)) ())
   and splay _ = 0. in
-  Plate.Lookups.make ~offset ~well ~splay ()
+  Plate.Lookups.make ~offset ~curve ~splay ()
 
 let plate_welder = Plate.skeleton_bridges
 
@@ -59,8 +59,9 @@ let build () =
       ~lookups
       ~thumb_offset:(-1., -50., -8.)
       ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
-      ~thumb_fan:Curvature.{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. }
-      ~thumb_well:Curvature.{ angle = 0.; radius = 0.; tilt = 0. }
+      ~thumb_curve:
+        Curvature.(
+          place ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ~centre_idx:1)
       keyhole
   in
   Case.make ~plate_welder ~wall_builder ~base_connector plate

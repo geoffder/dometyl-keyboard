@@ -2,33 +2,35 @@ open Base
 open Scad_ml
 
 module Lookups = struct
-  type t =
+  type 'k t =
     { offset : int -> Vec3.t
-    ; well : int -> Curvature.spec
+    ; curve : int -> 'k Curvature.t
     ; splay : int -> float
     }
 
   let default_offset = function
-    | 2 -> 0., 5., -6. (* middle *)
+    | 2 -> 0., 4., -6. (* middle *)
     | 3 -> 2.5, -1., 0. (* ring *)
     | i when i >= 4 -> 0.5, -22., 9.5 (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
-  let default_well = function
+  let default_curve = function
     | i when i >= 3 ->
-      Curvature.{ angle = Float.pi /. 7.; radius = 50.; tilt = 0. } (* pinky and ring *)
+      Curvature.(curve ~well:(spec ~radius:50. (Float.pi /. 7.)) ()) (* pinky and ring *)
     | i when i = 0 ->
-      Curvature.{ angle = Float.pi /. 8.; radius = 57.5; tilt = Float.pi /. 6.75 }
-    | _ -> Curvature.{ angle = Float.pi /. 8.; radius = 60.; tilt = 0. }
+      Curvature.(
+        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ())
 
   let default_splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -15. (* pinky *)
     | _ -> 0.
 
-  let make ?(offset = default_offset) ?(well = default_well) ?(splay = default_splay) () =
-    { offset; well; splay }
+  let make ?(offset = default_offset) ?(curve = default_curve) ?(splay = default_splay) ()
+    =
+    { offset; curve; splay }
 end
 
 type 'k config =
@@ -70,12 +72,12 @@ let rotate_about_pt r p t =
   ; thumb = Column.rotate_about_pt r p t.thumb
   }
 
-let make_thumb ?well ?fan ~rotate_clips keyhole =
+let make_thumb ~curve ~rotate_clips keyhole =
   Column.(
     make
       ~join_ax:`EW
       ~n_keys:3
-      ~curve:Curvature.(place ?well ?fan ~centre_idx:1)
+      ~curve
       ( if rotate_clips
       then KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole
       else KeyHole.cycle_faces keyhole )
@@ -91,18 +93,24 @@ let make
     ?(tent = Float.pi /. 12.)
     ?(thumb_offset = -16., -44.5, 13.5)
     ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 5.5))
-    ?(thumb_fan =
-      Curvature.{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 12. })
-    ?(thumb_well = Curvature.{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
+    ?(thumb_curve =
+      Curvature.(
+        place
+          ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 24. }
+          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
+          ~centre_idx:1))
     ?(rotate_thumb_clips = false)
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
-  let well_column spec =
-    Column.make
-      ~n_keys:n_rows
-      ~curve:Curvature.(place ~well:spec ~centre_idx:centre_row)
-      keyhole
+  let curve_column curvature =
+    let curve =
+      Curvature.(
+        match curvature with
+        | Curve { well; fan } -> Curvature.(place ?well ?fan ~centre_idx:centre_row)
+        | Custom curve        -> curve)
+    in
+    Column.make ~n_keys:n_rows ~curve keyhole
   in
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
@@ -117,7 +125,7 @@ let make
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
   in
   let place_col ~key:i ~data:off =
-    let tented = apply_tent off (well_column @@ lookups.well i) in
+    let tented = apply_tent off (curve_column @@ lookups.curve i) in
     Column.rotate_about_pt
       (0., 0., lookups.splay i)
       (Vec3.negate (Map.find_exn tented.keys centre_row).origin)
@@ -153,11 +161,7 @@ let make
     let thumb =
       let placed =
         Column.(
-          make_thumb
-            ~fan:thumb_fan
-            ~well:thumb_well
-            ~rotate_clips:rotate_thumb_clips
-            keyhole
+          make_thumb ~curve:thumb_curve ~rotate_clips:rotate_thumb_clips keyhole
           |> rotate thumb_angle
           |> translate thumb_offset)
       in
