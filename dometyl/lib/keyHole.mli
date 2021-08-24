@@ -26,7 +26,7 @@ module Faces : sig
 
   val map : f:(Face.t -> Face.t) -> t -> t
   val fold : f:('k -> Face.t -> 'k) -> init:'k -> t -> 'k
-  val make : float -> float -> t
+  val make : float -> float -> float -> t
   val face : t -> [< `East | `North | `South | `West ] -> Face.t
   val translate : Vec3.t -> t -> t
   val rotate : Vec3.t -> t -> t

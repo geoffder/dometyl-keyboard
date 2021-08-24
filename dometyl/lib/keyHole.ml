@@ -56,14 +56,20 @@ module Faces = struct
     let flipped = Fn.flip f in
     f init t.north |> flipped t.south |> flipped t.east |> flipped t.west
 
-  let make width depth =
-    let half_w = width /. 2. in
-    let rlat = 0., 0., Float.pi /. 2. in
-    let base = Face.rotate (Float.pi /. 2., 0., 0.) (Face.make (width, depth, 0.1)) in
-    { north = Face.translate (0., half_w, 0.) base
-    ; south = Face.(base |> rotate (0., 0., Float.pi) |> translate (0., -.half_w, 0.))
-    ; west = Face.(base |> rotate rlat |> translate (-.half_w, 0., 0.))
-    ; east = Face.(base |> rotate (Vec3.negate rlat) |> Face.translate (half_w, 0., 0.))
+  let make w h depth =
+    let vert north =
+      Face.rotate
+        Float.(pi /. 2., 0., if north then 0. else pi)
+        (Face.make (w, depth, 0.1))
+    and lat west =
+      Face.rotate
+        Float.(pi /. 2., 0., pi /. if west then 2. else -2.)
+        (Face.make (h, depth, 0.1))
+    in
+    { north = Face.translate (0., h /. 2., 0.) (vert true)
+    ; south = Face.translate (0., h /. -2., 0.) (vert false)
+    ; west = Face.translate (w /. -2., 0., 0.) (lat true)
+    ; east = Face.translate (w /. 2., 0., 0.) (lat false)
     }
 
   let face t = function
@@ -161,7 +167,7 @@ let make
   { config
   ; scad = clip hole
   ; origin = 0., 0., 0.
-  ; faces = Faces.make outer_w thickness
+  ; faces = Faces.make outer_w outer_h thickness
   ; cap = Option.map ~f:(Model.translate (0., 0., cap_height)) cap
   ; cutout
   }
