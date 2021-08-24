@@ -83,8 +83,10 @@ module Kind = struct
     ; snap_slot_h : float
     }
 
+  type mx = unit
+
   type _ t =
-    | Mx : unit -> unit t
+    | Mx : mx -> mx t
     | Niz : niz -> niz t
 end
 
