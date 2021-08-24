@@ -33,25 +33,28 @@ let make
       ]
     |> Model.translate (dist, 0., 0.)
   and inset =
-    let below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
+    let fudge = 5. (* extra y length back into case for inset *)
+    and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
     let h = jack_radius +. below
     and len (foot : Points.t) =
       (Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.) -. inner_y foot
     in
     let left =
       let l = len left_foot in
-      Model.cube ~center:true (jack_width, l, h)
+      Model.cube ~center:true (jack_width, l +. fudge, h)
       |> Model.translate
-           (0., Float.max 0. (l -. length) -. (l /. 2.), (jack_radius -. below) /. 2.)
+           ( 0.
+           , Float.max 0. (l -. length) -. (l /. 2.) -. (fudge /. 2.)
+           , (jack_radius -. below) /. 2. )
     in
     let right =
       let l = len right_foot
       (* bring right into frame of reference of left inner_y *)
       and y_diff = inner_y right_foot -. inner_y left_foot in
-      Model.cube ~center:true (board_width, l, h)
+      Model.cube ~center:true (board_width, l +. fudge, h)
       |> Model.translate
            ( dist
-           , Float.max 0. (l -. length) -. (l /. 2.) +. y_diff
+           , Float.max 0. (l -. length) -. (l /. 2.) +. y_diff -. (fudge /. 2.)
            , (jack_radius -. below) /. 2. )
     in
     Model.hull [ left; right ]
