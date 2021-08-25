@@ -3,21 +3,80 @@ open Scad_ml
 
 type t = Model.t
 
-let keys k1 k2 = Model.hull KeyHole.[ k1.faces.east.scad; k2.faces.west.scad ]
+let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
+  let a = Model.translate (Vec3.map (( *. ) d1) ortho) scad
+  and b = Model.translate (Vec3.map (( *. ) d2) ortho) scad in
+  Model.hull [ scad; a ], Model.hull [ a; b ]
+
+let keys (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
+  if Float.(
+       Vec3.get_z k1.faces.east.points.centre > Vec3.get_z k2.faces.west.points.centre)
+  then (
+    let a, b = slide ~ortho:(KeyHole.orthogonal k2 `West) k2.faces.west.scad in
+    Model.union [ Model.hull [ k1.faces.east.scad; b ]; a ] )
+  else (
+    let a, b = slide ~ortho:(KeyHole.orthogonal k1 `East) k1.faces.east.scad in
+    Model.union [ Model.hull [ k2.faces.west.scad; b ]; a ] )
+
+let keys' (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
+  let slide side (k : _ KeyHole.t) =
+    let ortho = KeyHole.orthogonal k side
+    and face = KeyHole.Faces.face k.faces side in
+    let a = Model.translate (Vec3.map (( *. ) 0.5) ortho) face.scad
+    and b = Model.translate (Vec3.map (( *. ) 1.0) ortho) face.scad in
+    Model.hull [ face.scad; a ], Model.hull [ a; b ]
+  in
+  let w1, w2 = slide `West k2 in
+  let e1, e2 = slide `East k1 in
+  Model.union [ w1; e1; Model.hull [ w2; e2 ] ]
+
 let joins j1 j2 = Model.hull Column.Join.[ j1.faces.east; j2.faces.west ]
 
 let cols ~columns a_i b_i =
   let a : _ Column.t = Map.find_exn columns a_i
-  and b = Map.find_exn columns b_i in
-  let folder ~f ~key:_ ~data hulls =
+  and b = Map.find_exn columns b_i
+  and bookends keys join_idx =
+    Map.find_exn keys join_idx, Map.find_exn keys (join_idx + 1)
+  in
+  let key_folder ~key:_ ~data hulls =
     match data with
-    | `Both (a', b') -> f a' b' :: hulls
+    | `Both (a', b') -> keys a' b' :: hulls
     | _              -> hulls
+  and join_folder ~key ~data hulls =
+    match data with
+    | `Both ((w_join : Column.Join.t), (e_join : Column.Join.t)) ->
+      let w_last, w_next = bookends a.keys key
+      and e_last, e_next = bookends b.keys key in
+      let w_z =
+        Vec3.(
+          get_z
+          @@ mean [ w_last.faces.east.points.centre; w_next.faces.east.points.centre ])
+      and e_z =
+        Vec3.(
+          get_z
+          @@ mean [ e_last.faces.west.points.centre; e_next.faces.west.points.centre ])
+      in
+      if Float.(w_z > e_z)
+      then (
+        let ortho =
+          Vec3.(
+            normalize (KeyHole.orthogonal e_last `West <+> KeyHole.orthogonal e_next `West))
+        in
+        let j1, j2 = slide ~ortho e_join.faces.west in
+        j1 :: Model.hull [ w_join.faces.east; j2 ] :: hulls )
+      else (
+        let ortho =
+          Vec3.(
+            normalize (KeyHole.orthogonal w_last `East <+> KeyHole.orthogonal w_next `East))
+        in
+        let j1, j2 = slide ~ortho w_join.faces.east in
+        j1 :: Model.hull [ e_join.faces.west; j2 ] :: hulls )
+    | _ -> hulls
   in
   Model.union
     (Map.fold2
-       ~f:(folder ~f:keys)
-       ~init:(Map.fold2 ~f:(folder ~f:joins) ~init:[] a.joins b.joins)
+       ~f:key_folder
+       ~init:(Map.fold2 ~f:join_folder ~init:[] a.joins b.joins)
        a.keys
        b.keys )
 
