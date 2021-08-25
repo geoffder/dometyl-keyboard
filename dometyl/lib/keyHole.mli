@@ -31,6 +31,8 @@ module Faces : sig
   val translate : Vec3.t -> t -> t
   val rotate : Vec3.t -> t -> t
   val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+  val quaternion : Quaternion.t -> t -> t
+  val quaternion_about_pt : Quaternion.t -> Vec3.t -> t -> t
 end
 
 module Kind : sig
@@ -70,6 +72,10 @@ type 'k t =
 val translate : Vec3.t -> 'k t -> 'k t
 val rotate : Vec3.t -> 'k t -> 'k t
 val rotate_about_pt : Vec3.t -> Vec3.t -> 'k t -> 'k t
+val quaternion : Quaternion.t -> 'k t -> 'k t
+val quaternion_about_pt : Quaternion.t -> Vec3.t -> 'k t -> 'k t
+val rotate_about_origin : Vec3.t -> 'k t -> 'k t
+val quaternion_about_origin : float -> 'k t -> 'k t
 val cycle_faces : 'k t -> 'k t
 val orthogonal : 'k t -> [< `East | `North | `South | `West ] -> Vec3.t
 val normal : 'k t -> Vec3.t

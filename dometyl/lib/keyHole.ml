@@ -81,6 +81,8 @@ module Faces = struct
   let translate p = map ~f:(Face.translate p)
   let rotate r = map ~f:(Face.rotate r)
   let rotate_about_pt r p = map ~f:(Face.rotate_about_pt r p)
+  let quaternion q = map ~f:(Face.quaternion q)
+  let quaternion_about_pt q p = map ~f:(Face.quaternion_about_pt q p)
 end
 
 module Kind = struct
@@ -117,6 +119,13 @@ type 'k t =
   ; cutout : Model.t option
   }
 
+let orthogonal t side =
+  Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
+
+let normal t =
+  let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
+  Vec3.(normalize (top_left <-> bot_left))
+
 let translate p t =
   { t with
     scad = Model.translate p t.scad
@@ -144,15 +153,45 @@ let rotate_about_pt r p t =
   ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
   }
 
+let quaternion q t =
+  { t with
+    scad = Model.quaternion q t.scad
+  ; origin = Quaternion.rotate_vec3 q t.origin
+  ; faces = Faces.quaternion q t.faces
+  ; cap = Option.map ~f:(Model.quaternion q) t.cap
+  ; cutout = Option.map ~f:(Model.quaternion q) t.cutout
+  }
+
+let quaternion_about_pt q p t =
+  { t with
+    scad = Model.quaternion_about_pt q p t.scad
+  ; origin = Quaternion.rotate_vec3_about_pt q p t.origin
+  ; faces = Faces.quaternion_about_pt q p t.faces
+  ; cap = Option.map ~f:(Model.quaternion_about_pt q p) t.cap
+  ; cutout = Option.map ~f:(Model.quaternion_about_pt q p) t.cutout
+  }
+
+let rotate_about_origin r t =
+  let p = Vec3.negate t.origin in
+  { t with
+    scad = Model.rotate_about_pt r p t.scad
+  ; faces = Faces.rotate_about_pt r p t.faces
+  ; cap = Option.map ~f:(Model.rotate_about_pt r p) t.cap
+  ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
+  }
+
+let quaternion_about_origin angle t =
+  let p = Vec3.negate t.origin
+  and q = Quaternion.make (normal t) angle in
+  { t with
+    scad = Model.quaternion_about_pt q p t.scad
+  ; faces = Faces.quaternion_about_pt q p t.faces
+  ; cap = Option.map ~f:(Model.quaternion_about_pt q p) t.cap
+  ; cutout = Option.map ~f:(Model.quaternion_about_pt q p) t.cutout
+  }
+
 let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
   { t with faces = { north = west; south = east; east = north; west = south } }
-
-let orthogonal t side =
-  Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
-
-let normal t =
-  let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
-  Vec3.(normalize (top_left <-> bot_left))
 
 let make
     ?cap
