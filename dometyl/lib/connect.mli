@@ -85,5 +85,13 @@ val skeleton
   -> Walls.t
   -> t
 
-val closed : ?n_steps:int -> ?fudge_factor:float -> Walls.t -> t
+val closed
+  :  ?n_steps:int
+  -> ?fudge_factor:float
+  -> ?snake_d:float
+  -> ?snake_scale:float
+  -> ?snake_height:float
+  -> Walls.t
+  -> t
+
 val to_scad : t -> Model.t

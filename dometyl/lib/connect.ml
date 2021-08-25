@@ -528,7 +528,14 @@ let skeleton
      is actually failing.) *)
   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
-let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
+let closed
+    ?n_steps
+    ?fudge_factor
+    ?snake_d
+    ?snake_scale
+    ?snake_height
+    Walls.{ body; thumb }
+  =
   let n_cols = Map.length body.cols
   and col side i =
     let%bind.Option c = Map.find body.cols i in
@@ -574,11 +581,18 @@ let closed ?n_steps ?fudge_factor Walls.{ body; thumb } =
     and southeast =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys)
     in
+    let link =
+      (Option.map2
+         ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps) )
+        (col `S 2)
+        southeast
+    in
     prepend_corner southwest thumb.sides.west south
     |> prepend_corner thumb.sides.west northwest
     |> prepend_corner northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
     |> List.rev
     |> prepend_corner thumb.sides.east southeast
+    |> Util.prepend_opt link
   in
   List.join [ west; north; east; south; thumb ] |> clockwise_union
 
