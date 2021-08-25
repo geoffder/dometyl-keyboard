@@ -12,12 +12,19 @@ type curve =
   ; fan : spec option
   }
 
+type 'k custom = int -> 'k KeyHole.t -> 'k KeyHole.t
+
 type 'k t =
   | Curve of curve
-  | Custom of (int -> 'k KeyHole.t -> 'k KeyHole.t)
+  | Custom of 'k custom
+  | PreTweak of 'k custom * curve
+  | PostTweak of curve * 'k custom
 
 let spec ?(tilt = 0.) ~radius angle = { radius; angle; tilt }
 let curve ?well ?fan () = Curve { well; fan }
+let custom f = Custom f
+let pre_tweak ?well ?fan f = PreTweak (f, { well; fan })
+let post_tweak ?well ?fan f = PostTweak ({ well; fan }, f)
 let well_point { radius; _ } = 0., 0., -.radius
 let fan_point { radius; _ } = -.radius, 0., 0.
 let well_theta centre_idx { angle; _ } i = angle *. Int.to_float (i - centre_idx), 0., 0.

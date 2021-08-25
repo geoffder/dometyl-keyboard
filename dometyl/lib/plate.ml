@@ -1,5 +1,6 @@
 open Base
 open Scad_ml
+open Infix
 
 module Lookups = struct
   type 'k t =
@@ -115,10 +116,14 @@ let make
   =
   let curve_column curvature =
     let curve =
-      Curvature.(
-        match curvature with
-        | Curve { well; fan } -> Curvature.(place ?well ?fan ~centre_idx:centre_row)
-        | Custom curve        -> curve)
+      let open Curvature in
+      match curvature with
+      | Curve { well; fan } -> Curvature.(place ?well ?fan ~centre_idx:centre_row)
+      | Custom curve -> curve
+      | PreTweak (curve, { well; fan }) ->
+        fun i -> curve i >> Curvature.(place ?well ?fan ~centre_idx:centre_row i)
+      | PostTweak ({ well; fan }, curve) ->
+        fun i -> Curvature.(place ?well ?fan ~centre_idx:centre_row i) >> curve i
     in
     Column.make ~n_keys:n_rows ~curve keyhole
   in
