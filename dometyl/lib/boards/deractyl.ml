@@ -4,31 +4,22 @@ open! Infix
 
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_steps:(`Flat 3) ~clearance:4. plate
+    { body =
+        Body.make
+          ~west_lookup:(fun i -> if i = 0 then Screw else Yes)
+          ~east_lookup:(fun _ -> Yes)
+          ~n_steps:(`PerZ 6.)
+          ~clearance:4.
+          plate
     ; thumb =
         Thumb.make
-          ~south_lookup:(fun _ -> Yes)
           ~east:No
-          ~west:Screw
-          ~clearance:1.5
-          ~n_steps:(`Flat 3)
+          ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
+          ~n_steps:(`PerZ 6.)
           plate
     }
 
-let base_connector =
-  Connect.skeleton
-    ~height:7.
-    ~thumb_height:11.
-    ~snake_scale:1.3
-    ~snake_d:1.4
-    ~cubic_d:2.
-    ~cubic_scale:1.
-    ~thumb_cubic_d:1.
-    ~thumb_cubic_scale:1.25
-    ~join_steps:3
-    ~fudge_factor:8.
-    ~close_thumb:true
-    ~close_pinky:true
+let base_connector = Connect.closed ~n_steps:4 ~snake_height:10.
 
 let lookups =
   let offset = function
@@ -38,19 +29,6 @@ let lookups =
     | 5 -> 5.5, -14., 21. (* outer pinky *)
     | i when i >= 4 -> 0.5, -12., 9.5 (* pinky *)
     | _ -> 0., -5., 1.
-  (* and curve = function
-   *   | i when i = 0 ->
-   *     Curvature.(
-   *       curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ())
-   *   | i when i = 5 ->
-   *     let f = function
-   *       | 3 ->
-   *         KeyHole.quaternion_about_origin (Float.pi /. -64.)
-   *         >> KeyHole.translate (1., 1.5, -1.5)
-   *       | _ -> Fn.id
-   *     in
-   *     Curvature.(
-   *       post_tweak ~well:(spec ~tilt:(Float.pi /. -5.) ~radius:58. (Float.pi /. 8.)) f) *)
   and curve = function
     | i when i = 0 ->
       Curvature.(
@@ -66,10 +44,8 @@ let lookups =
         post_tweak ~well:(spec ~tilt:(Float.pi /. -4.) ~radius:58. (Float.pi /. 8.)) f)
     | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ())
   and swing = function
-    (* | 5 -> Float.pi /. -24. *)
     | _ -> 0.
   and splay = function
-    (* | 5 -> Float.pi /. -120. *)
     | _ -> 0.
   in
   Plate.Lookups.make ~offset ~curve ~swing ~splay ()
