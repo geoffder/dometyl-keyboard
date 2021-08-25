@@ -466,11 +466,10 @@ let skeleton
   in
   let south =
     let base i =
-      if i >= pinky_idx
-      then
-        if close_pinky
-        then join_walls ?n_steps:join_steps ?fudge_factor
-        else inward_elbow_base ~d:1.5 ?height ?n_steps
+      if i >= pinky_idx && close_pinky
+      then join_walls ?n_steps:join_steps ?fudge_factor
+      else if i = pinky_idx
+      then inward_elbow_base ~d:1.5 ?height ?n_steps
       else straight_base ?height ?fudge_factor ?min_width:min_straight_width
     in
     List.init
