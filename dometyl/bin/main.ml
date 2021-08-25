@@ -37,7 +37,11 @@ let () =
     ~export:false
     "case"
     (Case.to_scad ~show_cutouts:false ~show_caps:false case);
-  write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ());
+  write_thing ~export:false "choctyl" (Case.to_scad ~show_caps:true (Choctyl.build ()));
+  write_thing ~export:false "deractyl" (Case.to_scad ~show_caps:true (Deractyl.build ()));
+  (* write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ()); *)
+  write_thing ~export:false "splay_vs_skel" (Splaytyl.bastard_compare ());
+  write_thing ~export:false "bottom_plate" (Bottom.make case);
   (* write_thing
    *   ~export:false
    *   "case"
