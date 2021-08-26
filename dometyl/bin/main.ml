@@ -33,21 +33,19 @@ let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
   (* write_thing "mx_keyhole" (KeyHole.make Mx.hole_config).scad; *)
   (* write_thing "niz_keyhole" (KeyHole.make Niz.hole_config).scad; *)
-  write_thing
-    ~export:false
-    "case"
-    (Case.to_scad ~show_cutouts:false ~show_caps:false case);
-  write_thing ~export:false "choctyl" (Case.to_scad ~show_caps:true (Choctyl.build ()));
-  write_thing ~export:false "deractyl" (Case.to_scad ~show_caps:true (Deractyl.build ()));
-  (* write_thing ~export:false "bk_mimic" (Skeletyl.bastard_compare ()); *)
-  write_thing ~export:false "splay_vs_skel" (Splaytyl.bastard_compare ());
-  write_thing ~export:false "bottom_plate" (Bottom.make case);
+  write_thing "case" (Case.to_scad ~show_cutouts:false ~show_caps:false case);
+  write_thing "choctyl" (Case.to_scad ~show_caps:true (Choctyl.build ()));
+  write_thing "deractyl" (Case.to_scad ~show_caps:false (Deractyl.build ()));
+  write_thing "compactyl_mimic" (Deractyl.compactyl_compare ());
+  (* write_thing  "bk_mimic" (Skeletyl.bastard_compare ()); *)
+  write_thing "splay_vs_skel" (Splaytyl.bastard_compare ());
+  write_thing "bottom_plate" (Bottom.make case);
   (* write_thing
-   *   ~export:false
    *   "case"
    *   (Model.union [ case.scad; Bottom.make case |> Model.translate (0., 0., -10.) ]); *)
   (* write_thing "niz_bottom" Niz.Bottom.scad; *)
   write_thing "tent" (Tent.make case);
+  (* write_thing "deractyl_tent" (Tent.make (Deractyl.build ())); *)
   (* write_thing "niz_platform" Niz.Platform.(make default_config).scad; *)
   (* write_thing "niz_cross_section" Niz.example_cross_section; *)
   (* write_thing "niz_sensor" Sensor.(make Config.a3144).scad; *)
