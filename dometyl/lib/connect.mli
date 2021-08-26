@@ -91,6 +91,7 @@ val closed
   -> ?snake_d:float
   -> ?snake_scale:float
   -> ?snake_height:float
+  -> ?snake_steps:int
   -> Walls.t
   -> t
 

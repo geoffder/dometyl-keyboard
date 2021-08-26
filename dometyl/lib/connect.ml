@@ -534,17 +534,17 @@ let closed
     ?snake_d
     ?snake_scale
     ?snake_height
+    ?snake_steps
     Walls.{ body; thumb }
   =
+  let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
   let n_cols = Map.length body.cols
   and col side i =
     let%bind.Option c = Map.find body.cols i in
     match side with
     | `N -> c.north
     | `S -> c.south
-  and prepend_corner w1 w2 =
-    Util.prepend_opt @@ Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) w1 w2
-  in
+  and prepend_corner w1 w2 = Util.prepend_opt (corner w1 w2) in
   let east, west =
     let f = joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor) in
     let _, west = Map.fold ~init:(None, []) ~f body.sides.west in
@@ -580,19 +580,25 @@ let closed
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.north) (Map.min_elt thumb.keys)
     and southeast =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys)
-    in
-    let link =
+    and west_body = Option.map ~f:snd @@ Map.min_elt body.sides.west in
+    let e_link =
       (Option.map2
-         ~f:(snake_base ?height:snake_height ?scale:snake_scale ?d:snake_d ?n_steps) )
+         ~f:
+           (snake_base
+              ?height:snake_height
+              ?scale:snake_scale
+              ?d:snake_d
+              ?n_steps:snake_steps ) )
         (col `S 2)
         southeast
-    in
+    and w_link = corner (Option.first_some northwest thumb.sides.west) west_body in
     prepend_corner southwest thumb.sides.west south
     |> prepend_corner thumb.sides.west northwest
-    |> prepend_corner northwest (Option.map ~f:snd @@ Map.min_elt body.sides.west)
+    (* |> prepend_corner northwest west_body *)
+    |> Util.prepend_opt w_link
     |> List.rev
     |> prepend_corner thumb.sides.east southeast
-    |> Util.prepend_opt link
+    |> Util.prepend_opt e_link
   in
   List.join [ west; north; east; south; thumb ] |> clockwise_union
 
