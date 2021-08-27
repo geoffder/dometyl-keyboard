@@ -72,6 +72,7 @@ val skeleton
   -> ?join_steps:int
   -> ?join_index:bool
   -> ?fudge_factor:float
+  -> ?join_fudge_factor:float
   -> ?snake_d:float
   -> ?snake_scale:float
   -> ?cubic_d:float

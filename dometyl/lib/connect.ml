@@ -380,6 +380,7 @@ let skeleton
     ?join_steps
     ?(join_index = true)
     ?fudge_factor
+    ?join_fudge_factor
     ?snake_d
     ?snake_scale
     ?cubic_d
@@ -423,19 +424,18 @@ let skeleton
   let north =
     let index =
       if join_index
-      then join_walls ?n_steps:join_steps
-      else straight_base ~height:index_height ?min_width:min_straight_width
+      then join_walls ?n_steps:join_steps ?fudge_factor:join_fudge_factor
+      else straight_base ~height:index_height ?min_width:min_straight_width ?fudge_factor
     in
     List.init
       ~f:(fun i ->
         Option.map2
           ~f:
-            (( if i = 0
-             then index
-             else if i >= pinky_idx - 1 && close_pinky
-             then join_walls ?n_steps:join_steps
-             else straight_base ?height ?min_width:min_straight_width )
-               ?fudge_factor )
+            ( if i = 0
+            then index
+            else if i >= pinky_idx - 1 && close_pinky
+            then join_walls ?n_steps:join_steps ?fudge_factor:join_fudge_factor
+            else straight_base ?height ?min_width:min_straight_width ?fudge_factor )
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
@@ -591,11 +591,10 @@ let closed
               ?n_steps:snake_steps ) )
         (col `S 2)
         southeast
-    and w_link = corner (Option.first_some northwest thumb.sides.west) west_body in
+    in
     prepend_corner southwest thumb.sides.west south
     |> prepend_corner thumb.sides.west northwest
-    (* |> prepend_corner northwest west_body *)
-    |> Util.prepend_opt w_link
+    |> prepend_corner (Option.first_some northwest thumb.sides.west) west_body
     |> List.rev
     |> prepend_corner thumb.sides.east southeast
     |> Util.prepend_opt e_link
