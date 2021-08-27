@@ -1,6 +1,9 @@
 open! Base
 open! Scad_ml
 
+(** The top-level type of this library. The {!Model.t} scad held within this type
+    should generally represent the finished case, made up of the three major building
+    blocks: {!Plate.t}, {!Walls.t}, and {!Connect.t}. *)
 type 'k t =
   { scad : Model.t
   ; plate : 'k Plate.t
@@ -8,6 +11,7 @@ type 'k t =
   ; connections : Connect.t
   }
 
+(** Basic transformation functions. *)
 include Sigs.Transformable' with type 'k t := 'k t
 
 (** [make ~plate_welder ~wall_builder ~base_connector plate]
