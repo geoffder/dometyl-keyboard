@@ -37,7 +37,7 @@ let () =
   write_thing "choctyl" (Case.to_scad ~show_caps:true (Choctyl.build ()));
   write_thing "deractyl" (Case.to_scad ~show_caps:false (Deractyl.build ()));
   write_thing "compactyl_mimic" (Deractyl.compactyl_compare ());
-  (* write_thing  "bk_mimic" (Skeletyl.bastard_compare ()); *)
+  write_thing "bk_mimic" (Skeletyl.bastard_compare ());
   write_thing "splay_vs_skel" (Splaytyl.bastard_compare ());
   write_thing "bottom_plate" (Bottom.make case);
   (* write_thing

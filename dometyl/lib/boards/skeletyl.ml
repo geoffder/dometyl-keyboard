@@ -38,12 +38,22 @@ let base_connector =
 let lookups =
   let offset = function
     | 2 -> 0., 3.5, -8. (* middle *)
-    | 3 -> 0., -1., -1.5 (* ring *)
+    | 3 -> 1., -1., -1.5 (* ring *)
     | i when i >= 4 -> 0., -12., 7. (* pinky *)
+    | 0 -> -1., 0., -2.
     | _ -> 0., 0., -3.
-  and curve _ = Curvature.(curve ~well:(spec ~radius:85. (Float.pi /. 12.)) ())
+  and curve = function
+    | 0 ->
+      Curvature.(
+        curve ~well:(spec ~radius:85. (Float.pi /. 12.) ~tilt:(Float.pi /. 24.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:85. (Float.pi /. 12.)) ())
+  and swing = function
+    | 2 -> Float.pi /. -48.
+    | 3 -> Float.pi /. -19.
+    | 4 -> Float.pi /. -14.
+    | _ -> 0.
   and splay _ = 0. in
-  Plate.Lookups.make ~offset ~curve ~splay ()
+  Plate.Lookups.make ~offset ~curve ~splay ~swing ()
 
 let plate_welder = Plate.skeleton_bridges
 
