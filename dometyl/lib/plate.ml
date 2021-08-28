@@ -1,6 +1,5 @@
 open Base
 open Scad_ml
-open Infix
 
 module Lookups = struct
   type 'k t =
@@ -83,12 +82,12 @@ let rotate_about_pt r p t =
   ; thumb = Column.rotate_about_pt r p t.thumb
   }
 
-let make_thumb ~curve ~rotate_clips keyhole =
+let make_thumb ~n_keys ~centre_idx ~curve ~rotate_clips keyhole =
   Column.(
     make
       ~join_ax:`EW
-      ~n_keys:3
-      ~curve
+      ~n_keys
+      ~curve:(Curvature.apply ~centre_idx curve)
       ( if rotate_clips
       then KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole
       else KeyHole.cycle_faces keyhole )
@@ -102,30 +101,25 @@ let make
     ?(centre_col = 2)
     ?(spacing = 1.)
     ?(tent = Float.pi /. 12.)
-    ?(thumb_offset = -16., -44.5, 13.5)
-    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 5.5))
+    ?(n_thumb_keys = 3)
+    ?(thumb_centre = 1)
     ?(thumb_curve =
       Curvature.(
-        place
+        curve
           ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 24. }
-          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
-          ~centre_idx:1))
+          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
+        ())
     ?(rotate_thumb_clips = false)
+    ?(thumb_offset = -16., -44.5, 13.5)
+    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 5.5))
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
-  let curve_column curvature =
-    let curve =
-      let open Curvature in
-      match curvature with
-      | Curve { well; fan } -> Curvature.(place ?well ?fan ~centre_idx:centre_row)
-      | Custom curve -> curve
-      | PreTweak (curve, { well; fan }) ->
-        fun i -> curve i >> Curvature.(place ?well ?fan ~centre_idx:centre_row i)
-      | PostTweak ({ well; fan }, curve) ->
-        fun i -> Curvature.(place ?well ?fan ~centre_idx:centre_row i) >> curve i
-    in
-    Column.make ~n_keys:n_rows ~curve keyhole
+  let curve_column curv =
+    Column.make
+      ~n_keys:n_rows
+      ~curve:(Curvature.apply ~centre_idx:centre_row curv)
+      keyhole
   in
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
@@ -176,7 +170,12 @@ let make
     let thumb =
       let placed =
         Column.(
-          make_thumb ~curve:thumb_curve ~rotate_clips:rotate_thumb_clips keyhole
+          make_thumb
+            ~n_keys:n_thumb_keys
+            ~centre_idx:thumb_centre
+            ~curve:thumb_curve
+            ~rotate_clips:rotate_thumb_clips
+            keyhole
           |> rotate thumb_angle
           |> translate thumb_offset)
       in

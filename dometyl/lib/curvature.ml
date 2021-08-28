@@ -1,5 +1,6 @@
 open Base
 open Scad_ml
+open! Infix
 
 type spec =
   { radius : float
@@ -51,3 +52,10 @@ let place ?well ?fan ~centre_idx i key =
     |> KeyHole.rotate (0., f.tilt, 0.)
     |> KeyHole.rotate_about_pt (fan_theta' f i) (fan_point f)
   | None, None      -> key
+
+let apply ~centre_idx t =
+  match t with
+  | Curve { well; fan } -> place ?well ?fan ~centre_idx
+  | Custom curve -> curve
+  | PreTweak (curve, { well; fan }) -> fun i -> curve i >> place ?well ?fan ~centre_idx i
+  | PostTweak ({ well; fan }, curve) -> fun i -> place ?well ?fan ~centre_idx i >> curve i

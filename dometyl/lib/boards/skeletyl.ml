@@ -70,8 +70,7 @@ let build () =
       ~thumb_offset:(-1., -50., -8.)
       ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
       ~thumb_curve:
-        Curvature.(
-          place ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ~centre_idx:1)
+        Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
       keyhole
   in
   Case.make ~plate_welder ~wall_builder ~base_connector plate

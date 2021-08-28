@@ -65,10 +65,10 @@ let build () =
       ~thumb_angle:Float.(pi /. 12., pi /. -4.75, pi /. 5.5)
       ~thumb_curve:
         Curvature.(
-          place
+          curve
             ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 24. }
             ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
-            ~centre_idx:1)
+            ())
       ~lookups
       keyhole
   in
