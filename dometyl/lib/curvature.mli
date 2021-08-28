@@ -37,3 +37,5 @@ val place
   -> int
   -> 'k KeyHole.t
   -> 'k KeyHole.t
+
+val apply : centre_idx:int -> 'k t -> int -> 'k KeyHole.t -> 'k KeyHole.t

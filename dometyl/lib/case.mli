@@ -23,17 +23,17 @@ include Sigs.Transformable' with type 'k t := 'k t
 (** [make ~plate_welder ~wall_builder ~base_connector plate]
 
 A high level helper used to contsruct the case from provided functions and a {!Plate.t}.
-- [~plate_welder] is a function intended to generate a {!Model.t} that provides support
-  between columns.
-- [~wall_builder] will use the provided {!Plate.t} to create {!Walls.t} from the ends and
-  sides of the columns to the ground (likely a closure using {!Walls.Body.make}
-  and {!Walls.Thumb.make}).
-- [~base_connector] connects the walls around the perimeter of the case, using various
-  functions provided by {!module:Connect}. This function should return a {!Connect.t} that
-  follows along the entire edge of the case in clockwise fashion without gaps. This way
-  the resulting {!Case.t} will contain the necessary information to use {!module:Bottom}
-  and {!module:Tent}. See {!Connect.skeleton} and {!Connect.closed} for examples that
-  provide this functionality. *)
+- [plate_welder] function intended to generate a {!Model.t} that provides support
+between columns.
+- [wall_builder] uses the provided {!Plate.t} to create {!Walls.t} from the ends and
+sides of the columns to the ground (likely a closure using {!Walls.Body.make}
+and {!Walls.Thumb.make}).
+- [base_connector] connects the walls around the perimeter of the case, using various
+functions provided by {!module:Connect}. This function should return a {!Connect.t} that
+follows along the entire edge of the case in clockwise fashion without gaps. This way
+the resulting {!Case.t} will contain the necessary information to use {!module:Bottom}
+and {!module:Tent}. See {!Connect.skeleton} and {!Connect.closed} for examples that
+provide this functionality. *)
 val make
   :  plate_welder:('k Plate.t -> Model.t)
   -> wall_builder:('k Plate.t -> Walls.t)
@@ -45,5 +45,8 @@ val make
 
 Extract the contained {!Model.t}, optionally tacking on keycaps and case cutouts (such as
 representations of hotswap sockets, that are used to provide clearance), stored
-in {!KeyHole.t}. *)
+in {!KeyHole.t} with [show_caps] and [show_cutouts] respectively. I would recommend against
+rendering with these options active, as they will balloon the processing time, remove the
+colouration only visible in preview mode, and they are not something that you will want
+and stl of anyway. *)
 val to_scad : ?show_caps:bool -> ?show_cutouts:bool -> 'k t -> Model.t
