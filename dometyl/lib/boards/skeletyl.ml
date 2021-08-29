@@ -13,19 +13,21 @@ let wall_builder plate =
     { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
     ; thumb =
         Thumb.make
-          ~south_lookup:(fun _ -> Yes)
+          ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
           ~east:No
           ~west:Screw
-          ~clearance:1.5
-          ~n_steps:(`Flat 3)
+          ~clearance:0.5
+          ~d1:4.
+          ~d2:4.75
+          ~n_steps:(`PerZ 6.)
           plate
     }
 
 let base_connector =
   Connect.skeleton
-    ~height:7.
-    ~thumb_height:11.
-    ~snake_scale:1.3
+    ~height:5.
+    ~thumb_height:9.
+    ~snake_scale:1.
     ~snake_d:1.4
     ~cubic_d:2.
     ~cubic_scale:1.
@@ -33,6 +35,7 @@ let base_connector =
     ~thumb_cubic_scale:1.25
     ~join_steps:3
     ~fudge_factor:8.
+    ~join_index:true
     ~close_thumb:true
     ~close_pinky:false
 
@@ -58,9 +61,8 @@ let lookups =
 
 let plate_welder = Plate.skeleton_bridges
 
-let build () =
-  (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 () in
+let build ?hotswap () =
+  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
   let plate =
     Plate.make
       ~n_rows:3
@@ -68,7 +70,7 @@ let build () =
       ~spacing:1.5
       ~tent:(Float.pi /. 10.)
       ~lookups
-      ~thumb_offset:(-1., -50., -8.)
+      ~thumb_offset:(-1., -50., -6.)
       ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
       ~thumb_curve:
         Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
