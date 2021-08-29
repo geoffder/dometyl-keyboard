@@ -1,5 +1,5 @@
 # Dometyl - Another Dactyl inspired keyboard (eventually supporting rubber domes)
-
+![splaytyl prototype](images/splaytyl_prototype.png)
 ## About
 This is a library (currently under construction) for generation of paramaterized
 split-hand, concave, columnar, ergonomic keyboards in the spirit of the
@@ -81,7 +81,18 @@ be filling in over time.
    variations here rather than having them strewn over countless forks would be
    make for a nice resource!
 
-## Example Output
+## More Example Output
+* An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the bastard-kb
+skeletyl (purple).
+  ![splaytyl prototype](images/bk_skeletyl_mimic.png)
+* This configuration can serve as a nice place to start if you like the skeletyl,
+but would like to tweak the column offsets, or would like to (at the price of it
+being a bit taller) use kailh hotswap sockets:
+  ![splaytyl prototype](images/skeletyl_hotswap.png)
+* (Mostly) closed configuration with thumb and plate based off of the
+ [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
+ the addition of aggresive secondary column tilt.
+ ![deractyl prototype](images/deractyl_prototype.png)
 
 ## License
 Copyright © 2021 Geoff deRosenroll
