@@ -96,14 +96,28 @@ let rotate_about_pt r p t =
   }
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
-  (* Iteratively find a rotation around it's bottom axis that brings face to a more
-   * vertical orientation, returning the pivoted face and it's new orthogonal. *)
+  (* Iteratively find a rotation around it's bottom or top axis, depending on which way
+     face is pointing in z, that brings face to a more vertical orientation, returning
+     the pivoted face and it's new orthogonal. *)
   let quat = Quaternion.make (KeyHole.Face.direction face)
-  and pivot = Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
-  and top = face.points.top_right
-  and bot_z = Vec3.get_z face.points.bot_right in
+  and free, pivot, rock_z, z_sign =
+    let ortho = Vec3.(normalize (face.points.centre <-> key_origin)) in
+    if Float.(Vec3.get_z ortho > 0.)
+    then
+      ( face.points.top_right
+      , Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
+      , Vec3.get_z face.points.bot_right
+      , 1. )
+    else
+      ( face.points.bot_right
+      , Vec3.(div (face.points.top_left <+> face.points.top_right) (-2., -2., -2.))
+      , Vec3.get_z face.points.top_right
+      , -1. )
+  in
   let diff a =
-    Vec3.(get_z Quaternion.(rotate_vec3_about_pt (quat a) pivot top) -. bot_z)
+    Vec3.(
+      get_z Quaternion.(rotate_vec3_about_pt (quat (a *. z_sign)) pivot free) -. rock_z)
+    *. z_sign
   in
   let rec find_angle a last_diff =
     if Float.(a < pi)
@@ -112,7 +126,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
       if Float.(d < last_diff) then a -. step else find_angle (a +. step) d )
     else a -. step
   in
-  let q = quat @@ find_angle step (Vec3.get_z top -. bot_z) in
+  let q = quat @@ (find_angle step (Vec3.get_z free -. rock_z) *. z_sign) in
   let face' = KeyHole.Face.quaternion_about_pt q pivot face in
   let ortho' =
     Quaternion.rotate_vec3_about_pt q pivot key_origin
@@ -181,25 +195,12 @@ let poly_siding
   let cw_points = Points.to_clockwise_list cleared_face.points in
   let steps =
     let adjust (_, _, z) =
-      (* match n_steps with
-       * | `Flat n ->
-       *   let lowest_z =
-       *     let f m (_, _, z) = Float.min m z in
-       *     Points.fold ~f ~init:Float.max_value cleared_face.points
-       *   in
-       *   Float.(to_int (z /. lowest_z *. of_int n))
-       *   (\* FIXME: using Steps.to_int conversion is not adequate to achieve reliable
-       *      polyhedrons. I need to incorporate more adjustments based on relative height,
-       *      as done with `Flat already, or with other factors previously unaccounted for,
-       *      such as the distance traveled including xy. *\)
-       * | `PerZ _ -> Steps.to_int n_steps z *)
       let lowest_z =
         let f m (_, _, z) = Float.min m z in
         Points.fold ~f ~init:Float.max_value cleared_face.points
       in
       Float.(to_int (z /. lowest_z *. of_int (Steps.to_int n_steps z)))
     in
-    (* `Ragged (List.map ~f:adjust cw_points) *)
     `Ragged
       (List.map2_exn ~f:(fun p a -> Int.max (adjust p + a) 2) cw_points [ 0; 0; 0; 0 ])
   and end_ps, bezs =
