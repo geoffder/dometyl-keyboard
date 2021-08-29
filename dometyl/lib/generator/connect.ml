@@ -518,7 +518,10 @@ let skeleton
             thumb.keys
         in
         List.rev scads )
-      else Option.map2 ~f:(bez_base ?height ?n_steps) e_s w_s |> Option.to_list
+      else
+        Option.map2 ~f:(bez_base ?height:thumb_height ?n_steps) e_s w_s
+        |> Option.to_list
+        |> Util.prepend_opt e_link
     in
     east_swoop, List.filter_opt [ sw; nw; w_link ]
   in
