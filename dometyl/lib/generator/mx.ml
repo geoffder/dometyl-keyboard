@@ -64,14 +64,6 @@ module Hotswap = struct
     in
     hotswap, cutout
 
-  (* let ex = Model.import "../things/hotswap.stl" |> Model.color Color.FireBrick
-   *
-   * let cutout_ex =
-   *   Model.import "../things/hotswap-cutout.stl" |> Model.color Color.DarkMagenta
-   *
-   * let combo_ex =
-   *   Model.union [ ex; cutout_ex ] |> Model.translate (0., 0., thickness /. -2.) *)
-
   let combo_ex =
     let swap, cut = make ~inner_w:13.9 ~inner_h:13.8 `North in
     Model.union [ Model.color Color.FireBrick swap; Model.color Color.DarkMagenta cut ]

@@ -6,7 +6,7 @@ split-hand, concave, columnar, ergonomic keyboards in the spirit of the
 [Dactyl](https://github.com/adereth/dactyl-keyboard), but written in from the
 ground up in [ocaml](https://ocaml.org/), rather than
 [clojure](https://clojure.org). **Dometyl** also takes inspiration from a
-lineage of **Dactyl**-like keyboards that evolved from the original script,
+lineage of **Dactyl-like** keyboards that evolved from the original script,
 including the [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight)
 itself a fork of forks of dactyl-manumform keyboards with many accumulated
 features, and the [Skeletyl](https://github.com/Bastardkb/Skeletyl), a sleak,
@@ -15,12 +15,14 @@ low-profile, open-case design built in
 
 The name **Dometyl** comes from my original mission of creating a
 **dactyl/skeletyl-like** board that can be built with rubber dome switches like
-Topre (or Niz, whose top switch housings are available to purchase). The planned
-switching mechanism using magnets and cheap hall-effect sensors rather than the
-typical capacitive sensor PCBs works as expected in hand (images and video of
-prototype assembly to come), however a sturdy enough and relible mounting scheme
-for dome and sensor platform to the bottom of the plate is yet to be worked out
-(WIP parts can be found in the [Niz module](dometyl/lib/niz.ml)).
+[Topre](https://deskthority.net/wiki/Topre_switch) (or
+[Niz](https://www.nizkeyboard.com/products/2019-new-niz-ec-switch), whose top
+switch housings are available to purchase). The planned switching mechanism
+using magnets and cheap hall-effect sensors rather than the typical capacitive
+sensor PCBs works as expected in hand (images and video of prototype assembly to
+come), however a sturdy enough and relible mounting scheme for dome and sensor
+platform to the bottom of the plate is yet to be worked out (WIP parts can be
+found in the [Niz module](dometyl/lib/generator/niz.ml)).
 
 In the meantime, the generator works fine for Mx and Choc style switches, so I
 am working to improve the documentation and make it a bit more user friendly so
@@ -54,7 +56,7 @@ Online documentation is available
 be filling in over time.
 
 ## Usage
-1. Make a new `.ml` file in the [boards directory](dometyl/lib/boards), or
+1. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
    modify and existing one to suit your preferences / fit your hand.
 2. Add a line (or make sure one exists) for writing the scad of your generated
    model to [main.ml](dometyl/bin/main.ml), which will be run when executing
@@ -71,7 +73,7 @@ be filling in over time.
    your new changes to be comfortable (e.g. cool new thumb cluster, tailored
    splays, column tilts, a new look squeezed out of this jank library, etc),
    consider making a PR for your addition to the [boards
-   directory](dometyl/lib/boards). It would be nice to accumulate a zoo of
+   library](dometyl/lib/boards). It would be nice to accumulate a zoo of
    configurations that can serve as jumping off points / inspiration for others.
 6. PRs for added/improved functionality in the rest of the library that go
    beyond new combinations of the existing tools are welcomed as well. I know

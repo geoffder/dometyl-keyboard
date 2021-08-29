@@ -1,6 +1,7 @@
 open! Base
 open! Scad_ml
-open Dometyl
+open Generator
+open Boards
 
 let write_thing ?(export = false) name scad =
   let filename ext = Printf.sprintf "../things/%s.%s" name ext in

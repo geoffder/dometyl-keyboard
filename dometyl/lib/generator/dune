@@ -1,7 +1,5 @@
 (library
- (name dometyl)
- (public_name dometyl)
+ (name generator)
+ (public_name dometyl.generator)
  (libraries scad_ml base stdio)
  (preprocess (pps ppx_jane)))
-
-(include_subdirs unqualified)

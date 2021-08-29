@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open! Generator
 open! Infix
 
 let wall_builder plate =
@@ -79,7 +80,7 @@ let build () =
   Case.make ~plate_welder ~wall_builder ~base_connector plate
 
 let compactyl =
-  Model.import "../things/compactyl_5x6.stl"
+  Model.import "../things/others/dereknheiley_compactyl_5x6.stl"
   |> Model.rotate (0., Float.pi /. -8., 0.)
   |> Model.translate (70., -2., -10.)
   |> Model.color ~alpha:0.25 Color.DarkSlateBlue

@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open! Generator
 
 let wall_builder plate =
   Walls.

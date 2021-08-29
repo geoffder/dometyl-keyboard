@@ -1,4 +1,4 @@
 (executable
  (public_name dometyl)
  (name main)
- (libraries dometyl stdio))
+ (libraries generator boards stdio))

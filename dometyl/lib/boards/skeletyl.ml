@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open Generator
 
 (* This is configuration is a mimicry of BastardKB's skeletyl keyboard.
    (https://github.com/Bastardkb/Skeletyl).
@@ -76,7 +77,7 @@ let build () =
   Case.make ~plate_welder ~wall_builder ~base_connector plate
 
 let bastard_skelly =
-  Model.import "../things/bk_skeletyl_v3_v5.stl"
+  Model.import "../things/others/bastardkb_skeletyl_v3_v5.stl"
   |> Model.translate (87., 0., 25.)
   |> Model.rotate (Float.pi /. 2., 0., 0.)
   |> Model.translate (0., -2., 8.)
