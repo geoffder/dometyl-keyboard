@@ -82,8 +82,8 @@ be filling in over time.
    make for a nice resource!
 
 ## More Example Output
-* An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the bastard-kb
-skeletyl (purple).
+* An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
+[BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
   ![splaytyl prototype](images/bk_skeletyl_mimic.png)
 * This configuration can serve as a nice place to start if you like the skeletyl,
 but would like to tweak the column offsets, or would like to (at the price of it
