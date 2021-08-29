@@ -83,16 +83,17 @@ be filling in over time.
 
 ## More Example Output
 * An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
-[BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
+  [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
   ![splaytyl prototype](images/bk_skeletyl_mimic.png)
-* This configuration can serve as a nice place to start if you like the skeletyl,
-but would like to tweak the column offsets, or would like to (at the price of it
-being a bit taller) use kailh hotswap sockets:
+* This [configuration](dometyl/lib/boards/deractyl.ml) can serve as a nice place
+  to start if you like the skeletyl, but would like to tweak the column offsets,
+  or would like to (at the price of it being a bit taller) use kailh hotswap
+  sockets:
   ![splaytyl prototype](images/skeletyl_hotswap.png)
 * (Mostly) closed configuration with thumb and plate based off of the
- [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
- the addition of aggresive secondary column tilt.
- ![deractyl prototype](images/deractyl_prototype.png)
+  [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
+  the addition of aggresive secondary column tilt.
+  ![deractyl prototype](images/deractyl_prototype.png)
 
 ## License
 Copyright © 2021 Geoff deRosenroll
