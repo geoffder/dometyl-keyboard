@@ -39,16 +39,19 @@ need to get an environment set up, including the package manager
 One day I may get to upstreaming my drammatic changes to
 [scad-ml](https://github.com/namachan10777/scad-ml) and do the work to get the
 library added to the **opam** repository, but for now, you'll need to clone and
-locally install my fork.
+locally install my fork (anywhere, no need to be in your clone of this repo, as
+doing this will make it available in your opam switch alogside the packages you
+install from the package repository).
 1. `git clone https://github.com/geoffder/scad-ml`
 2. `cd scad-ml`
-3. `opam install ./scad_ml.opam`
+3. `dune build`
+4. `opam install ./scad_ml.opam`
 
 ### opam dependencies
 The other dependencies are [base](https://github.com/janestreet/base) (standard
 library replacement) and [stdio](https://github.com/janestreet/stdio) from
 janestreet, both of which are available through the opam package manager.
-* `opam install base stdio`
+* `opam install base stdio ppx_jane ppx_inline_test`
 
 ## Organization
 Online documentation is available
