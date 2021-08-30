@@ -94,6 +94,37 @@ be filling in over time.
   the addition of aggresive secondary column tilt.
   ![deractyl prototype](images/deractyl_prototype.png)
 
+## Troubleshooting
+Now and then, when you attempt to render a model, part of it will disappear.
+This is due to my imperfect abuse of
+[OpenSCAD
+polyhedrons](https://en.m.wikibooks.org/wiki/OpenSCAD_User_Manual/Primitive_Solids#polyhedron),
+which can fail to close when the points on each of their edges are at strange
+angles to eachother. The walls (from keyholes to the ground) and the
+connections between the walls both use polyhedrons so they are prone to breaking
+in this manner.
+
+When this happens, and more than one piece of the case disappears (e.g. all of the
+connections between the walls), it can be useful to narrow down which part(s) in
+particular caused it, since it isn't necessarily all of them that have gone bad.
+To help with this, you can use **Thrown Together** mode in the OpenSCAD GUI
+(found in the **View** menu, or activated by hitting **F12**), which will show
+pink where you can see into the inside of any shapes (unclosed mesh).
+
+Generally, you should be able to fix the problem by adjusting the parameters
+used for drawing the polyhedrons in question. For walls, key values include
+`~d1` and `~d2`, which specify how far they extend out from the side of the
+plate, and `n_steps`, which determines many points are used to draw the bezier
+curves that form the edge of the drawn polyhedra. If the numbers of points are
+too high, or the curve of the wall is too tight, sometimes the "bunching up" of
+points can make the faces difficult to close up. For the perimeter connections,
+you'll want to look at the various `d` and `scale` parameters relevant to the
+one that has broken.
+
+One day, some of these worries may be alleviated as I revisit/improve the
+solutions for polyhedron generation that are presently in use, for now, my
+apologies if they cause you any grief!
+
 ## License
 Copyright © 2021 Geoff deRosenroll
 
