@@ -311,7 +311,6 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let fudge =
     let dir = if outward then Vec3.zero else dir2 in
-    (* let dir = if outward then Vec3.negate dir1 else dir2 in *)
     let extra =
       if Float.(abs minor_diff > fudge_factor)
       then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
@@ -335,7 +334,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
   and dests =
     Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
         (if outward then Fn.id else fudge) @@ w2.edges.top_left step )
-    |> List.map ~f:Vec3.(add (mul dir2 (-0.001, -0.001, 0.)))
+    |> List.map ~f:Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.)))
   and wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
      * key face and moving it out for clearance prior to drawing the walls. *)
@@ -487,12 +486,36 @@ let skeleton
       Option.map2
         ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
     in
-    let es = corner thumb.sides.east e_s
+    (* TODO: es and sw are pretty repetitive, can probably clean up, and also take
+       lessons from using closest key into other places. *)
+    let es =
+      match corner thumb.sides.east e_s with
+      | Some _ as es -> es
+      | None         ->
+        Map.closest_key thumb.keys `Less_than (Map.length thumb.keys)
+        |> Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south)
+        |> Option.map2 ~f:(bez_base ~n_steps:3 ?height:thumb_height) thumb.sides.east
     and e_link =
       if Option.is_some thumb.sides.east
       then Option.map2 ~f:(bez_base ~n_steps:3 ?height) (col `S 2) thumb.sides.east
       else link (col `S 2) e_s
-    and sw = corner w_s thumb.sides.west
+    and sw =
+      match corner w_s thumb.sides.west with
+      | Some _ as es -> es
+      | None         ->
+        let next =
+          Map.closest_key thumb.keys `Greater_or_equal_to 1
+          |> Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south)
+        in
+        Option.map2
+          ~f:
+            (cubic_base
+               ~n_steps:3
+               ?height:thumb_height
+               ?scale:thumb_cubic_scale
+               ?d:thumb_cubic_d )
+          next
+          thumb.sides.west
     and nw = corner thumb.sides.west w_n
     and w_link =
       Option.map2
@@ -507,21 +530,18 @@ let skeleton
         (Map.find body.sides.west 0)
     in
     let east_swoop =
+      Util.prepend_opt e_link
+      @@
       if close_thumb
       then (
         let _, scads =
           let join = join_walls ?n_steps:join_steps ?fudge_factor
           and get d = d.Walls.Thumb.south in
-          Map.fold_right
-            ~init:(None, Util.prepend_opt es (Option.to_list e_link))
-            ~f:(joiner ~get ~join)
-            thumb.keys
+          Map.fold_right ~init:(None, Option.to_list es) ~f:(joiner ~get ~join) thumb.keys
         in
         List.rev scads )
       else
-        Option.map2 ~f:(bez_base ?height:thumb_height ?n_steps) e_s w_s
-        |> Option.to_list
-        |> Util.prepend_opt e_link
+        Option.map2 ~f:(bez_base ?height:thumb_height ?n_steps) e_s w_s |> Option.to_list
     in
     east_swoop, List.filter_opt [ sw; nw; w_link ]
   in
