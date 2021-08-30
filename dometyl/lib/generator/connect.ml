@@ -494,10 +494,10 @@ let skeleton
       | None         ->
         Map.closest_key thumb.keys `Less_than (Map.length thumb.keys)
         |> Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south)
-        |> Option.map2 ~f:(bez_base ~n_steps:3 ?height:thumb_height) thumb.sides.east
+        |> Option.map2 ~f:(bez_base ?n_steps ?height:thumb_height) thumb.sides.east
     and e_link =
       if Option.is_some thumb.sides.east
-      then Option.map2 ~f:(bez_base ~n_steps:3 ?height) (col `S 2) thumb.sides.east
+      then Option.map2 ~f:(bez_base ?n_steps ?height) (col `S 2) thumb.sides.east
       else link (col `S 2) e_s
     and sw =
       match corner w_s thumb.sides.west with
@@ -510,7 +510,7 @@ let skeleton
         Option.map2
           ~f:
             (cubic_base
-               ~n_steps:3
+               ?n_steps
                ?height:thumb_height
                ?scale:thumb_cubic_scale
                ?d:thumb_cubic_d )
