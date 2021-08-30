@@ -503,7 +503,7 @@ let skeleton
              ?d:thumb_cubic_d
              ?n_steps
              ~bow_out:false )
-        w_n
+        (Option.first_some w_n thumb.sides.west)
         (Map.find body.sides.west 0)
     in
     let east_swoop =
