@@ -145,7 +145,6 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
  * implementing and switching to splines?
    Update: Clearance not using d1 has been added, so this is more of a cosmetic
    consideration now. *)
-(* TODO: see FIXME below in poly_siding step adjustment *)
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)

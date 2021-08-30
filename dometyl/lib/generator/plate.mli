@@ -132,10 +132,11 @@ val make
     hulling the {!KeyHole.Face.scad}s of the {!KeyHole.t}s together, for a closed
     switch-plate look (and sturdiness). Typically, a function such as this or
     {!val:skeleton_bridges} below will be used as as the [plate_welder] parameter
-    to {!Case.make}. Optional params [d1] and [d2] are passed on to {!Bridges.cols}
-    to control how far the lower key's face is moved out before being hulled with its
-    neighbours face. This can be used to thicken the generated supports. *)
-val column_joins : ?d1:float -> ?d2:float -> 'k t -> Model.t
+    to {!Case.make}. Optional params [in_d], [out_d1] and [out_d2] are passed on
+    to {!Bridges.cols} to control how far the lower key's face is moved out, and
+    the upper keys face is moved in before being hulled with its neighbours
+    across the gap. This can be used to thicken the generated supports. *)
+val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Model.t
 
 (** [skeleton_bridges ?d1 ?d2 t]
 
@@ -144,10 +145,11 @@ val column_joins : ?d1:float -> ?d2:float -> 'k t -> Model.t
     BastardKB skeletyl. This function, as well as {!val:column_joins} make use of
     functions found in the {!module:Bridges} module, if you are wanting to do
     something different, that would be a good place to get started. Optional
-    params [d1] and [d2] are passed on to {!Bridges.cols} to control how far the
-    lower key's face is moved out before being hulled with its neighbours face.
-    This can be used to thicken the generated supports. *)
-val skeleton_bridges : ?d1:float -> ?d2:float -> 'k t -> Model.t
+    params [in_d], [out_d1] and [out_d2] are passed on to {!Bridges.cols} to
+    control how far the lower key's face is moved out, and the upper keys face
+    is moved in before being hulled with its neighbours across the gap. This can
+    be used to thicken the generated supports. *)
+val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Model.t
 
 (** [to_scad t]
 

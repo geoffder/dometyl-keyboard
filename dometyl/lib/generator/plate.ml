@@ -192,13 +192,18 @@ let make
   ; thumb
   }
 
-let column_joins ?d1 ?d2 { config = { n_cols; _ }; columns; _ } =
-  let join = Bridge.cols ?d1 ?d2 ~columns in
+let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_cols; _ }; columns; _ } =
+  let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns in
   Model.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
-let skeleton_bridges ?d1 ?d2 { config = { n_rows; n_cols; _ }; columns; _ } =
+let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; columns; _ } =
   let bridge c k =
-    Bridge.keys ?d1 ?d2 (Columns.key_exn columns c k) (Columns.key_exn columns (c + 1) k)
+    Bridge.keys
+      ?in_d
+      ?out_d1
+      ?out_d2
+      (Columns.key_exn columns c k)
+      (Columns.key_exn columns (c + 1) k)
   in
   Model.union
   @@ List.init
