@@ -8,14 +8,14 @@ let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
   and b = Model.translate (Vec3.map (( *. ) d2) ortho) scad in
   Model.hull [ scad; a ], Model.hull [ a; b ]
 
-let keys (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
+let keys ?d1 ?d2 (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
   if Float.(
        Vec3.get_z k1.faces.east.points.centre > Vec3.get_z k2.faces.west.points.centre)
   then (
-    let a, b = slide ~ortho:(KeyHole.orthogonal k2 `West) k2.faces.west.scad in
+    let a, b = slide ?d1 ?d2 ~ortho:(KeyHole.orthogonal k2 `West) k2.faces.west.scad in
     Model.union [ Model.hull [ k1.faces.east.scad; b ]; a ] )
   else (
-    let a, b = slide ~ortho:(KeyHole.orthogonal k1 `East) k1.faces.east.scad in
+    let a, b = slide ?d1 ?d2 ~ortho:(KeyHole.orthogonal k1 `East) k1.faces.east.scad in
     Model.union [ Model.hull [ k2.faces.west.scad; b ]; a ] )
 
 let keys' (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
@@ -32,7 +32,7 @@ let keys' (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
 
 let joins j1 j2 = Model.hull Column.Join.[ j1.faces.east; j2.faces.west ]
 
-let cols ~columns a_i b_i =
+let cols ?d1 ?d2 ~columns a_i b_i =
   let a : _ Column.t = Map.find_exn columns a_i
   and b = Map.find_exn columns b_i
   and bookends keys join_idx =
@@ -40,7 +40,7 @@ let cols ~columns a_i b_i =
   in
   let key_folder ~key:_ ~data hulls =
     match data with
-    | `Both (a', b') -> keys a' b' :: hulls
+    | `Both (a', b') -> keys ?d1 ?d2 a' b' :: hulls
     | _              -> hulls
   and join_folder ~key ~data hulls =
     match data with
@@ -62,14 +62,14 @@ let cols ~columns a_i b_i =
           Vec3.(
             normalize (KeyHole.orthogonal e_last `West <+> KeyHole.orthogonal e_next `West))
         in
-        let j1, j2 = slide ~ortho e_join.faces.west in
+        let j1, j2 = slide ?d1 ?d2 ~ortho e_join.faces.west in
         j1 :: Model.hull [ w_join.faces.east; j2 ] :: hulls )
       else (
         let ortho =
           Vec3.(
             normalize (KeyHole.orthogonal w_last `East <+> KeyHole.orthogonal w_next `East))
         in
-        let j1, j2 = slide ~ortho w_join.faces.east in
+        let j1, j2 = slide ?d1 ?d2 ~ortho w_join.faces.east in
         j1 :: Model.hull [ e_join.faces.west; j2 ] :: hulls )
     | _ -> hulls
   in

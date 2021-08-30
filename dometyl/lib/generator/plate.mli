@@ -126,23 +126,28 @@ val make
   -> 'k KeyHole.t
   -> 'k t
 
-(** [column_joins t]
+(** [column_joins ?d1 ?d2 t]
 
     Returns a {!Model.t} scad which joins together all columns of the main plate by
     hulling the {!KeyHole.Face.scad}s of the {!KeyHole.t}s together, for a closed
     switch-plate look (and sturdiness). Typically, a function such as this or
     {!val:skeleton_bridges} below will be used as as the [plate_welder] parameter
-    to {!Case.make}. *)
-val column_joins : 'k t -> Model.t
+    to {!Case.make}. Optional params [d1] and [d2] are passed on to {!Bridges.cols}
+    to control how far the lower key's face is moved out before being hulled with its
+    neighbours face. This can be used to thicken the generated supports. *)
+val column_joins : ?d1:float -> ?d2:float -> 'k t -> Model.t
 
-(** [skeleton_bridges t]
+(** [skeleton_bridges ?d1 ?d2 t]
 
     Returns a {!Model.t} scad with "bridges" between the bottom row keys from
     index to middle, and the top keys for the remaining columns. Similar to the
     BastardKB skeletyl. This function, as well as {!val:column_joins} make use of
     functions found in the {!module:Bridges} module, if you are wanting to do
-    something different, that would be a good place to get started. *)
-val skeleton_bridges : 'k t -> Model.t
+    something different, that would be a good place to get started. Optional
+    params [d1] and [d2] are passed on to {!Bridges.cols} to control how far the
+    lower key's face is moved out before being hulled with its neighbours face.
+    This can be used to thicken the generated supports. *)
+val skeleton_bridges : ?d1:float -> ?d2:float -> 'k t -> Model.t
 
 (** [to_scad t]
 
