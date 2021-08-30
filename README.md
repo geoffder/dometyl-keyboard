@@ -48,9 +48,10 @@ install from the package repository).
 4. `opam install ./scad_ml.opam`
 
 ### opam dependencies
-The other dependencies are [base](https://github.com/janestreet/base) (standard
-library replacement) and [stdio](https://github.com/janestreet/stdio) from
-janestreet, both of which are available through the opam package manager.
+The other dependencies include [base](https://github.com/janestreet/base) and
+[stdio](https://github.com/janestreet/stdio) (standard library replacements)
+from janestreet, as well as a couple ppx rewriters, all of which are available
+through the opam package manager.
 * `opam install base stdio ppx_jane ppx_inline_test`
 
 ## Organization
