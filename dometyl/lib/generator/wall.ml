@@ -2,7 +2,6 @@ open Base
 open Scad_ml
 
 module Steps = struct
-  (* TODO: should name better, this is done as mm in z per step at the moment. *)
   type t =
     [ `PerZ of float
     | `Flat of int
@@ -96,9 +95,6 @@ let rotate_about_pt r p t =
   }
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
-  (* Iteratively find a rotation around it's bottom or top axis, depending on which way
-     face is pointing in z, that brings face to a more vertical orientation, returning
-     the pivoted face and it's new orthogonal. *)
   let quat = Quaternion.make (KeyHole.Face.direction face)
   and free, pivot, rock_z, z_sign =
     let ortho = Vec3.(normalize (face.points.centre <-> key_origin)) in
