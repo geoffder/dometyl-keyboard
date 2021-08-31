@@ -62,23 +62,6 @@ let make
   Model.union [ jack; usb; inset ]
   |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
 
-(* let carbonfet_elite ?(x_off = 0.) ?(y_off = -0.25) Walls.{ body = { cols; _ }; _ } =
- *   let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
- *   let right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
- *   let outer_y (foot : Points.t) =
- *     Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.
- *   in
- *   let cutout =
- *     Model.import "../things/carbonfet_holder/elite-c_holder.stl"
- *     |> Model.color Color.FireBrick
- *     |> Model.translate (-109.5, -123.8, 0.)
- *   in
- *   let x = Vec3.get_x left_foot.bot_left +. x_off
- *   and y = y_off +. ((outer_y left_foot +. outer_y right_foot) /. 2.) in
- *   (\* cutout roughly matching dimensions of holder outer face (lined-up) *\)
- *   let slab = Model.cube (28.266, 10., 12.) |> Model.translate (1.325, -8., 0.) in
- *   Model.translate (x, y, 0.) (Model.union [ cutout; slab ]) *)
-
 let carbonfet_holder
     ?(micro = false)
     ?(x_off = 0.)
@@ -104,5 +87,9 @@ let carbonfet_holder
     Model.cube (28.266, 10., 12.)
     |> Model.translate (1.325, -8., 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
+  and trrs_clearance =
+    Model.cube (8.4, 4., 5.)
+    |> Model.translate (2.62, -6., 12.)
+    |> Model.color ~alpha:0.5 Color.Salmon
   in
-  Model.translate (x, y, 0.) (Model.union [ cutout; slab ])
+  Model.translate (x, y, 0.) (Model.union [ cutout; slab; trrs_clearance ])
