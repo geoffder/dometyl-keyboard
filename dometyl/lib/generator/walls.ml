@@ -28,6 +28,7 @@ module Body = struct
         ?(thickness = 3.5)
         ?(clearance = 2.5)
         ?(n_steps = `Flat 4)
+        ?(n_facets = 1)
         ?(north_lookup = fun i -> if i = 2 || i = 4 then Screw else Yes)
         ?(south_lookup =
           function
@@ -38,7 +39,16 @@ module Body = struct
         Plate.{ config = { spacing; _ }; columns; _ }
       =
       let drop =
-        Wall.column_drop ~spacing ~columns ~z_off ~thickness ~clearance ~n_steps ~d1 ~d2
+        Wall.column_drop
+          ~spacing
+          ~columns
+          ~z_off
+          ~thickness
+          ~clearance
+          ~n_steps
+          ~n_facets
+          ~d1
+          ~d2
       in
       let bez_wall = function
         | No    -> fun _ _ -> None
@@ -91,6 +101,7 @@ module Body = struct
         ?(thickness = 3.5)
         ?(clearance = 3.)
         ?(n_steps = `Flat 4)
+        ?(n_facets = 1)
         ?(west_lookup = fun i -> if i = 0 then Screw else No)
         ?(east_lookup = fun _ -> No)
         ?(screw_config = Screw.m4_config)
@@ -98,7 +109,9 @@ module Body = struct
       =
       let west_col = Map.find_exn columns 0
       and _, east_col = Map.max_elt_exn columns
-      and siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps in
+      and siding =
+        Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps ~n_facets
+      in
       let sider side ~key ~data m =
         let lookup =
           match side with
@@ -147,6 +160,7 @@ module Body = struct
       ?thickness
       ?clearance
       ?n_steps
+      ?n_facets
       ?north_lookup
       ?south_lookup
       ?west_lookup
@@ -162,6 +176,7 @@ module Body = struct
           ?thickness
           ?clearance
           ?n_steps
+          ?n_facets
           ?north_lookup
           ?south_lookup
           ?screw_config
@@ -174,6 +189,7 @@ module Body = struct
           ?thickness
           ?clearance
           ?n_steps
+          ?n_facets
           ?west_lookup
           ?east_lookup
           ?screw_config
@@ -218,6 +234,7 @@ module Thumb = struct
       ?(thickness = 3.5)
       ?(clearance = 2.)
       ?(n_steps = `PerZ 4.)
+      ?(n_facets = 1)
       ?(north_lookup = fun i -> if i = 0 then Yes else No)
       ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Screw else No)
       ?(west = Yes)
@@ -225,7 +242,9 @@ module Thumb = struct
       ?(screw_config = Screw.m4_config)
       Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
     =
-    let siding = Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps in
+    let siding =
+      Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps ~n_facets
+    in
     let bez_wall = function
       | No    -> fun _ _ -> None
       | Yes   -> fun side i -> Some (siding side i)

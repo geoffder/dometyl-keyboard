@@ -47,3 +47,16 @@ let prepend_opt_map ~f opt l =
   match opt with
   | Some a -> f a :: l
   | None   -> l
+
+let fill_points ?(init = []) ~n a b =
+  if n < 1
+  then b :: a :: init
+  else (
+    let n' = n + 1 in
+    let step = Vec3.(map (fun p -> p /. Float.of_int n') (sub b a)) in
+    let rec loop acc i =
+      if i < n'
+      then loop (Vec3.(a <+> map (( *. ) (Float.of_int i)) step) :: acc) (i + 1)
+      else b :: acc
+    in
+    loop (a :: init) 1 )

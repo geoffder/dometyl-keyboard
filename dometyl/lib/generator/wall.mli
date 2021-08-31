@@ -55,6 +55,7 @@ val poly_siding
   -> ?z_off:float
   -> ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+  -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
@@ -70,6 +71,7 @@ val column_drop
   -> ?d2:float
   -> ?thickness:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+  -> ?n_facets:int
   -> ?screw_config:Screw.config
   -> spacing:float
   -> columns:'k Columns.t

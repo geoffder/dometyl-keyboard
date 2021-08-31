@@ -28,6 +28,7 @@ module Body : sig
       -> ?thickness:float
       -> ?clearance:float
       -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+      -> ?n_facets:int
       -> ?north_lookup:(int -> presence)
       -> ?south_lookup:(int -> presence)
       -> ?screw_config:Screw.config
@@ -58,6 +59,7 @@ module Body : sig
       -> ?thickness:float
       -> ?clearance:float
       -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+      -> ?n_facets:int
       -> ?west_lookup:(int -> presence)
       -> ?east_lookup:(int -> presence)
       -> ?screw_config:Screw.config
@@ -84,6 +86,7 @@ module Body : sig
     -> ?thickness:float
     -> ?clearance:float
     -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+    -> ?n_facets:int
     -> ?north_lookup:(int -> presence)
     -> ?south_lookup:(int -> presence)
     -> ?west_lookup:(int -> presence)
@@ -128,6 +131,7 @@ module Thumb : sig
     -> ?thickness:float
     -> ?clearance:float
     -> ?n_steps:[ `Flat of int | `PerZ of float ]
+    -> ?n_facets:int
     -> ?north_lookup:(int -> presence)
     -> ?south_lookup:(int -> presence)
     -> ?west:presence

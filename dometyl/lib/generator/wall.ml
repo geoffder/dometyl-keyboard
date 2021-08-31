@@ -151,6 +151,7 @@ let poly_siding
     ?(z_off = 0.)
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
+    ?(n_facets = 1)
     ?(d1 = 4.)
     ?(d2 = 7.)
     ?thickness
@@ -191,8 +192,20 @@ let poly_siding
     in
     p3, Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
-  let cw_points = Points.to_clockwise_list cleared_face.points in
-  let steps =
+  let cw_points =
+    let n = n_facets - 1 in
+    Util.fill_points
+      ~init:
+        (Util.fill_points ~n cleared_face.points.bot_left cleared_face.points.bot_right)
+      ~n
+      cleared_face.points.top_right
+      cleared_face.points.top_left
+  in
+  let corners =
+    (* drop the extra non-corner elements for intermediate facets *)
+    List.filteri ~f:(fun i _ ->
+        i = 0 || i = n_facets || i = n_facets + 1 || i = 3 + ((n_facets - 1) * 2) )
+  and steps =
     let adjust (_, _, z) =
       let lowest_z =
         let f m (_, _, z) = Float.min m z in
@@ -200,17 +213,16 @@ let poly_siding
       in
       Float.(to_int (z /. lowest_z *. of_int (Steps.to_int n_steps z)))
     in
-    `Ragged
-      (List.map2_exn ~f:(fun p a -> Int.max (adjust p + a) 2) cw_points [ 0; 0; 0; 0 ])
+    `Ragged (List.map ~f:adjust cw_points)
   and end_ps, bezs =
     List.foldi
       ~f:(fun i (ends, bs) p ->
-        let e, b = get_bez (i > 1) p in
+        let e, b = get_bez (i > n_facets) p in
         e :: ends, b :: bs )
       ~init:([], [])
       (List.rev cw_points)
   in
-  let foot = Points.of_clockwise_list_exn end_ps in
+  let foot = Points.of_clockwise_list_exn (corners end_ps) in
   let screw =
     Option.map
       ~f:(fun config ->
@@ -224,7 +236,7 @@ let poly_siding
       |> Model.union
   ; start = start_face.points
   ; foot
-  ; edges = Edges.of_clockwise_list_exn bezs
+  ; edges = Edges.of_clockwise_list_exn (corners bezs)
   ; screw
   }
 
@@ -235,6 +247,7 @@ let column_drop
     ?d2
     ?thickness
     ?n_steps
+    ?n_facets
     ?screw_config
     ~spacing
     ~columns
@@ -276,6 +289,7 @@ let column_drop
     ?d2
     ?thickness
     ?n_steps
+    ?n_facets
     ?screw_config
     side
     key

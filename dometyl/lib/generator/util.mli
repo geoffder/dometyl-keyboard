@@ -13,3 +13,4 @@ val bisection_exn
 
 val prepend_opt : 'a option -> 'a list -> 'a list
 val prepend_opt_map : f:('a -> 'b) -> 'a option -> 'b list -> 'b list
+val fill_points : ?init:Vec3.t list -> n:int -> Vec3.t -> Vec3.t -> Vec3.t list
