@@ -24,7 +24,16 @@ let wall_builder plate =
     }
 
 let base_connector =
-  Connect.closed ~n_steps:5 ~snake_d:2. ~snake_scale:3. ~snake_height:10. ~snake_steps:6
+  Connect.closed
+    ~join_west:true
+    ~n_steps:5
+    ~snake_d:2.
+    ~snake_scale:3.
+    ~snake_height:10.
+    ~snake_steps:6
+    ~cubic_d:3.
+    ~cubic_scale:0.25
+    ~cubic_height:15.
 
 let lookups =
   let offset = function

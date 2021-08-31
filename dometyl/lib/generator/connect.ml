@@ -553,12 +553,16 @@ let skeleton
   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
 let closed
+    ?(join_west = true)
     ?n_steps
     ?fudge_factor
     ?snake_d
     ?snake_scale
     ?snake_height
     ?snake_steps
+    ?cubic_height
+    ?cubic_scale
+    ?cubic_d
     Walls.{ body; thumb }
   =
   let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
@@ -615,10 +619,25 @@ let closed
               ?n_steps:snake_steps ) )
         (col `S 2)
         southeast
+    and w_link =
+      let link =
+        if join_west
+        then corner
+        else
+          Option.map2
+            ~f:
+              (cubic_base
+                 ?height:cubic_height
+                 ?scale:cubic_scale
+                 ?d:cubic_d
+                 ?n_steps
+                 ~bow_out:false )
+      in
+      link (Option.first_some northwest thumb.sides.west) west_body
     in
     prepend_corner southwest thumb.sides.west south
     |> prepend_corner thumb.sides.west northwest
-    |> prepend_corner (Option.first_some northwest thumb.sides.west) west_body
+    |> Util.prepend_opt w_link
     |> List.rev
     |> prepend_corner thumb.sides.east southeast
     |> Util.prepend_opt e_link

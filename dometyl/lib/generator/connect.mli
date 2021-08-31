@@ -88,12 +88,16 @@ val skeleton
   -> t
 
 val closed
-  :  ?n_steps:int
+  :  ?join_west:bool
+  -> ?n_steps:int
   -> ?fudge_factor:float
   -> ?snake_d:float
   -> ?snake_scale:float
   -> ?snake_height:float
   -> ?snake_steps:int
+  -> ?cubic_height:float
+  -> ?cubic_scale:float
+  -> ?cubic_d:float
   -> Walls.t
   -> t
 
