@@ -25,7 +25,8 @@ let base_connector =
     ~cubic_scale:1.
     ~thumb_cubic_d:1.
     ~thumb_cubic_scale:1.25
-    ~join_steps:3
+    ~body_join_steps:3
+    ~thumb_join_steps:3
     ~fudge_factor:8.
     ~close_thumb:true
     ~close_pinky:false

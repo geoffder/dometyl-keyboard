@@ -376,7 +376,8 @@ let skeleton
     ?height
     ?min_straight_width
     ?n_steps
-    ?join_steps
+    ?body_join_steps
+    ?thumb_join_steps
     ?(join_index = true)
     ?fudge_factor
     ?join_fudge_factor
@@ -423,7 +424,7 @@ let skeleton
   let north =
     let index =
       if join_index
-      then join_walls ?n_steps:join_steps ?fudge_factor:join_fudge_factor
+      then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
       else straight_base ~height:index_height ?min_width:min_straight_width ?fudge_factor
     in
     List.init
@@ -433,7 +434,7 @@ let skeleton
             ( if i = 0
             then index
             else if i >= pinky_idx - 1 && close_pinky
-            then join_walls ?n_steps:join_steps ?fudge_factor:join_fudge_factor
+            then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
             else straight_base ?height ?min_width:min_straight_width ?fudge_factor )
           (col `N i)
           (col `N (i + 1)) )
@@ -466,7 +467,7 @@ let skeleton
   let south =
     let base i =
       if i >= pinky_idx && close_pinky
-      then join_walls ?n_steps:join_steps ?fudge_factor
+      then join_walls ?n_steps:body_join_steps ?fudge_factor
       else if i = pinky_idx
       then inward_elbow_base ~d:1.5 ?height ?n_steps
       else straight_base ?height ?fudge_factor ?min_width:min_straight_width
@@ -481,7 +482,7 @@ let skeleton
   let east_swoop, west_swoop =
     let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
     and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
-    and corner = Option.map2 ~f:(join_walls ?n_steps:join_steps ~fudge_factor:0.)
+    and corner = Option.map2 ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0.)
     and link =
       Option.map2
         ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
@@ -535,7 +536,7 @@ let skeleton
       if close_thumb
       then (
         let _, scads =
-          let join = join_walls ?n_steps:join_steps ?fudge_factor
+          let join = join_walls ?n_steps:thumb_join_steps ?fudge_factor
           and get d = d.Walls.Thumb.south in
           Map.fold_right ~init:(None, Option.to_list es) ~f:(joiner ~get ~join) thumb.keys
         in

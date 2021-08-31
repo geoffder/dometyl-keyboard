@@ -69,7 +69,8 @@ val skeleton
   -> ?height:float
   -> ?min_straight_width:float
   -> ?n_steps:int
-  -> ?join_steps:int
+  -> ?body_join_steps:int
+  -> ?thumb_join_steps:int
   -> ?join_index:bool
   -> ?fudge_factor:float
   -> ?join_fudge_factor:float
