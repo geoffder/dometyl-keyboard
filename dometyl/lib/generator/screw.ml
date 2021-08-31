@@ -1,10 +1,15 @@
 open! Base
 open! Scad_ml
 
+type hole =
+  | Through
+  | Inset of float
+
 type config =
   { outer_rad : float
   ; inner_rad : float
   ; thickness : float
+  ; hole : hole
   }
 
 type t =
@@ -24,16 +29,17 @@ let rotate_about_pt r p t =
   ; centre = Vec3.rotate_about_pt r p t.centre
   }
 
-let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0 }
-let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0 }
+let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
+let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
+let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.; hole = Inset 0.5 }
 
-let make ~normal ({ outer_rad; inner_rad; thickness } as config) p1 p2 =
+let make ~normal ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2 =
   let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1))
   and hole_offset = Vec3.map (( *. ) outer_rad) normal
   and foot_offset = Vec3.map (( *. ) (-0.1)) normal in
   let hole_centre = Vec3.(base_centre <+> hole_offset) in
-  let circ = Model.circle ~fn:16 outer_rad |> Model.translate hole_centre
-  and hole = Model.circle ~fn:16 inner_rad |> Model.translate hole_centre
+  let outer = Model.circle ~fn:16 outer_rad |> Model.translate hole_centre
+  and inner = Model.circle ~fn:16 inner_rad |> Model.translate hole_centre
   and swoop p =
     let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
     hole_centre
@@ -48,9 +54,15 @@ let make ~normal ({ outer_rad; inner_rad; thickness } as config) p1 p2 =
     |> List.map ~f:Vec3.to_vec2
     |> Model.polygon
   in
+  let outline = Model.union [ outer; swoop p1; swoop p2 ] in
   { scad =
-      Model.difference (Model.union [ circ; swoop p1; swoop p2 ]) [ hole ]
-      |> Model.linear_extrude ~height:thickness
+      ( match hole with
+      | Through     ->
+        Model.difference outline [ inner ] |> Model.linear_extrude ~height:thickness
+      | Inset depth ->
+        Model.difference
+          (Model.linear_extrude ~height:thickness outline)
+          [ Model.linear_extrude ~height:depth inner ] )
   ; centre = hole_centre
   ; config
   }
