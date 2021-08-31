@@ -30,7 +30,7 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
-let make ~plate_welder ~wall_builder ~base_connector plate =
+let make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate =
   let walls = wall_builder plate in
   let connections = base_connector walls in
   { scad =
@@ -41,7 +41,7 @@ let make ~plate_welder ~wall_builder ~base_connector plate =
            ; Connect.to_scad connections
            ; plate_welder plate
            ] )
-        [ Ports.make walls; Plate.collect_cutouts plate ]
+        [ ports_cutter walls; Plate.collect_cutouts plate ]
   ; plate
   ; walls
   ; connections

@@ -38,6 +38,7 @@ val make
   :  plate_welder:('k Plate.t -> Model.t)
   -> wall_builder:('k Plate.t -> Walls.t)
   -> base_connector:(Walls.t -> Connect.t)
+  -> ports_cutter:(Walls.t -> Model.t)
   -> 'k Plate.t
   -> 'k t
 

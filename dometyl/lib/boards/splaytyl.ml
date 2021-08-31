@@ -33,11 +33,13 @@ let base_connector =
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
+let ports_cutter = Ports.make
+
 let build () =
   (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 () in
   let plate = Plate.make ~n_rows:3 ~n_cols:5 keyhole in
-  Case.make ~plate_welder ~wall_builder ~base_connector plate
+  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
 
 let bastard_compare () =
   Model.union

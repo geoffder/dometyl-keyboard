@@ -9,7 +9,8 @@ let wall_builder plate =
         Body.make
           ~west_lookup:(fun i -> if i = 1 then Screw else Yes)
           ~east_lookup:(fun i -> if i = 1 then Screw else Yes)
-          ~n_steps:(`PerZ 6.)
+          ~n_steps:(`Flat 5)
+          ~n_facets:2
           ~clearance:4.
           plate
     ; thumb =
@@ -17,12 +18,13 @@ let wall_builder plate =
           ~east:No
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
-          ~n_steps:(`PerZ 6.)
+          ~n_steps:(`Flat 5)
+          ~n_facets:4
           plate
     }
 
 let base_connector =
-  Connect.closed ~n_steps:4 ~snake_d:2. ~snake_scale:3. ~snake_height:10. ~snake_steps:6
+  Connect.closed ~n_steps:5 ~snake_d:2. ~snake_scale:3. ~snake_height:10. ~snake_steps:6
 
 let lookups =
   let offset = function
@@ -53,9 +55,8 @@ let lookups =
   in
   Plate.Lookups.make ~offset ~curve ~swing ~splay ()
 
-(* let plate_welder plate =
- *   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ] *)
 let plate_welder = Plate.column_joins
+let ports_cutter = Ports.make
 
 let build () =
   (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
@@ -77,7 +78,7 @@ let build () =
       ~lookups
       keyhole
   in
-  Case.make ~plate_welder ~wall_builder ~base_connector plate
+  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
 
 let compactyl =
   Model.import "../things/others/dereknheiley_compactyl_5x6.stl"

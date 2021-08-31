@@ -36,7 +36,7 @@ let base_connector =
     ~join_steps:3
     ~fudge_factor:8.
     ~join_index:true
-    ~close_thumb:true
+    ~close_thumb:false
     ~close_pinky:false
 
 let lookups =
@@ -60,6 +60,7 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~splay ~swing ()
 
 let plate_welder = Plate.skeleton_bridges
+let ports_cutter = Ports.make
 
 let build ?hotswap () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
@@ -76,7 +77,7 @@ let build ?hotswap () =
         Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
       keyhole
   in
-  Case.make ~plate_welder ~wall_builder ~base_connector plate
+  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
 
 let bastard_skelly =
   Model.import "../things/others/bastardkb_skeletyl_v3_v5.stl"

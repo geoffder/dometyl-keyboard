@@ -54,6 +54,8 @@ let lookups =
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
+let ports_cutter = Ports.make
+
 let build () =
   let keyhole = Choc.make_hole ~cap:Caps.mbk () in
   let plate =
@@ -73,4 +75,4 @@ let build () =
       ~lookups
       keyhole
   in
-  Case.make ~plate_welder ~wall_builder ~base_connector plate
+  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
