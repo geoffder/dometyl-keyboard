@@ -61,3 +61,48 @@ let make
   in
   Model.union [ jack; usb; inset ]
   |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
+
+(* let carbonfet_elite ?(x_off = 0.) ?(y_off = -0.25) Walls.{ body = { cols; _ }; _ } =
+ *   let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
+ *   let right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+ *   let outer_y (foot : Points.t) =
+ *     Vec3.(get_y foot.top_left +. get_y foot.top_right) /. 2.
+ *   in
+ *   let cutout =
+ *     Model.import "../things/carbonfet_holder/elite-c_holder.stl"
+ *     |> Model.color Color.FireBrick
+ *     |> Model.translate (-109.5, -123.8, 0.)
+ *   in
+ *   let x = Vec3.get_x left_foot.bot_left +. x_off
+ *   and y = y_off +. ((outer_y left_foot +. outer_y right_foot) /. 2.) in
+ *   (\* cutout roughly matching dimensions of holder outer face (lined-up) *\)
+ *   let slab = Model.cube (28.266, 10., 12.) |> Model.translate (1.325, -8., 0.) in
+ *   Model.translate (x, y, 0.) (Model.union [ cutout; slab ]) *)
+
+let carbonfet_holder
+    ?(micro = false)
+    ?(x_off = 0.)
+    ?(y_off = -0.25)
+    Walls.{ body = { cols; _ }; _ }
+  =
+  let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot
+  and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot
+  and cutout =
+    let import s = Model.import (Printf.sprintf "../things/carbonfet_holder/%s.stl" s) in
+    Model.color Color.FireBrick
+    @@
+    if micro
+    then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
+    else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
+  in
+  let x = Vec3.get_x left_foot.bot_left +. x_off
+  and y =
+    let outer (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
+    y_off +. ((outer left_foot +. outer right_foot) /. 2.)
+  (* cutout roughly matching dimensions of holder outer face (lined-up) *)
+  and slab =
+    Model.cube (28.266, 10., 12.)
+    |> Model.translate (1.325, -8., 0.)
+    |> Model.color ~alpha:0.5 Color.Salmon
+  in
+  Model.translate (x, y, 0.) (Model.union [ cutout; slab ])
