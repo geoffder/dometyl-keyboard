@@ -62,29 +62,33 @@ let make
   Model.union [ jack; usb; inset ]
   |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
 
-let carbonfet_holder
-    ?(micro = false)
+let tray_stl micro =
+  let import s = Model.import (Printf.sprintf "../things/carbonfet_holder/%s.stl" s) in
+  Model.color Color.FireBrick
+  @@
+  if micro
+  then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
+  else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
+
+let place_tray
     ?(x_off = 0.)
     ?(y_off = -0.25)
+    ?(z_rot = 0.)
     Walls.{ body = { cols; _ }; _ }
+    scad
   =
   let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot
-  and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot
-  and cutout =
-    let import s = Model.import (Printf.sprintf "../things/carbonfet_holder/%s.stl" s) in
-    Model.color Color.FireBrick
-    @@
-    if micro
-    then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
-    else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
-  in
+  and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
   let x = Vec3.get_x left_foot.bot_left +. x_off
   and y =
     let outer (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
     y_off +. ((outer left_foot +. outer right_foot) /. 2.)
-  (* cutout roughly matching dimensions of holder outer face (lined-up) *)
-  and slab =
-    Model.cube (28.266, 10., 12.)
+  in
+  Model.rotate (0., 0., z_rot) scad |> Model.translate (x, y, 0.)
+
+let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot walls =
+  let slab =
+    Model.cube (28.266, 15., 12.)
     |> Model.translate (1.325, -8., 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
   and trrs_clearance =
@@ -92,4 +96,9 @@ let carbonfet_holder
     |> Model.translate (2.62, -6., 12.)
     |> Model.color ~alpha:0.5 Color.Salmon
   in
-  Model.translate (x, y, 0.) (Model.union [ cutout; slab; trrs_clearance ])
+  place_tray
+    ?x_off
+    ?y_off
+    ?z_rot
+    walls
+    (Model.union [ tray_stl micro; slab; trrs_clearance ])

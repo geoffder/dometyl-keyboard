@@ -15,6 +15,20 @@ val make
   -> Walls.t
   -> Model.t
 
-(* val carbonfet_elite : ?x_off:float -> ?y_off:float -> Walls.t -> Model.t
- * val carbonfet_micro : ?x_off:float -> ?y_off:float -> Walls.t -> Model.t *)
-val carbonfet_holder : ?micro:bool -> ?x_off:float -> ?y_off:float -> Walls.t -> Model.t
+val tray_stl : bool -> Model.t
+
+val place_tray
+  :  ?x_off:float
+  -> ?y_off:float
+  -> ?z_rot:float
+  -> Walls.t
+  -> Model.t
+  -> Model.t
+
+val carbonfet_holder
+  :  ?micro:bool
+  -> ?x_off:float
+  -> ?y_off:float
+  -> ?z_rot:float
+  -> Walls.t
+  -> Model.t
