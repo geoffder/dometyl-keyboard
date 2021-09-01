@@ -65,11 +65,12 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~swing ~splay ()
 
 let plate_welder = Plate.column_joins
-let ports_cutter = Ports.make
+let carbon_x = 0.
+let carbon_y = -2.5
+let carbon_z = Float.pi /. 30.
 
-let build () =
-  (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 () in
+let build ?hotswap ~ports_cutter () =
+  let keyhole = Mx.make_hole ?hotswap ~cap:Caps.sa_r3 () in
   let plate =
     Plate.make
       ~n_rows:4
@@ -89,6 +90,12 @@ let build () =
   in
   Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
 
+let ports_build = build ~ports_cutter:Ports.make
+
+let carbon_build =
+  build
+    ~ports_cutter:(Ports.carbonfet_holder ~x_off:carbon_x ~y_off:carbon_y ~z_rot:carbon_z)
+
 let compactyl =
   Model.import "../things/others/dereknheiley_compactyl_5x6.stl"
   |> Model.rotate (0., Float.pi /. -8., 0.)
@@ -98,5 +105,18 @@ let compactyl =
 let compactyl_compare () =
   Model.union
     [ compactyl
-    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    ; Case.to_scad ~show_caps:false (build ~ports_cutter:Ports.make ())
+      |> Model.color ~alpha:0.5 Color.Yellow
+    ]
+
+let carbonfet_ex () =
+  let case = carbon_build () in
+  Model.union
+    [ Case.to_scad ~show_caps:true case
+    ; Ports.place_tray
+        ~x_off:0.
+        ~y_off:(-2.5)
+        ~z_rot:(Float.pi /. 30.)
+        case.walls
+        (Ports.tray_stl false)
     ]
