@@ -91,9 +91,10 @@ let make_hole
     ?(clearance = 3.)
     ()
   =
-  let clearance, clip, cutout =
+  let thickness, clearance, clip, cutout =
     match hotswap with
     | Some facing ->
+      let thickness = 5. (* Thickness must be 5, correct depth to sockets. *) in
       let swap, cutout = Hotswap.make ~inner_w ~inner_h facing in
       let clip hole =
         Model.union
@@ -101,8 +102,11 @@ let make_hole
           ; Model.translate (0., 0., thickness /. -2.) swap
           ]
       in
-      clearance +. 3., clip, Some (Model.translate (0., 0., thickness /. -2.) cutout)
-    | None        -> clearance, teeth ~inner_h ~thickness, None
+      ( thickness
+      , clearance +. 3.
+      , clip
+      , Some (Model.translate (0., 0., thickness /. -2.) cutout) )
+    | None        -> thickness, clearance, teeth ~inner_h ~thickness, None
   in
   KeyHole.(
     make
