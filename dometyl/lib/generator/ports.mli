@@ -42,3 +42,18 @@ val reversible_holder
   -> ?z_rot:float
   -> Walls.t
   -> Model.t
+
+module BastardShield : sig
+  type t =
+    { pcb : Model.t
+    ; screw_l : Vec3.t
+    ; screw_r : Vec3.t
+    }
+
+  val t : t
+
+  include Sigs.Transformable with type t := t
+
+  val screws : t -> Model.t
+  val to_scad : ?show_screws:bool -> t -> Model.t
+end

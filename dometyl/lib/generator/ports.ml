@@ -127,3 +127,47 @@ let reversible_holder ?(reset_button = false) ?x_off ?y_off ?z_rot walls =
     ?z_rot
     walls
     (Model.union [ derek_reversible_stl reset_button; through; front ])
+
+module BastardShield = struct
+  type t =
+    { pcb : Model.t
+    ; screw_l : Vec3.t
+    ; screw_r : Vec3.t
+    }
+
+  let t =
+    let offset = -7.5, -27.25, 0.5 in
+    let screw_l = Vec3.((4.1, -0.15, 0.) <+> offset)
+    and screw_r = Vec3.((36.15, 22.7, 0.) <+> offset)
+    and pcb =
+      Model.import "../things/holders/bastardkb/elite-c_shield.dxf"
+      |> Model.translate offset
+      |> Model.color ~alpha:0.5 Color.Silver
+    in
+    { pcb; screw_l; screw_r }
+
+  let translate p t =
+    { pcb = Model.translate p t.pcb
+    ; screw_l = Vec3.add p t.screw_l
+    ; screw_r = Vec3.add p t.screw_r
+    }
+
+  let rotate r t =
+    { pcb = Model.rotate r t.pcb
+    ; screw_l = Vec3.rotate r t.screw_l
+    ; screw_r = Vec3.rotate r t.screw_r
+    }
+
+  let rotate_about_pt r p t =
+    { pcb = Model.rotate_about_pt r p t.pcb
+    ; screw_l = Vec3.rotate_about_pt r p t.screw_l
+    ; screw_r = Vec3.rotate_about_pt r p t.screw_r
+    }
+
+  let screws t =
+    let cyl = Model.cylinder ~center:true 2.25 5. |> Model.color ~alpha:0.5 Color.Black in
+    Model.union [ Model.translate t.screw_l cyl; Model.translate t.screw_r cyl ]
+
+  let to_scad ?(show_screws = false) t =
+    if show_screws then Model.union [ t.pcb; screws t ] else t.pcb
+end
