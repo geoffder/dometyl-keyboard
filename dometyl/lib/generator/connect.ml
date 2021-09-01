@@ -9,16 +9,6 @@ type t =
   ; inline : Vec3.t list
   }
 
-let bounding_box { outline; _ } =
-  let f (top, right, bot, left) (x, y, _) =
-    let top' = Float.max top y
-    and right' = Float.max right x
-    and bot' = Float.min bot y
-    and left' = Float.min left x in
-    top', right', bot', left'
-  in
-  List.fold ~f ~init:Float.(min_value, min_value, max_value, max_value) outline
-
 let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
 
 let translate p t =
@@ -319,9 +309,10 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     Vec3.(add (mul dir (-.extra, -.extra, 0.)))
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy in
-    if (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
-       && Float.(abs major_diff > abs minor_diff)
-    then Float.abs major_diff
+    if ( (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
+       && Float.(abs major_diff > abs minor_diff) )
+       || Points.overlapping_bounds w1.foot w2.foot
+    then Float.abs major_diff *. 1.1
     else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in

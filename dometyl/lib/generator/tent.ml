@@ -52,7 +52,7 @@ let make
     ?(bumpon_inset = 0.5)
     (case : _ Case.t)
   =
-  let _, bb_right, _, bb_left = Connect.bounding_box case.connections
+  let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
   and screws = Walls.collect_screws case.Case.walls
   and perimeter =
     Model.difference

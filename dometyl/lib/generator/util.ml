@@ -60,3 +60,27 @@ let fill_points ?(init = []) ~n a b =
       else b :: acc
     in
     loop (a :: init) 1 )
+
+let bounding_box poly =
+  let f (top, right, bot, left) (x, y, _) =
+    let top' = Float.max top y
+    and right' = Float.max right x
+    and bot' = Float.min bot y
+    and left' = Float.min left x in
+    top', right', bot', left'
+  in
+  List.fold ~f ~init:Float.(min_value, min_value, max_value, max_value) poly
+
+let point_in_polygon (x, y, _) poly =
+  let open Float in
+  let top, right, bot, left = bounding_box poly in
+  if x < left || x > right || y < bot || y > top
+  then false
+  else (
+    let f (inside, (bx, by, _)) ((ax, ay, _) as a) =
+      if (not (Bool.equal (ay > y) (by > y)))
+         && x < ((bx - ax) * (y - ay) /. (by - ay)) + ax
+      then not inside, a
+      else inside, a
+    in
+    fst @@ List.fold ~init:(false, List.last_exn poly) ~f poly )

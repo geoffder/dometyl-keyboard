@@ -7,7 +7,6 @@ type t =
   ; inline : Vec3.t list
   }
 
-val bounding_box : t -> float * float * float * float
 val centre : float * float * float * float -> float * float
 val translate : Vec3.t -> t -> t
 val rotate : Vec3.t -> t -> t

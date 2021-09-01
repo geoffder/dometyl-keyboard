@@ -51,6 +51,16 @@ let of_clockwise_list l =
   try Ok (of_clockwise_list_exn l) with
   | Failure e -> Error e
 
+let overlapping_bounds a b =
+  let a_t, a_r, a_b, a_l = Util.bounding_box (to_clockwise_list a)
+  and b_t, b_r, b_b, b_l = Util.bounding_box (to_clockwise_list b) in
+  (* intersection rectangle *)
+  let top = Float.min a_t b_t
+  and right = Float.min a_r b_r
+  and bot = Float.max a_b b_b
+  and left = Float.max a_l b_l in
+  not Float.(right < left || top < bot)
+
 let get t = function
   | `TL -> t.top_left
   | `TR -> t.top_right
