@@ -4,31 +4,33 @@ open! Generator
 
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
+    { body = Body.make ~n_facets:3 ~n_steps:(`Flat 3) ~clearance:1.5 plate
     ; thumb =
         Thumb.make
-          ~south_lookup:(fun _ -> Yes)
+          ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east:No
           ~west:Screw
           ~clearance:1.5
-          ~n_steps:(`Flat 3)
+          ~n_facets:3
+          ~n_steps:(`Flat 4)
           plate
     }
 
 let base_connector =
   Connect.skeleton
     ~height:7.
-    ~thumb_height:11.
+    ~thumb_height:13.
     ~snake_scale:1.3
     ~snake_d:1.4
     ~cubic_d:2.
     ~cubic_scale:1.
     ~thumb_cubic_d:1.
     ~thumb_cubic_scale:1.25
+    ~n_steps:9
     ~body_join_steps:3
-    ~thumb_join_steps:3
+    ~thumb_join_steps:4
     ~fudge_factor:8.
-    ~close_thumb:true
+    ~close_thumb:false
     ~close_pinky:false
 
 let lookups =
@@ -40,11 +42,12 @@ let lookups =
     | _ -> 0., 0., 1.5
   and curve = function
     | i when i >= 3 ->
-      Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 5.3)) ()) (* pinky and ring *)
+      Curvature.(curve ~well:(spec ~radius:34.5 (Float.pi /. 5.3)) ())
+      (* pinky and ring *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:38. (Float.pi /. 5.3)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 6.0)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:36.5 (Float.pi /. 5.3)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:38. (Float.pi /. 6.0)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -15. (* pinky *)
@@ -56,6 +59,7 @@ let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
 let ports_cutter = Ports.make
+(* let ports_cutter = Ports.carbonfet_holder ~x_off:0. ~y_off:(-0.75) *)
 
 let build () =
   let keyhole = Choc.make_hole ~cap:Caps.mbk () in
