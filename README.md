@@ -111,7 +111,7 @@ be filling in over time.
   ![splaytyl screw view](images/splaytyl_screw_view.png)
   ![splaytyl bumpon view](images/splaytyl_bumpon.png)
 * Base plate and configurable tent can be generated to fit your case.
-  ![splaytyl bottom plate](images/splatyl_bottom_plate.png)
+  ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
   ![splaytyl tent](images/splaytyl_tent.png)
   ![splaytyl tent underside](images/splaytyl_tent_underside.png)
 
