@@ -98,14 +98,16 @@ be filling in over time.
   [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
   the addition of aggresive secondary column tilt. ![deractyl
   prototype](images/deractyl_prototype.png)
-* There is also support for using the
-  ![carbonfet](https://github.com/carbonfet/dactyl-manuform) TRRS/MCU holder
-  trays (elite-C and pro-micro). Rough placement is done with the help of wall
+* There is also support for using the TRRS/MCU holders from
+  ![dereknheiley](https://github.com/dereknheiley/dactyl-manuform-tight)
+  (reversible, elite-C without and without reset button access) and
+  ![carbonfet](https://github.com/carbonfet/dactyl-manuform)
+  (non-reversible, elite-C and pro-micro). Rough placement is done with the help of wall
   coordinates, with offset and rotation parameters available to fine-tune.
   Eventually a more tailored holder should be available, but these existing stls
-  can get the job done.
-  ![holder outside view](images/deractyl_carbonfet_outside.png)
-  ![holder inside view](images/deractyl_carbonfet_inside.png)
+  can get the job done today.
+  ![derek holder with reset button](images/deractyl_elite_w_reset_button.png)
+  ![derek holder inside view](images/deractyl_elite-c_underside.png)
 * Configurable heat-set insert screw holes (visible in other examples) or
   bumpon feet can be placed at the base of walls of your choosing
   ![splaytyl bumpon view](images/splaytyl_bumpon.png)

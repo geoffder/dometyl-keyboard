@@ -65,9 +65,6 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~swing ~splay ()
 
 let plate_welder = Plate.column_joins
-let carbon_x = 0.
-let carbon_y = -2.5
-let carbon_z = Float.pi /. 30.
 
 let build ?hotswap ~ports_cutter () =
   let keyhole = Mx.make_hole ?hotswap ~cap:Caps.sa_r3 () in
@@ -91,10 +88,22 @@ let build ?hotswap ~ports_cutter () =
   Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
 
 let ports_build = build ~ports_cutter:Ports.make
+let carbon_x = 0.
+let carbon_y = -2.5
+let carbon_z = Float.pi /. 30.
 
 let carbon_build =
   build
     ~ports_cutter:(Ports.carbonfet_holder ~x_off:carbon_x ~y_off:carbon_y ~z_rot:carbon_z)
+
+let derek_x = 0.
+let derek_y = -2.8
+let derek_z = Float.pi /. 25.
+
+let derek_build reset_button =
+  build
+    ~ports_cutter:
+      (Ports.reversible_holder ~reset_button ~x_off:derek_x ~y_off:derek_y ~z_rot:derek_z)
 
 let compactyl =
   Model.import "../things/others/dereknheiley_compactyl_5x6.stl"
@@ -114,9 +123,21 @@ let carbonfet_ex () =
   Model.union
     [ Case.to_scad ~show_caps:true case
     ; Ports.place_tray
-        ~x_off:0.
-        ~y_off:(-2.5)
-        ~z_rot:(Float.pi /. 30.)
+        ~x_off:carbon_x
+        ~y_off:carbon_y
+        ~z_rot:carbon_z
         case.walls
-        (Ports.tray_stl false)
+        (Ports.carbonfet_stl false)
+    ]
+
+let reversible_ex ?(reset_button = false) () =
+  let case = derek_build reset_button () in
+  Model.union
+    [ Case.to_scad ~show_caps:true case
+    ; Ports.place_tray
+        ~x_off:derek_x
+        ~y_off:derek_y
+        ~z_rot:derek_z
+        case.walls
+        (Ports.derek_reversible_stl reset_button)
     ]

@@ -62,14 +62,6 @@ let make
   Model.union [ jack; usb; inset ]
   |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
 
-let tray_stl micro =
-  let import s = Model.import (Printf.sprintf "../things/carbonfet_holder/%s.stl" s) in
-  Model.color Color.FireBrick
-  @@
-  if micro
-  then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
-  else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
-
 let place_tray
     ?(x_off = 0.)
     ?(y_off = -0.25)
@@ -86,6 +78,14 @@ let place_tray
   in
   Model.rotate (0., 0., z_rot) scad |> Model.translate (x, y, 0.)
 
+let carbonfet_stl micro =
+  let import s = Model.import (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
+  Model.color Color.FireBrick
+  @@
+  if micro
+  then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
+  else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
+
 let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot walls =
   let slab =
     Model.cube (28.266, 15., 12.)
@@ -101,4 +101,29 @@ let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot walls =
     ?y_off
     ?z_rot
     walls
-    (Model.union [ tray_stl micro; slab; trrs_clearance ])
+    (Model.union [ carbonfet_stl micro; slab; trrs_clearance ])
+
+let derek_reversible_stl reset_button =
+  (if reset_button then "elite-c_holder_w_reset" else "elite-c_holder")
+  |> Printf.sprintf "../things/holders/dereknheiley/%s.stl"
+  |> Model.import
+  |> Model.translate (15.3, 0., 0.)
+  |> Model.color Color.FireBrick
+
+let reversible_holder ?(reset_button = false) ?x_off ?y_off ?z_rot walls =
+  let h = if reset_button then 15. else 8.4 in
+  let through =
+    Model.cube (27.6, 12., h)
+    |> Model.translate (1.5, -7., 0.)
+    |> Model.color ~alpha:0.5 Color.Salmon
+  and front =
+    Model.cube (30.6, 4., h)
+    |> Model.translate (0., -0.5, 0.)
+    |> Model.color ~alpha:0.5 Color.Salmon
+  in
+  place_tray
+    ?x_off
+    ?y_off
+    ?z_rot
+    walls
+    (Model.union [ derek_reversible_stl reset_button; through; front ])

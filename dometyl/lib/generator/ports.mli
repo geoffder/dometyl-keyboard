@@ -15,8 +15,6 @@ val make
   -> Walls.t
   -> Model.t
 
-val tray_stl : bool -> Model.t
-
 val place_tray
   :  ?x_off:float
   -> ?y_off:float
@@ -25,8 +23,20 @@ val place_tray
   -> Model.t
   -> Model.t
 
+val carbonfet_stl : bool -> Model.t
+
 val carbonfet_holder
   :  ?micro:bool
+  -> ?x_off:float
+  -> ?y_off:float
+  -> ?z_rot:float
+  -> Walls.t
+  -> Model.t
+
+val derek_reversible_stl : bool -> Model.t
+
+val reversible_holder
+  :  ?reset_button:bool
   -> ?x_off:float
   -> ?y_off:float
   -> ?z_rot:float
