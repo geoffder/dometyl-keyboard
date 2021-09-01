@@ -4,10 +4,19 @@ open! Generator
 
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_facets:3 ~n_steps:(`Flat 3) ~clearance:1.5 plate
+    { body =
+        Body.make
+          ~n_facets:3
+          ~n_steps:(`Flat 3)
+          ~clearance:2.5
+          ~west_lookup:(function
+            | 0 -> Screw
+            | 1 -> Yes
+            | _ -> No )
+          plate
     ; thumb =
-        Thumb.make
-          ~south_lookup:(fun i -> if i = 1 then No else Yes)
+        Thumb.make (* ~south_lookup:(fun i -> if i = 1 then No else Yes) *)
+          ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Screw
           ~clearance:1.5
@@ -19,18 +28,29 @@ let wall_builder plate =
 let base_connector =
   Connect.skeleton
     ~height:7.
-    ~thumb_height:13.
+    ~index_height:15.
+    ~thumb_height:15.
     ~snake_scale:1.3
     ~snake_d:1.4
     ~cubic_d:2.
     ~cubic_scale:1.
-    ~thumb_cubic_d:1.
-    ~thumb_cubic_scale:1.25
+    ~thumb_cubic_d:0.5
+    ~thumb_cubic_scale:1.5
     ~n_steps:9
     ~body_join_steps:3
     ~thumb_join_steps:4
     ~fudge_factor:8.
-    ~close_thumb:false
+    ~close_thumb:true
+
+let default_curve = function
+  | i when i = 3 ->
+    Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ()) (* ring *)
+  | i when i > 3 ->
+    Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
+  | i when i = 0 ->
+    Curvature.(
+      curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:45. (Float.pi /. 6.)) ())
+  | _ -> Curvature.(curve ~well:(spec ~radius:46. (Float.pi /. 6.3)) ())
 
 let lookups =
   let offset = function
@@ -40,13 +60,14 @@ let lookups =
     | 0 -> -2.25, 0., 8.
     | _ -> 0., 0., 1.5
   and curve = function
-    | i when i >= 3 ->
-      Curvature.(curve ~well:(spec ~radius:34.5 (Float.pi /. 5.3)) ())
-      (* pinky and ring *)
+    | i when i = 3 ->
+      Curvature.(curve ~well:(spec ~radius:30. (Float.pi /. 4.5)) ()) (* pinky  *)
+    | i when i > 3 ->
+      Curvature.(curve ~well:(spec ~radius:25. (Float.pi /. 3.6)) ()) (* pinky  *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:36.5 (Float.pi /. 5.3)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:38. (Float.pi /. 6.0)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:32. (Float.pi /. 4.5)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:34. (Float.pi /. 5.25)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -15. (* pinky *)
@@ -68,13 +89,13 @@ let build () =
       ~n_cols:5
       ~spacing:0.5
       ~tent:(Float.pi /. 12.)
-      ~thumb_offset:(-16., -44.5, 13.5)
+      ~thumb_offset:(-18., -42.5, 13.5)
       ~thumb_angle:Float.(pi /. 12., pi /. -4.75, pi /. 5.5)
       ~thumb_curve:
         Curvature.(
           curve
             ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 24. }
-            ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
+            ~well:{ angle = Float.pi /. 5.; radius = 30.; tilt = 0. }
             ())
       ~lookups
       keyhole
