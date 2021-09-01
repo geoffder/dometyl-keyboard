@@ -350,7 +350,10 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
       [ (if outward then fudge else Fn.id) w1.foot.top_right
       ; (if outward then Fn.id else fudge) w2.foot.top_left
       ]
-  ; inline = [ w1.foot.bot_right; w2.foot.bot_left ]
+  ; inline =
+      [ Vec3.(add (mul dir1 (overlap, overlap, 0.)) w1.foot.bot_right)
+      ; Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.)) w2.foot.bot_left)
+      ]
   }
 
 let joiner ~get ~join ~key:_ ~data (last, scads) =
