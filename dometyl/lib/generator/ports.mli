@@ -7,6 +7,7 @@ val make
   -> ?jack_width:float
   -> ?usb_height:float
   -> ?usb_width:float
+  -> ?usb_z_off:float
   -> ?board_width:float
   -> ?board_thickness:float
   -> ?dist:float

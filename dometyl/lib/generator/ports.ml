@@ -3,15 +3,16 @@ open! Scad_ml
 
 let make
     ?(length = 2.)
-    ?(jack_radius = 2.65)
+    ?(jack_radius = 2.49)
     ?(jack_width = 6.2)
     ?(usb_height = 3.6)
-    ?(usb_width = 9.5)
+    ?(usb_width = 9.575)
+    ?(usb_z_off = 0.35)
     ?(board_width = 21.)
     ?(board_thickness = 2.)
-    ?(dist = 15.5)
-    ?(x_off = 4.)
-    ?(z_off = 7.)
+    ?(dist = 16.)
+    ?(x_off = 3.25)
+    ?(z_off = 6.4)
     Walls.{ body = { cols; _ }; _ }
   =
   let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
@@ -31,7 +32,7 @@ let make
       [ Model.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
       ; Model.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
       ]
-    |> Model.translate (dist, 0., 0.)
+    |> Model.translate (dist, 0., usb_z_off)
   and inset =
     let fudge = 5. (* extra y length back into case for inset *)
     and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
