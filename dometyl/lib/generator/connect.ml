@@ -372,7 +372,6 @@ let skeleton
     ?n_steps
     ?body_join_steps
     ?thumb_join_steps
-    ?(join_index = true)
     ?fudge_factor
     ?join_fudge_factor
     ?snake_d
@@ -382,9 +381,10 @@ let skeleton
     ?thumb_cubic_d
     ?thumb_cubic_scale
     ?thumb_height
+    ?(north_joins = fun i -> i = 0)
+    ?(south_joins = fun _ -> false)
     ?(pinky_idx = 4)
     ?(close_thumb = false)
-    ?(close_pinky = false)
     Walls.{ body; thumb }
   =
   (* TODO:
@@ -416,20 +416,17 @@ let skeleton
     List.rev @@ Util.prepend_opt corner side
   in
   let north =
-    let index =
-      if join_index
-      then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
-      else straight_base ~height:index_height ?min_width:min_straight_width ?fudge_factor
-    in
     List.init
       ~f:(fun i ->
         Option.map2
           ~f:
-            ( if i = 0
-            then index
-            else if i >= pinky_idx - 1 && close_pinky
+            ( if north_joins i
             then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
-            else straight_base ?height ?min_width:min_straight_width ?fudge_factor )
+            else
+              straight_base
+                ?height:(if i = 0 then Some index_height else height)
+                ?min_width:min_straight_width
+                ?fudge_factor )
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
@@ -460,7 +457,7 @@ let skeleton
   in
   let south =
     let base i =
-      if i >= pinky_idx && close_pinky
+      if south_joins i
       then join_walls ?n_steps:body_join_steps ?fudge_factor
       else if i = pinky_idx
       then inward_elbow_base ~d:1.5 ?height ?n_steps

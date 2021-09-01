@@ -11,18 +11,20 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 4., -6. (* middle *)
-    | 3 -> 2.5, -1., 0. (* ring *)
-    | i when i >= 4 -> 0.5, -22., 9.5 (* pinky *)
+    | 3 -> 2.25, -2., 0. (* ring *)
+    | i when i >= 4 -> 0.75, -22., 9.5 (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
   let default_curve = function
-    | i when i >= 3 ->
-      Curvature.(curve ~well:(spec ~radius:50. (Float.pi /. 7.)) ()) (* pinky and ring *)
+    | i when i = 3 ->
+      Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ()) (* ring *)
+    | i when i > 3 ->
+      Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:45. (Float.pi /. 6.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:46. (Float.pi /. 6.3)) ())
 
   (* post tenting, this can be used to undo tent angle (y-rotation) *)
   let default_swing = function
@@ -30,7 +32,7 @@ module Lookups = struct
 
   let default_splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
-    | i when i >= 4 -> Float.pi /. -15. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -13. (* pinky *)
     | _ -> 0.
 
   let make
@@ -106,8 +108,8 @@ let make
     ?(thumb_curve =
       Curvature.(
         curve
-          ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 24. }
-          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. })
+          ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 24. }
+          ~well:{ angle = Float.pi /. 6.2; radius = 47.; tilt = 0. })
         ())
     ?(rotate_thumb_clips = false)
     ?(thumb_offset = -16., -44.5, 13.5)

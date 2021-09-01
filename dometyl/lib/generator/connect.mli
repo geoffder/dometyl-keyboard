@@ -70,7 +70,6 @@ val skeleton
   -> ?n_steps:int
   -> ?body_join_steps:int
   -> ?thumb_join_steps:int
-  -> ?join_index:bool
   -> ?fudge_factor:float
   -> ?join_fudge_factor:float
   -> ?snake_d:float
@@ -80,9 +79,10 @@ val skeleton
   -> ?thumb_cubic_d:float
   -> ?thumb_cubic_scale:float
   -> ?thumb_height:float
+  -> ?north_joins:(int -> bool)
+  -> ?south_joins:(int -> bool)
   -> ?pinky_idx:int
   -> ?close_thumb:bool
-  -> ?close_pinky:bool
   -> Walls.t
   -> t
 

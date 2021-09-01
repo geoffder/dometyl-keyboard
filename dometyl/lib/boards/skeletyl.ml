@@ -36,9 +36,7 @@ let base_connector =
     ~body_join_steps:3
     ~thumb_join_steps:3
     ~fudge_factor:8.
-    ~join_index:true
     ~close_thumb:false
-    ~close_pinky:false
 
 let lookups =
   let offset = function

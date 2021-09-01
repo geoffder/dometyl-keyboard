@@ -29,7 +29,6 @@ let base_connector =
     ~thumb_join_steps:3
     ~fudge_factor:8.
     ~close_thumb:true
-    ~close_pinky:false
 
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]

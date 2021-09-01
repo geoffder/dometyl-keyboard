@@ -31,7 +31,6 @@ let base_connector =
     ~thumb_join_steps:4
     ~fudge_factor:8.
     ~close_thumb:false
-    ~close_pinky:false
 
 let lookups =
   let offset = function
