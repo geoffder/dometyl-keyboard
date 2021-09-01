@@ -34,14 +34,15 @@ let () =
   Stdio.print_endline "Building (and maybe exporting) scads...";
   (* write_thing "mx_keyhole" (KeyHole.make Mx.hole_config).scad; *)
   (* write_thing "niz_keyhole" (KeyHole.make Niz.hole_config).scad; *)
-  write_thing "case" (Case.to_scad ~show_cutouts:false ~show_caps:true case);
-  write_thing "choctyl" (Case.to_scad ~show_caps:true (Choctyl.build ()));
-  write_thing "deractyl" (Case.to_scad ~show_caps:true (Deractyl.build ()));
+  write_thing "case" (Case.to_scad ~show_cutouts:false ~show_caps:false case);
+  write_thing "choctyl" (Case.to_scad ~show_caps:false (Choctyl.build ()));
+  write_thing "deractyl" (Case.to_scad ~show_caps:false (Deractyl.ports_build ()));
   write_thing "compactyl_mimic" (Deractyl.compactyl_compare ());
+  write_thing "skeletyl" (Case.to_scad (Skeletyl.build ()));
+  write_thing "tester" (Case.to_scad (Tester.build ()));
   write_thing "skeletyl_hotswap" (Case.to_scad (Skeletyl.build ~hotswap:`South ()));
-  write_thing "bk_mimic" (Skeletyl.bastard_compare ());
-  write_thing "splay_vs_skel" (Splaytyl.bastard_compare ());
   write_thing "bottom_plate" (Bottom.make case);
+  write_thing "deractyl_holder_ex" (Deractyl.carbonfet_ex ());
   (* write_thing
    *   "case"
    *   (Model.union [ case.scad; Bottom.make case |> Model.translate (0., 0., -10.) ]); *)
