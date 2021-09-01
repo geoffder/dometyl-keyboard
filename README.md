@@ -106,9 +106,8 @@ be filling in over time.
   can get the job done.
   ![holder outside view](images/deractyl_carbonfet_outside.png)
   ![holder inside view](images/deractyl_carbonfet_inside.png)
-* Configurable heat-set insert screw holes or bumpons feet can be placed at the
-  base of walls of your choosing
-  ![splaytyl screw view](images/splaytyl_screw_view.png)
+* Configurable heat-set insert screw holes (visible in other examples) or
+  bumpon feet can be placed at the base of walls of your choosing
   ![splaytyl bumpon view](images/splaytyl_bumpon.png)
 * Base plate and configurable tent can be generated to fit your case.
   ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
