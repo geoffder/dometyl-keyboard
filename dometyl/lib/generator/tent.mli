@@ -2,7 +2,8 @@ open! Base
 open! Scad_ml
 
 val bumpon
-  :  outer_rad:float
+  :  ?n_steps:int
+  -> outer_rad:float
   -> inner_rad:float
   -> thickness:float
   -> inset:float

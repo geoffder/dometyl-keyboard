@@ -1,7 +1,7 @@
 open! Base
 open! Scad_ml
 
-let bumpon ~outer_rad ~inner_rad ~thickness ~inset foot =
+let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =
     Points.map ~f:(Vec3.mul (1., 1., 0.)) foot
   in
@@ -16,10 +16,10 @@ let bumpon ~outer_rad ~inner_rad ~thickness ~inset foot =
     :: base_centre
     :: p
     :: Bezier.curve
-         ~n_steps:10
+         ~n_steps
          (Bezier.quad_vec3
             ~p1:p
-            ~p2:Vec3.(base_centre <+> rad_offset)
+            ~p2:Vec3.(mean [ base_centre <+> rad_offset; p ])
             ~p3:Vec3.(centre <+> rad_offset) )
     |> List.map ~f:Vec3.to_vec2
     |> Model.polygon
