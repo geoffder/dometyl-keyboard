@@ -1,6 +1,15 @@
 open! Base
 open! Scad_ml
 
+type t =
+  { plus : Model.t option
+  ; minus : Model.t option
+  }
+
+type cutter = walls:Walls.t -> connections:Connect.t -> t
+
+val apply : t -> Model.t -> Model.t
+
 val make
   :  ?length:float
   -> ?jack_radius:float
@@ -13,8 +22,8 @@ val make
   -> ?dist:float
   -> ?x_off:float
   -> ?z_off:float
-  -> Walls.t
-  -> Model.t
+  -> unit
+  -> cutter
 
 val place_tray
   :  ?x_off:float
@@ -31,8 +40,8 @@ val carbonfet_holder
   -> ?x_off:float
   -> ?y_off:float
   -> ?z_rot:float
-  -> Walls.t
-  -> Model.t
+  -> unit
+  -> cutter
 
 val derek_reversible_stl : bool -> Model.t
 
@@ -41,12 +50,12 @@ val reversible_holder
   -> ?x_off:float
   -> ?y_off:float
   -> ?z_rot:float
-  -> Walls.t
-  -> Model.t
+  -> unit
+  -> cutter
 
 module BastardShield : sig
   type t =
-    { pcb : Model.t
+    { scad : Model.t
     ; screw_l : Vec3.t
     ; screw_r : Vec3.t
     }
@@ -56,5 +65,15 @@ module BastardShield : sig
   include Sigs.Transformable with type t := t
 
   val screws : t -> Model.t
+
+  val place
+    :  ?x_off:float
+    -> ?y_off:float
+    -> ?z_off:float
+    -> ?z_rot:float
+    -> Walls.t
+    -> t
+    -> t
+
   val to_scad : ?show_screws:bool -> t -> Model.t
 end

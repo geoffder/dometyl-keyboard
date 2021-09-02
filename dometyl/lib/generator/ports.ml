@@ -1,6 +1,19 @@
 open! Base
 open! Scad_ml
 
+type t =
+  { plus : Model.t option
+  ; minus : Model.t option
+  }
+
+type cutter = walls:Walls.t -> connections:Connect.t -> t
+
+let apply t scad =
+  let added =
+    Option.value_map ~default:scad ~f:(fun s -> Model.union [ s; scad ]) t.plus
+  in
+  Option.value_map ~default:added ~f:(fun s -> Model.difference added [ s ]) t.minus
+
 let make
     ?(length = 2.)
     ?(jack_radius = 2.49)
@@ -10,10 +23,12 @@ let make
     ?(usb_z_off = 0.35)
     ?(board_width = 21.)
     ?(board_thickness = 2.)
-    ?(dist = 16.)
-    ?(x_off = 3.25)
+    ?(dist = 15.925)
+    ?(x_off = 3.3)
     ?(z_off = 6.4)
-    Walls.{ body = { cols; _ }; _ }
+    ()
+    ~walls:Walls.{ body = { cols; _ }; _ }
+    ~connections:_
   =
   let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
   let right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
@@ -60,8 +75,11 @@ let make
     in
     Model.hull [ left; right ]
   in
-  Model.union [ jack; usb; inset ]
-  |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
+  let cutout =
+    Model.union [ jack; usb; inset ]
+    |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
+  in
+  { plus = None; minus = Some cutout }
 
 let place_tray
     ?(x_off = 0.)
@@ -87,7 +105,7 @@ let carbonfet_stl micro =
   then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
   else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
 
-let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot walls =
+let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connections:_ =
   let slab =
     Model.cube (28.266, 15., 12.)
     |> Model.translate (1.325, -8., 0.)
@@ -97,12 +115,15 @@ let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot walls =
     |> Model.translate (2.62, -6., 12.)
     |> Model.color ~alpha:0.5 Color.Salmon
   in
-  place_tray
-    ?x_off
-    ?y_off
-    ?z_rot
-    walls
-    (Model.union [ carbonfet_stl micro; slab; trrs_clearance ])
+  let tray =
+    place_tray
+      ?x_off
+      ?y_off
+      ?z_rot
+      walls
+      (Model.union [ carbonfet_stl micro; slab; trrs_clearance ])
+  in
+  { plus = None; minus = Some tray }
 
 let derek_reversible_stl reset_button =
   (if reset_button then "elite-c_holder_w_reset" else "elite-c_holder")
@@ -111,7 +132,15 @@ let derek_reversible_stl reset_button =
   |> Model.translate (15.3, 0., 0.)
   |> Model.color Color.FireBrick
 
-let reversible_holder ?(reset_button = false) ?x_off ?y_off ?z_rot walls =
+let reversible_holder
+    ?(reset_button = false)
+    ?x_off
+    ?y_off
+    ?z_rot
+    ()
+    ~walls
+    ~connections:_
+  =
   let h = if reset_button then 15. else 8.4 in
   let through =
     Model.cube (27.6, 12., h)
@@ -122,45 +151,37 @@ let reversible_holder ?(reset_button = false) ?x_off ?y_off ?z_rot walls =
     |> Model.translate (0., -0.5, 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
   in
-  place_tray
-    ?x_off
-    ?y_off
-    ?z_rot
-    walls
-    (Model.union [ derek_reversible_stl reset_button; through; front ])
+  let tray =
+    place_tray
+      ?x_off
+      ?y_off
+      ?z_rot
+      walls
+      (Model.union [ derek_reversible_stl reset_button; through; front ])
+  in
+  { plus = None; minus = Some tray }
 
 module BastardShield = struct
   type t =
-    { pcb : Model.t
+    { scad : Model.t
     ; screw_l : Vec3.t
     ; screw_r : Vec3.t
     }
 
-  let t =
-    let offset = -7.5, -27.25, 0.5 in
-    let screw_l = Vec3.((4.1, -0.15, 0.) <+> offset)
-    and screw_r = Vec3.((36.15, 22.7, 0.) <+> offset)
-    and pcb =
-      Model.import "../things/holders/bastardkb/elite-c_shield.dxf"
-      |> Model.translate offset
-      |> Model.color ~alpha:0.5 Color.Silver
-    in
-    { pcb; screw_l; screw_r }
-
   let translate p t =
-    { pcb = Model.translate p t.pcb
+    { scad = Model.translate p t.scad
     ; screw_l = Vec3.add p t.screw_l
     ; screw_r = Vec3.add p t.screw_r
     }
 
   let rotate r t =
-    { pcb = Model.rotate r t.pcb
+    { scad = Model.rotate r t.scad
     ; screw_l = Vec3.rotate r t.screw_l
     ; screw_r = Vec3.rotate r t.screw_r
     }
 
   let rotate_about_pt r p t =
-    { pcb = Model.rotate_about_pt r p t.pcb
+    { scad = Model.rotate_about_pt r p t.scad
     ; screw_l = Vec3.rotate_about_pt r p t.screw_l
     ; screw_r = Vec3.rotate_about_pt r p t.screw_r
     }
@@ -170,5 +191,72 @@ module BastardShield = struct
     Model.union [ Model.translate t.screw_l cyl; Model.translate t.screw_r cyl ]
 
   let to_scad ?(show_screws = false) t =
-    if show_screws then Model.union [ t.pcb; screws t ] else t.pcb
+    if show_screws then Model.union [ t.scad; screws t ] else t.scad
+
+  let t =
+    let jack_radius = 2.49
+    and jack_width = 6.2
+    and usb_height = 3.6
+    and usb_width = 9.575
+    and board_width = 21.
+    and board_thickness = 2.
+    and dist = 15.925 in
+    let inset_height = jack_radius +. (usb_height /. 2.) +. board_thickness in
+    let inset_width = ((jack_width +. board_width) /. 2.) +. dist in
+    (* let jack_x_off = 3.3  in *)
+    let jack_x_off = jack_width /. 2. (* with move in place to line up holes *) in
+    let jack =
+      Model.cylinder ~center:true ~fn:16 jack_radius 20.
+      |> Model.rotate (Float.pi /. 2., 0., 0.)
+      |> Model.translate (jack_x_off, 0., 4.5)
+      |> Model.color ~alpha:0.5 Color.Silver
+    and usb =
+      let rad = usb_height /. 2. in
+      let cyl =
+        Model.cylinder ~center:true ~fn:16 rad 20. |> Model.rotate (Float.pi /. 2., 0., 0.)
+      in
+      Model.hull
+        [ Model.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
+        ; Model.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
+        ]
+      |> Model.translate (jack_x_off +. dist, 0., 4.85)
+      |> Model.color ~alpha:0.5 Color.Silver
+    and inset =
+      Model.cube (inset_width, 6., inset_height)
+      |> Model.translate (0., -4., 1.)
+      |> Model.color ~alpha:0.5 Color.Silver
+    in
+    let pcb =
+      Model.import "../things/holders/bastardkb/elite-c_shield.dxf"
+      |> Model.linear_extrude ~height:1.
+      |> Model.color ~alpha:0.5 Color.Silver
+    in
+    let start =
+      { scad = pcb; screw_l = 4.15, -0.15, 0.; screw_r = 36.15, 22.7, 0. }
+      |> translate (-7.36, -30.99, 0.)
+    in
+    let rotated =
+      start
+      |> rotate_about_pt
+           (0., 0., Float.pi)
+           Vec3.(negate @@ mean [ start.screw_l; start.screw_r ])
+    in
+    { rotated with scad = Model.union [ rotated.scad; jack; usb; inset ] }
+
+  let place
+      ?(x_off = 0.2)
+      ?(y_off = -0.25)
+      ?(z_off = 1.9)
+      ?(z_rot = 0.)
+      Walls.{ body = { cols; _ }; _ }
+      t
+    =
+    let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot
+    and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+    let x = Vec3.get_x left_foot.bot_left +. x_off
+    and y =
+      let inner (ps : Points.t) = Vec3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
+      y_off +. ((inner left_foot +. inner right_foot) /. 2.)
+    in
+    rotate (0., 0., z_rot) t |> translate (x, y, z_off)
 end
