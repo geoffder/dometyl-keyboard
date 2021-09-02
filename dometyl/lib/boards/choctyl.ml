@@ -78,8 +78,8 @@ let lookups =
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
-let ports_cutter = Ports.make
-(* let ports_cutter = Ports.carbonfet_holder ~x_off:0. ~y_off:(-0.75) *)
+let ports_cutter = Ports.make ()
+(* let ports_cutter = Ports.carbonfet_holder ~x_off:0. ~y_off:(-0.75) ()*)
 
 let build () =
   let keyhole = Choc.make_hole ~cap:Caps.mbk () in

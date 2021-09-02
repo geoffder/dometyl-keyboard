@@ -33,7 +33,7 @@ let base_connector =
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
-let ports_cutter = Ports.make
+let ports_cutter = Ports.make ()
 
 let build () =
   (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)

@@ -34,15 +34,16 @@ A high level helper used to contsruct the case from provided functions and a {!P
   the resulting {!Case.t} will contain the necessary information to use {!module:Bottom}
   and {!module:Tent}. See {!Connect.skeleton} and {!Connect.closed} for examples that
   provide this functionality.
-- [ports_cutter] is intended to be a function that uses {!Walls.t} to create a
-  {!Model.t} scad to cut from the case to facilitate placement of jacks/ports. See
-  {!Ports.make} for an example of such a function, which can be configured then passed
-  as a closure as this parameter. *)
+- [ports_cutter] contains a function that uses {!Walls.t} and/or {!Connect.t} to
+  create a {!Ports.t} containing {!Model.t}s to cut from / add to the case to
+  facilitate placement of jacks/ports. See {!Ports.make} for an example of such
+  a function, which can be configured then wrapped in {!Ports.t} as this
+  parameter. *)
 val make
   :  plate_welder:('k Plate.t -> Model.t)
   -> wall_builder:('k Plate.t -> Walls.t)
   -> base_connector:(Walls.t -> Connect.t)
-  -> ports_cutter:(Walls.t -> Model.t)
+  -> ports_cutter:Ports.cutter
   -> 'k Plate.t
   -> 'k t
 

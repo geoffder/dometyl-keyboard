@@ -41,7 +41,8 @@ let make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate =
            ; Connect.to_scad connections
            ; plate_welder plate
            ] )
-        [ ports_cutter walls; Plate.collect_cutouts plate ]
+        [ Plate.collect_cutouts plate ]
+      |> Ports.apply (ports_cutter ~walls ~connections)
   ; plate
   ; walls
   ; connections

@@ -20,7 +20,7 @@ let wall_builder plate =
 
 let base_connector = Connect.closed ~n_steps:4
 let plate_welder = Plate.column_joins
-let ports_cutter = Ports.make
+let ports_cutter = Ports.make ()
 
 let build () =
   (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
