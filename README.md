@@ -47,9 +47,10 @@ The other dependencies include the build system
 [dune](https://github.com/ocaml/dune),
 [base](https://github.com/janestreet/base) and
 [stdio](https://github.com/janestreet/stdio) (standard library replacements)
-from janestreet, as well as a couple ppx rewriters, all of which are available
-through the opam package manager.
-* `opam install dune base stdio ppx_jane ppx_inline_test`
+from janestreet, as well as a couple ppx rewriters, and some dev tools, all of
+which are available through the opam package manager.
+* `opam install dune base stdio ppx_jane ppx_inline_test merlin ocp-indent ocaml-lsp-server
+  ocamlformat`
 
 ### Installing Scad_ml
 One day I may get to upstreaming my drammatic changes to
