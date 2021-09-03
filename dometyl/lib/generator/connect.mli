@@ -48,12 +48,19 @@ val inward_elbow_base : ?height:float -> ?n_steps:int -> ?d:float -> Wall.t -> W
 val straight_base
   :  ?height:float
   -> ?fudge_factor:float
+  -> ?overlap_factor:float
   -> ?min_width:float
   -> Wall.t
   -> Wall.t
   -> t
 
-val join_walls : ?n_steps:int -> ?fudge_factor:float -> Wall.t -> Wall.t -> t
+val join_walls
+  :  ?n_steps:int
+  -> ?fudge_factor:float
+  -> ?overlap_factor:float
+  -> Wall.t
+  -> Wall.t
+  -> t
 
 val joiner
   :  get:('a -> Wall.t option)
@@ -72,6 +79,7 @@ val skeleton
   -> ?thumb_join_steps:int
   -> ?fudge_factor:float
   -> ?join_fudge_factor:float
+  -> ?overlap_factor:float
   -> ?snake_d:float
   -> ?snake_scale:float
   -> ?cubic_d:float
@@ -90,6 +98,7 @@ val closed
   :  ?join_west:bool
   -> ?n_steps:int
   -> ?fudge_factor:float
+  -> ?overlap_factor:float
   -> ?snake_d:float
   -> ?snake_scale:float
   -> ?snake_height:float

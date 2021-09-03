@@ -181,6 +181,7 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2
 let straight_base
     ?(height = 11.)
     ?(fudge_factor = 6.)
+    ?(overlap_factor = 1.2)
     ?(min_width = 4.5)
     (w1 : Wall.t)
     (w2 : Wall.t)
@@ -219,7 +220,7 @@ let straight_base
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy in
     if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
-    then Float.abs major_diff
+    then Float.abs major_diff *. overlap_factor
     else 0.01
   (* If the walls are overlapping, move back the start positions to counter. *)
   and outward =
@@ -281,7 +282,13 @@ let straight_base
         else [ extra_starts; extra_dests; dests true ] )
   }
 
-let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
+let join_walls
+    ?(n_steps = 6)
+    ?(fudge_factor = 3.)
+    ?(overlap_factor = 1.2)
+    (w1 : Wall.t)
+    (w2 : Wall.t)
+  =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let major_diff, minor_diff =
@@ -312,7 +319,7 @@ let join_walls ?(n_steps = 6) ?(fudge_factor = 3.) (w1 : Wall.t) (w2 : Wall.t) =
     if ( (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
        && Float.(abs major_diff > abs minor_diff) )
        || Points.overlapping_bounds w1.foot w2.foot
-    then Float.abs major_diff *. 1.1
+    then Float.abs major_diff *. overlap_factor
     else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
@@ -374,6 +381,7 @@ let skeleton
     ?thumb_join_steps
     ?fudge_factor
     ?join_fudge_factor
+    ?overlap_factor
     ?snake_d
     ?snake_scale
     ?cubic_d
@@ -409,7 +417,9 @@ let skeleton
     in
     let _, side =
       let f =
-        joiner ~get:Option.some ~join:(straight_base ~height:index_height ?fudge_factor)
+        joiner
+          ~get:Option.some
+          ~join:(straight_base ~height:index_height ?fudge_factor ?overlap_factor)
       in
       Map.fold ~init:(None, []) ~f body.sides.west
     in
@@ -421,12 +431,17 @@ let skeleton
         Option.map2
           ~f:
             ( if north_joins i
-            then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
+            then
+              join_walls
+                ?n_steps:body_join_steps
+                ?fudge_factor:join_fudge_factor
+                ?overlap_factor
             else
               straight_base
                 ?height:(if i < 2 then Some index_height else height)
                 ?min_width:min_straight_width
-                ?fudge_factor )
+                ?fudge_factor
+                ?overlap_factor )
           (col `N i)
           (col `N (i + 1)) )
       (n_cols - 1)
@@ -448,7 +463,11 @@ let skeleton
         draw_corner (Option.map ~f:snd @@ Map.min_elt body.sides.east) south
       in
       let _, side =
-        let f = joiner ~get:Option.some ~join:(straight_base ?height ?fudge_factor) in
+        let f =
+          joiner
+            ~get:Option.some
+            ~join:(straight_base ?height ?fudge_factor ?overlap_factor)
+        in
         Map.fold_right ~init:(None, Option.to_list south_corner) ~f body.sides.east
       and north_corner =
         draw_corner north (Option.map ~f:snd @@ Map.max_elt body.sides.east)
@@ -458,10 +477,11 @@ let skeleton
   let south =
     let base i =
       if south_joins i
-      then join_walls ?n_steps:body_join_steps ?fudge_factor
+      then join_walls ?n_steps:body_join_steps ?fudge_factor ?overlap_factor
       else if i = pinky_idx
       then inward_elbow_base ~d:1.5 ?height ?n_steps
-      else straight_base ?height ?fudge_factor ?min_width:min_straight_width
+      else
+        straight_base ?height ?fudge_factor ?overlap_factor ?min_width:min_straight_width
     in
     List.init
       ~f:(fun i ->
@@ -473,7 +493,9 @@ let skeleton
   let east_swoop, west_swoop =
     let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
     and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
-    and corner = Option.map2 ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0.)
+    and corner =
+      Option.map2
+        ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor)
     and link =
       Option.map2
         ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
@@ -527,7 +549,7 @@ let skeleton
       if close_thumb
       then (
         let _, scads =
-          let join = join_walls ?n_steps:thumb_join_steps ?fudge_factor
+          let join = join_walls ?n_steps:thumb_join_steps ?fudge_factor ?overlap_factor
           and get d = d.Walls.Thumb.south in
           Map.fold_right ~init:(None, Option.to_list es) ~f:(joiner ~get ~join) thumb.keys
         in
@@ -547,6 +569,7 @@ let closed
     ?(join_west = true)
     ?n_steps
     ?fudge_factor
+    ?overlap_factor
     ?snake_d
     ?snake_scale
     ?snake_height
@@ -556,7 +579,7 @@ let closed
     ?cubic_d
     Walls.{ body; thumb }
   =
-  let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0.) in
+  let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0. ?overlap_factor) in
   let n_cols = Map.length body.cols
   and col side i =
     let%bind.Option c = Map.find body.cols i in
@@ -565,7 +588,9 @@ let closed
     | `S -> c.south
   and prepend_corner w1 w2 = Util.prepend_opt (corner w1 w2) in
   let east, west =
-    let f = joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor) in
+    let f =
+      joiner ~get:Option.some ~join:(join_walls ?n_steps ?fudge_factor ?overlap_factor)
+    in
     let _, west = Map.fold ~init:(None, []) ~f body.sides.west in
     let _, east = Map.fold_right ~init:(None, []) ~f body.sides.east in
     ( prepend_corner
@@ -580,7 +605,7 @@ let closed
     let f side =
       joiner
         ~get:(Fn.flip Walls.Body.Cols.get @@ side)
-        ~join:(join_walls ?n_steps ?fudge_factor)
+        ~join:(join_walls ?n_steps ?fudge_factor ?overlap_factor)
     in
     let _, north = Map.fold ~init:(None, []) ~f:(f `N) body.cols in
     let _, south = Map.fold_right ~init:(None, []) ~f:(f `S) body.cols in
@@ -589,7 +614,7 @@ let closed
   in
   let thumb =
     let _, south =
-      let join = join_walls ?n_steps ?fudge_factor
+      let join = join_walls ?n_steps ?fudge_factor ?overlap_factor
       and get d = d.Walls.Thumb.south in
       Map.fold_right ~init:(None, []) ~f:(joiner ~get ~join) thumb.keys
     in
