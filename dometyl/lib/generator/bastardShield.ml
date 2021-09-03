@@ -46,7 +46,7 @@ let pcb thickness =
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window" ]
   |> Model.linear_extrude ~height:thickness
-  |> Model.color ~alpha:0.3 Color.Crimson
+  |> Model.color ~alpha:0.5 Color.Crimson
 
 let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
   let jack_radius = 2.49
@@ -116,7 +116,7 @@ let eyelets
   =
   let perim = Array.of_list inline
   and half_width =
-    Option.value_map ~default:screw_config.outer_rad ~f:(( *. ) 0.5) width
+    Option.value_map ~default:(screw_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
   in
   let n_pts = Array.length perim in
   let dist a b = Vec3.(norm (a <-> b)) in
