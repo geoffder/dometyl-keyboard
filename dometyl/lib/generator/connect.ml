@@ -381,7 +381,7 @@ let skeleton
     ?thumb_cubic_d
     ?thumb_cubic_scale
     ?thumb_height
-    ?(north_joins = fun i -> i = 0)
+    ?(north_joins = fun i -> i < 2)
     ?(south_joins = fun _ -> false)
     ?(pinky_idx = 4)
     ?(close_thumb = false)
@@ -424,7 +424,7 @@ let skeleton
             then join_walls ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor
             else
               straight_base
-                ?height:(if i = 0 then Some index_height else height)
+                ?height:(if i < 2 then Some index_height else height)
                 ?min_width:min_straight_width
                 ?fudge_factor )
           (col `N i)
