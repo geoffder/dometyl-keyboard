@@ -65,24 +65,27 @@ let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez =
   in
   loop init start
 
+let endpoints ?n_facets ~height top top_bez bot_bez bot =
+  top
+  :: facet_points
+       ?n_facets
+       ~height
+       ~init:(facet_points ~rev:true ?n_facets ~height ~init:[ bot ] bot_bez)
+       top_bez
+
 let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
     | `Left  -> `TL, `BL
     | `Right -> `TR, `BR
   in
-  Points.get w.foot top
-  :: facet_points
-       ~n_facets
-       ~height
-       ~init:
-         (facet_points
-            ~rev:true
-            ~n_facets
-            ~height
-            ~init:[ Points.get w.foot bot ]
-            (Wall.Edges.get w.edges bot) )
-       (Wall.Edges.get w.edges top)
+  endpoints
+    ~n_facets
+    ~height
+    (Points.get w.foot top)
+    (Wall.Edges.get w.edges top)
+    (Wall.Edges.get w.edges bot)
+    (Points.get w.foot bot)
 
 let base_steps ~n_steps starts dests =
   let norms = List.map2_exn ~f:(fun s d -> Vec3.(norm (s <-> d))) starts dests in
@@ -208,18 +211,13 @@ let inward_elbow_base
   let starts =
     let w = Vec3.(norm (w1.foot.bot_right <-> w1.foot.top_right)) in
     let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
-    w1.foot.bot_right
-    :: facet_points
-         ~n_facets
-         ~height
-         ~init:
-           (facet_points
-              ~rev:true
-              ~n_facets
-              ~height
-              ~init:[ slide w1.foot.bot_right ]
-              (w1.edges.bot_right >> slide) )
-         w1.edges.bot_right
+    endpoints
+      ~n_facets
+      ~height
+      w1.foot.bot_right
+      w1.edges.bot_right
+      (w1.edges.bot_right >> slide)
+      (slide w1.foot.bot_right)
   and dests = base_endpoints ~n_facets ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
@@ -284,53 +282,37 @@ let straight_base
      opposite. `og` indicates whether the points include the true inner wall
      start/end positions, or are intermediaries. *)
   let starts og =
-    w1.foot.top_right
-    :: facet_points
-         ~n_facets
-         ~height
-         ~init:
-           (facet_points
-              ~rev:true
-              ~n_facets
-              ~height
-              ~init:
-                [ ( if og
-                  then w1.foot.bot_right
-                  else if not outward
-                  then fudge dir1 w1.foot.bot_right
-                  else fudge (Vec3.negate dir1) w1.foot.bot_right )
-                ]
-              ( if og
-              then w1.edges.bot_right
-              else if not outward
-              then w1.edges.bot_right >> fudge dir1
-              else w1.edges.bot_right >> fudge (Vec3.negate dir1) ) )
-         w1.edges.top_right
+    let bot_bez =
+      if og
+      then w1.edges.bot_right
+      else if not outward
+      then w1.edges.bot_right >> fudge dir1
+      else w1.edges.bot_right >> fudge (Vec3.negate dir1)
+    and bot_pt =
+      if og
+      then w1.foot.bot_right
+      else if not outward
+      then fudge dir1 w1.foot.bot_right
+      else fudge (Vec3.negate dir1) w1.foot.bot_right
+    in
+    endpoints ~n_facets ~height w1.foot.top_right w1.edges.top_right bot_bez bot_pt
     |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
   and dests og =
     let slide = fudge (Vec3.negate dir2) in
-    w2.foot.top_left
-    :: facet_points
-         ~n_facets
-         ~height
-         ~init:
-           (facet_points
-              ~rev:true
-              ~n_facets
-              ~height
-              ~init:
-                [ ( if og
-                  then w2.foot.bot_left
-                  else if not outward
-                  then fudge dir2 w2.foot.bot_left
-                  else fudge (Vec3.negate dir2) w2.foot.bot_left )
-                ]
-              ( if og
-              then w2.edges.bot_left
-              else if outward
-              then w2.edges.bot_left >> slide
-              else w2.edges.bot_left >> fudge dir2 ) )
-         w2.edges.top_left
+    let bot_bez =
+      if og
+      then w2.edges.bot_left
+      else if outward
+      then w2.edges.bot_left >> slide
+      else w2.edges.bot_left >> fudge dir2
+    and bot_pt =
+      if og
+      then w2.foot.bot_left
+      else if not outward
+      then fudge dir2 w2.foot.bot_left
+      else fudge (Vec3.negate dir2) w2.foot.bot_left
+    in
+    endpoints ~n_facets ~height w2.foot.top_left w2.edges.top_left bot_bez bot_pt
     |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
   let extra_starts = starts false
