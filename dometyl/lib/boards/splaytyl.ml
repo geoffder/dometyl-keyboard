@@ -17,6 +17,7 @@ let wall_builder plate =
 
 let base_connector =
   Connect.skeleton
+    ~n_facets:1
     ~height:7.
     ~thumb_height:11.
     ~snake_scale:1.3

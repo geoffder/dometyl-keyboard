@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open! Infix
 
 (* TODO: cubic base for w_link of skeleton thumb is unreliable. Worked before,
    but with current rotation and closeness to the body it is faltering. *)
@@ -52,23 +53,36 @@ let clockwise_union ts =
 let outline_2d t = List.map ~f:Vec3.to_vec2 t.outline
 let inline_2d t = List.map ~f:Vec3.to_vec2 t.inline
 
-(* TODO: calculate multiple points up z, so that it lines up with the wall edge
-   better. straight_base and join_walls does not use this helper, and
-   inward_elbow_base uses a hybrid, so I will have to make the same upgrades there,
-   and ensure that they remain compatible. Also, maybe try to improve the abstractions
-   to not rely on the "is top?" lists that I am using (which will need to change if
-   using a variable number of steps for the endpoints.) *)
-let base_endpoints ~height hand (w : Wall.t) =
+let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez =
+  let step = height /. Float.of_int n_facets
+  and start, continue, next =
+    if rev then 1, ( >= ) n_facets, ( + ) 1 else n_facets, ( < ) 0, ( + ) (-1)
+  in
+  let rec loop ps i =
+    if continue i
+    then loop (Wall.Edge.point_at_z bez (Float.of_int i *. step) :: ps) (next i)
+    else ps
+  in
+  loop init start
+
+let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) =
   let top, bot =
     match hand with
     | `Left  -> `TL, `BL
     | `Right -> `TR, `BR
   in
-  [ Points.get w.foot top
-  ; Wall.(Edge.point_at_z (Edges.get w.edges top) height)
-  ; Wall.(Edge.point_at_z (Edges.get w.edges bot) height)
-  ; Points.get w.foot bot
-  ]
+  Points.get w.foot top
+  :: facet_points
+       ~n_facets
+       ~height
+       ~init:
+         (facet_points
+            ~rev:true
+            ~n_facets
+            ~height
+            ~init:[ Points.get w.foot bot ]
+            (Wall.Edges.get w.edges bot) )
+       (Wall.Edges.get w.edges top)
 
 let base_steps ~n_steps starts dests =
   let norms = List.map2_exn ~f:(fun s d -> Vec3.(norm (s <-> d))) starts dests in
@@ -76,7 +90,7 @@ let base_steps ~n_steps starts dests =
   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in
   `Ragged (List.map ~f:adjust norms)
 
-let bez_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let mask = if Float.(abs dx > abs dy) then 1., 0., 0. else 0., 1., 0. in
@@ -87,13 +101,14 @@ let bez_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     and p3 = Vec3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
     Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
-  let starts = base_endpoints ~height `Right w1 in
-  let dests = base_endpoints ~height `Left w2 in
+  let starts = base_endpoints ~n_facets ~height `Right w1 in
+  let dests = base_endpoints ~n_facets ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
   prism_connection bezs steps
 
 let cubic_base
+    ?(n_facets = 1)
     ?(height = 4.)
     ?(scale = 1.1)
     ?(d = 2.)
@@ -116,13 +131,22 @@ let cubic_base
     and p4 = Vec3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
     Bezier.cubic_vec3 ~p1 ~p2 ~p3 ~p4
   in
-  let starts = base_endpoints ~height `Right w1 in
-  let dests = base_endpoints ~height `Left w2 in
+  let starts = base_endpoints ~n_facets ~height `Right w1 in
+  let dests = base_endpoints ~n_facets ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
-  and bezs = List.map3_exn ~f:get_bez [ true; true; false; false ] starts dests in
+  and bezs =
+    List.fold2_exn
+      ~init:(0, [])
+      ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs)
+      starts
+      dests
+    |> snd
+    |> List.rev
+  in
   prism_connection bezs steps
 
 let snake_base
+    ?(n_facets = 1)
     ?(height = 4.)
     ?(scale = 1.5)
     ?(d = 2.)
@@ -142,13 +166,27 @@ let snake_base
     and p4 = Vec3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
     Bezier.cubic_vec3 ~p1 ~p2 ~p3 ~p4
   in
-  let starts = base_endpoints ~height `Right w1 in
-  let dests = base_endpoints ~height `Left w2 in
+  let starts = base_endpoints ~n_facets ~height `Right w1 in
+  let dests = base_endpoints ~n_facets ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
-  and bezs = List.map3_exn ~f:get_bez [ true; true; false; false ] starts dests in
+  and bezs =
+    List.fold2_exn
+      ~init:(0, [])
+      ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs)
+      starts
+      dests
+    |> snd
+    |> List.rev
+  in
   prism_connection bezs steps
 
-let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2 : Wall.t)
+let inward_elbow_base
+    ?(n_facets = 1)
+    ?(height = 11.)
+    ?(n_steps = 6)
+    ?(d = 0.)
+    (w1 : Wall.t)
+    (w2 : Wall.t)
   =
   (* Quad bezier, but starting from the bottom (inside face) of the wall and
    * projecting inward. This is so similar to bez_base that some generalization may
@@ -168,17 +206,28 @@ let inward_elbow_base ?(height = 11.) ?(n_steps = 6) ?(d = 0.) (w1 : Wall.t) (w2
     Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
   let starts =
-    let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
     let w = Vec3.(norm (w1.foot.bot_right <-> w1.foot.top_right)) in
     let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
-    [ w1.foot.bot_right; up_bot; slide up_bot; slide w1.foot.bot_right ]
-  and dests = base_endpoints ~height `Left w2 in
+    w1.foot.bot_right
+    :: facet_points
+         ~n_facets
+         ~height
+         ~init:
+           (facet_points
+              ~rev:true
+              ~n_facets
+              ~height
+              ~init:[ slide w1.foot.bot_right ]
+              (w1.edges.bot_right >> slide) )
+         w1.edges.bot_right
+  and dests = base_endpoints ~n_facets ~height `Left w2 in
   let steps = base_steps ~n_steps starts dests
   and bezs = List.map2_exn ~f:get_bez starts dests in
   let t = prism_connection bezs steps in
   { t with outline = w1.foot.top_right :: t.outline }
 
 let straight_base
+    ?(n_facets = 1)
     ?(height = 11.)
     ?(fudge_factor = 6.)
     ?(overlap_factor = 1.2)
@@ -235,33 +284,53 @@ let straight_base
      opposite. `og` indicates whether the points include the true inner wall
      start/end positions, or are intermediaries. *)
   let starts og =
-    let up_bot = Wall.Edge.point_at_z w1.edges.bot_right height in
-    [ ( if og
-      then w1.foot.bot_right
-      else if not outward
-      then fudge dir1 w1.foot.bot_right
-      else fudge (Vec3.negate dir1) w1.foot.bot_right )
-    ; w1.foot.top_right
-    ; Wall.Edge.point_at_z w1.edges.top_right height
-    ; ( if og
-      then up_bot
-      else if not outward
-      then fudge dir1 up_bot
-      else fudge (Vec3.negate dir1) up_bot )
-    ]
+    w1.foot.top_right
+    :: facet_points
+         ~n_facets
+         ~height
+         ~init:
+           (facet_points
+              ~rev:true
+              ~n_facets
+              ~height
+              ~init:
+                [ ( if og
+                  then w1.foot.bot_right
+                  else if not outward
+                  then fudge dir1 w1.foot.bot_right
+                  else fudge (Vec3.negate dir1) w1.foot.bot_right )
+                ]
+              ( if og
+              then w1.edges.bot_right
+              else if not outward
+              then w1.edges.bot_right >> fudge dir1
+              else w1.edges.bot_right >> fudge (Vec3.negate dir1) ) )
+         w1.edges.top_right
     |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
   and dests og =
-    let up_bot = Wall.Edge.point_at_z w2.edges.bot_left height
-    and slide = fudge (Vec3.negate dir2) in
-    [ ( if og
-      then w2.foot.bot_left
-      else if outward
-      then slide w2.foot.bot_left
-      else fudge dir2 w2.foot.bot_left )
-    ; w2.foot.top_left
-    ; Wall.Edge.point_at_z w2.edges.top_left height
-    ; (if og then up_bot else if outward then slide up_bot else fudge dir2 up_bot)
-    ]
+    let slide = fudge (Vec3.negate dir2) in
+    w2.foot.top_left
+    :: facet_points
+         ~n_facets
+         ~height
+         ~init:
+           (facet_points
+              ~rev:true
+              ~n_facets
+              ~height
+              ~init:
+                [ ( if og
+                  then w2.foot.bot_left
+                  else if not outward
+                  then fudge dir2 w2.foot.bot_left
+                  else fudge (Vec3.negate dir2) w2.foot.bot_left )
+                ]
+              ( if og
+              then w2.edges.bot_left
+              else if outward
+              then w2.edges.bot_left >> slide
+              else w2.edges.bot_left >> fudge dir2 ) )
+         w2.edges.top_left
     |> List.map ~f:Vec3.(add (mul dir2 (-0.05, -0.05, 0.)))
   in
   let extra_starts = starts false
@@ -373,6 +442,7 @@ let joiner ~get ~join ~key:_ ~data (last, scads) =
   Option.first_some next last, scads'
 
 let skeleton
+    ?(n_facets = 1)
     ?(index_height = 11.)
     ?height
     ?min_straight_width
@@ -419,7 +489,8 @@ let skeleton
       let f =
         joiner
           ~get:Option.some
-          ~join:(straight_base ~height:index_height ?fudge_factor ?overlap_factor)
+          ~join:
+            (straight_base ~n_facets ~height:index_height ?fudge_factor ?overlap_factor)
       in
       Map.fold ~init:(None, []) ~f body.sides.west
     in
@@ -438,6 +509,7 @@ let skeleton
                 ?overlap_factor
             else
               straight_base
+                ~n_facets
                 ?height:(if i < 2 then Some index_height else height)
                 ?min_width:min_straight_width
                 ?fudge_factor
@@ -453,7 +525,7 @@ let skeleton
     if Map.is_empty body.sides.east
     then
       Option.map2
-        ~f:(cubic_base ?height ?d:cubic_d ?scale:cubic_scale ?n_steps)
+        ~f:(cubic_base ~n_facets ?height ?d:cubic_d ?scale:cubic_scale ?n_steps)
         north
         south
       |> Option.to_list
@@ -466,7 +538,7 @@ let skeleton
         let f =
           joiner
             ~get:Option.some
-            ~join:(straight_base ?height ?fudge_factor ?overlap_factor)
+            ~join:(straight_base ~n_facets ?height ?fudge_factor ?overlap_factor)
         in
         Map.fold_right ~init:(None, Option.to_list south_corner) ~f body.sides.east
       and north_corner =
@@ -479,9 +551,14 @@ let skeleton
       if south_joins i
       then join_walls ?n_steps:body_join_steps ?fudge_factor ?overlap_factor
       else if i = pinky_idx
-      then inward_elbow_base ~d:1.5 ?height ?n_steps
+      then inward_elbow_base ~n_facets ~d:1.5 ?height ?n_steps
       else
-        straight_base ?height ?fudge_factor ?overlap_factor ?min_width:min_straight_width
+        straight_base
+          ~n_facets
+          ?height
+          ?fudge_factor
+          ?overlap_factor
+          ?min_width:min_straight_width
     in
     List.init
       ~f:(fun i ->
@@ -498,7 +575,13 @@ let skeleton
         ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor)
     and link =
       Option.map2
-        ~f:(snake_base ?height:thumb_height ?scale:snake_scale ?d:snake_d ?n_steps)
+        ~f:
+          (snake_base
+             ~n_facets
+             ?height:thumb_height
+             ?scale:snake_scale
+             ?d:snake_d
+             ?n_steps )
     in
     (* TODO: es and sw are pretty repetitive, can probably clean up, and also take
        lessons from using closest key into other places. *)
@@ -524,6 +607,7 @@ let skeleton
         Option.map2
           ~f:
             (cubic_base
+               ~n_facets
                ?n_steps
                ?height:thumb_height
                ?scale:thumb_cubic_scale
@@ -535,6 +619,7 @@ let skeleton
       Option.map2
         ~f:
           (cubic_base
+             ~n_facets
              ?height:thumb_height
              ?scale:thumb_cubic_scale
              ?d:thumb_cubic_d
@@ -567,6 +652,7 @@ let skeleton
 
 let closed
     ?(join_west = true)
+    ?(n_facets = 1)
     ?n_steps
     ?fudge_factor
     ?overlap_factor
@@ -629,6 +715,7 @@ let closed
       (Option.map2
          ~f:
            (snake_base
+              ~n_facets
               ?height:snake_height
               ?scale:snake_scale
               ?d:snake_d
@@ -643,6 +730,7 @@ let closed
           Option.map2
             ~f:
               (cubic_base
+                 ~n_facets
                  ?height:cubic_height
                  ?scale:cubic_scale
                  ?d:cubic_d

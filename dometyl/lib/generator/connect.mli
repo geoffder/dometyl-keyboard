@@ -20,12 +20,28 @@ val prism_connection
 val clockwise_union : t list -> t
 val outline_2d : t -> (float * float) list
 val inline_2d : t -> (float * float) list
-val base_endpoints : height:float -> [< `Left | `Right ] -> Wall.t -> Vec3.t list
+
+val facet_points
+  :  ?rev:bool
+  -> ?n_facets:int
+  -> ?init:Vec3.t list
+  -> height:float
+  -> Wall.Edge.t
+  -> Vec3.t list
+
+val base_endpoints
+  :  ?n_facets:int
+  -> height:float
+  -> [< `Left | `Right ]
+  -> Wall.t
+  -> Vec3.t list
+
 val base_steps : n_steps:int -> Vec3.t list -> Vec3.t list -> [> `Ragged of int list ]
-val bez_base : ?height:float -> ?n_steps:int -> Wall.t -> Wall.t -> t
+val bez_base : ?n_facets:int -> ?height:float -> ?n_steps:int -> Wall.t -> Wall.t -> t
 
 val cubic_base
-  :  ?height:float
+  :  ?n_facets:int
+  -> ?height:float
   -> ?scale:float
   -> ?d:float
   -> ?n_steps:int
@@ -35,7 +51,8 @@ val cubic_base
   -> t
 
 val snake_base
-  :  ?height:float
+  :  ?n_facets:int
+  -> ?height:float
   -> ?scale:float
   -> ?d:float
   -> ?n_steps:int
@@ -43,10 +60,18 @@ val snake_base
   -> Wall.t
   -> t
 
-val inward_elbow_base : ?height:float -> ?n_steps:int -> ?d:float -> Wall.t -> Wall.t -> t
+val inward_elbow_base
+  :  ?n_facets:int
+  -> ?height:float
+  -> ?n_steps:int
+  -> ?d:float
+  -> Wall.t
+  -> Wall.t
+  -> t
 
 val straight_base
-  :  ?height:float
+  :  ?n_facets:int
+  -> ?height:float
   -> ?fudge_factor:float
   -> ?overlap_factor:float
   -> ?min_width:float
@@ -71,7 +96,8 @@ val joiner
   -> Wall.t option * t list
 
 val skeleton
-  :  ?index_height:float
+  :  ?n_facets:int
+  -> ?index_height:float
   -> ?height:float
   -> ?min_straight_width:float
   -> ?n_steps:int
@@ -96,6 +122,7 @@ val skeleton
 
 val closed
   :  ?join_west:bool
+  -> ?n_facets:int
   -> ?n_steps:int
   -> ?fudge_factor:float
   -> ?overlap_factor:float
