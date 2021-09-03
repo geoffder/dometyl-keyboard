@@ -35,6 +35,21 @@ need to get an environment set up, including the package manager
 [dune](https://github.com/ocaml/dune). You'll of course also want
 [OpenSCAD](https://openscad.org/) to preview/render/export the generated models.
 
+After installing `opam`, you can run the [setup.sh](setup.sh) script for
+convenience, or follow the instructions under the [opam
+dependencies](#opam-dependencies) and [Installing Scad_ml](#Installing-Scad_ml)
+sub-sections, followed by copying [main.ml.example](dometyl/bin/main.ml.example)
+to `dometyl/bin/main.ml`.
+
+### opam dependencies
+The other dependencies include the build system
+[dune](https://github.com/ocaml/dune),
+[base](https://github.com/janestreet/base) and
+[stdio](https://github.com/janestreet/stdio) (standard library replacements)
+from janestreet, as well as a couple ppx rewriters, all of which are available
+through the opam package manager.
+* `opam install dune base stdio ppx_jane ppx_inline_test`
+
 ### Installing Scad_ml
 One day I may get to upstreaming my drammatic changes to
 [scad-ml](https://github.com/namachan10777/scad-ml) and do the work to get the
@@ -47,28 +62,21 @@ install from the package repository).
 3. `dune build`
 4. `opam install ./scad_ml.opam`
 
-### opam dependencies
-The other dependencies include [base](https://github.com/janestreet/base) and
-[stdio](https://github.com/janestreet/stdio) (standard library replacements)
-from janestreet, as well as a couple ppx rewriters, all of which are available
-through the opam package manager.
-* `opam install base stdio ppx_jane ppx_inline_test`
-
 ## Organization
 Online documentation is available
 [here](https://geoffder.github.io/dometyl-keyboard/dometyl/index.html), and will
 be filling in over time.
 
 ## Usage
-1. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
+1. If you haven't already, copy [main.ml.example](dometyl/bin/main.ml.example)
+   to `dometyl/bin/main.ml` and add a line for writing the scad of your
+   generated model to the [things](dometyl/things) directory. This can be done
+   simply with the helper function `write_thing` which can also optionally
+   export and `.stl` using the OpenSCAD cli. You can also pass your generated
+   `Case.t` to tent and bottom plate generation functions while you're there and
+   write those to `.scad` as well.
+2. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
    modify and existing one to suit your preferences / fit your hand.
-2. Remove the `.example` suffix from
-   [main.ml.example](dometyl/bin/main.ml.example) and add a line for writing the
-   scad of your generated model to the [things](dometyl/things) directory. This
-   can be done simply with the helper function `write_thing` which can also
-   optionally export and `.stl` using the OpenSCAD cli. You can also pass your
-   generated `Case.t` to tent and bottom plate generation functions while you're
-   there and write those to `.scad` as well.
 3. Generate scads/stls by running `dune exec @dometyl` from the [dometyl](dometyl)
    project folder. Files will be output to the [things](things) directory.
 4. Open generated `.scad` files in OpenSCAD where they can be
