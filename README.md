@@ -62,12 +62,13 @@ be filling in over time.
 ## Usage
 1. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
    modify and existing one to suit your preferences / fit your hand.
-2. Add a line (or make sure one exists) for writing the scad of your generated
-   model to [main.ml](dometyl/bin/main.ml), which will be run when executing
-   `dometyl`. This can be done simply with the helper function `write_thing`
-   which can also optionally export and `.stl` using the OpenSCAD cli. You can
-   also pass your generated `Case.t` to tent and bottom plate generation
-   functions while you're there and write those to `.scad` as well.
+2. Remove the `.example` suffix from
+   [main.ml.example](dometyl/bin/main.ml.example) and add a line for writing the
+   scad of your generated model to the [things](dometyl/things) directory. This
+   can be done simply with the helper function `write_thing` which can also
+   optionally export and `.stl` using the OpenSCAD cli. You can also pass your
+   generated `Case.t` to tent and bottom plate generation functions while you're
+   there and write those to `.scad` as well.
 3. Generate scads/stls by running `dune exec @dometyl` from the [dometyl](dometyl)
    project folder. Files will be output to the [things](things) directory.
 4. Open generated `.scad` files in OpenSCAD where they can be
