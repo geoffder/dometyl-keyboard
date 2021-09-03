@@ -10,7 +10,7 @@ open Generator
    pretty. *)
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
+    { body = Body.make ~n_steps:(`Flat 5) ~n_facets:6 ~clearance:1.5 plate
     ; thumb =
         Thumb.make
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
@@ -19,7 +19,8 @@ let wall_builder plate =
           ~clearance:0.5
           ~d1:4.
           ~d2:4.75
-          ~n_steps:(`PerZ 6.)
+          ~n_steps:(`PerZ 5.)
+          ~n_facets:2
           plate
     }
 
@@ -33,8 +34,8 @@ let base_connector =
     ~cubic_scale:1.
     ~thumb_cubic_d:1.
     ~thumb_cubic_scale:1.25
-    ~body_join_steps:3
-    ~thumb_join_steps:3
+    ~body_join_steps:5
+    ~thumb_join_steps:5
     ~fudge_factor:8.
     ~close_thumb:false
 
