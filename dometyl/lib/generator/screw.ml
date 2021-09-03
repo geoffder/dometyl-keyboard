@@ -5,6 +5,10 @@ type hole =
   | Through
   | Inset of float
 
+type placement =
+  | Normal of Vec3.t
+  | Point of Vec3.t
+
 type config =
   { outer_rad : float
   ; inner_rad : float
@@ -33,10 +37,21 @@ let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole =
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
 let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.; hole = Inset 0.5 }
 
-let make ~normal ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2 =
-  let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1))
-  and hole_offset = Vec3.map (( *. ) outer_rad) normal
-  and foot_offset = Vec3.map (( *. ) (-0.1)) normal in
+let make
+    ?(n_steps = 7)
+    ~placement
+    ({ outer_rad; inner_rad; thickness; hole } as config)
+    p1
+    p2
+  =
+  let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1)) in
+  let hole_offset, foot_offset =
+    match placement with
+    | Normal n -> Vec3.map (( *. ) outer_rad) n, Vec3.map (( *. ) (-0.1)) n
+    | Point p  ->
+      let diff = Vec3.(p <-> base_centre) in
+      diff, Vec3.map (( *. ) (-0.1)) (Vec3.normalize diff)
+  in
   let hole_centre = Vec3.(base_centre <+> hole_offset) in
   let outer = Model.circle ~fn:16 outer_rad |> Model.translate hole_centre
   and inner = Model.circle ~fn:16 inner_rad |> Model.translate hole_centre
@@ -46,10 +61,10 @@ let make ~normal ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2 =
     :: base_centre
     :: Vec3.add p foot_offset
     :: Bezier.curve
-         ~n_steps:10
+         ~n_steps
          (Bezier.quad_vec3
             ~p1:p
-            ~p2:Vec3.(base_centre <+> rad_offset)
+            ~p2:Vec3.(mean [ base_centre <+> rad_offset; p ])
             ~p3:Vec3.(hole_centre <+> rad_offset) )
     |> List.map ~f:Vec3.to_vec2
     |> Model.polygon

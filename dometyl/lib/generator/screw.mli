@@ -5,6 +5,10 @@ type hole =
   | Through
   | Inset of float
 
+type placement =
+  | Normal of Vec3.t
+  | Point of Vec3.t
+
 type config =
   { outer_rad : float
   ; inner_rad : float
@@ -24,5 +28,5 @@ val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
 val default_config : config
 val m4_config : config
 val bumpon_config : config
-val make : normal:Vec3.t -> config -> Vec3.t -> Vec3.t -> t
+val make : ?n_steps:int -> placement:placement -> config -> Vec3.t -> Vec3.t -> t
 val to_scad : t -> Model.t

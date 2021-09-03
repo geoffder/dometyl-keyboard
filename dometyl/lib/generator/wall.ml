@@ -222,7 +222,9 @@ let poly_siding
   let screw =
     Option.map
       ~f:(fun config ->
-        Screw.make ~normal:(Vec3.negate xy) config foot.bot_left foot.bot_right )
+        Screw.(
+          make ~placement:(Normal (Vec3.negate xy)) config foot.bot_left foot.bot_right)
+        )
       screw_config
   in
   { scad =
