@@ -94,29 +94,19 @@ be filling in over time.
    variations here rather than having them strewn over countless forks would be
    make for a nice resource!
 
-## More Example Output
+## Example Output
 * An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
   [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
-  ![splaytyl prototype](images/bk_skeletyl_mimic.png)
+  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png)
 * This mimic configuration can serve as a nice place to start if you like the
   skeletyl, but would like to tweak the column offsets, or would like to (at the
   price of it being a bit taller) use kailh hotswap sockets:
-  ![splaytyl prototype](images/skeletyl_hotswap.png)
+  ![skeletyl hotswap](images/skeletyl_hotswap.png)
 * (Mostly) closed [configuration](dometyl/lib/boards/deractyl.ml) with thumb and
   plate based off of the
   [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
   the addition of aggresive secondary column tilt. ![deractyl
   prototype](images/deractyl_prototype.png)
-* There is also support for using the TRRS/MCU holders from
-  ![dereknheiley](https://github.com/dereknheiley/dactyl-manuform-tight)
-  (reversible, elite-C without and without reset button access) and
-  ![carbonfet](https://github.com/carbonfet/dactyl-manuform)
-  (non-reversible, elite-C and pro-micro). Rough placement is done with the help of wall
-  coordinates, with offset and rotation parameters available to fine-tune.
-  Eventually a more tailored holder should be available, but these existing stls
-  can get the job done today.
-  ![derek holder with reset button](images/deractyl_elite_w_reset_button.png)
-  ![derek holder inside view](images/deractyl_elite-c_underside.png)
 * Configurable heat-set insert screw holes (visible in other examples) or
   bumpon feet can be placed at the base of walls of your choosing
   ![splaytyl bumpon view](images/splaytyl_bumpon.png)
@@ -124,6 +114,28 @@ be filling in over time.
   ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
   ![splaytyl tent](images/splaytyl_tent.png)
   ![splaytyl tent underside](images/splaytyl_tent_underside.png)
+
+## MCU / TRRS jack holders
+* A few solutions for MCU (elite-C and pro-micro at the moment) and TRRS jack
+  mounting are available at the moment. Rough placement is done with the help of
+  coordinates kept within the records of the `Case.t` type, with offset and
+  rotation parameters available to fine-tune.
+* Firstly, there is support for using the familiar slot-in trays from
+  ![dereknheiley](https://github.com/dereknheiley/dactyl-manuform-tight)
+  (reversible, elite-C without and without reset button access) and
+  ![carbonfet](https://github.com/carbonfet/dactyl-manuform) (non-reversible,
+  elite-C and pro-micro). Eventually a more tailored tray holder that should be
+  available, but these existing stls can get the job done today.
+  ![derek holder with reset button](images/deractyl_elite_w_reset_button.png)
+  ![derek holder inside view](images/deractyl_elite-c_underside.png)
+* Second, the [BastardKB shield
+  pcb](https://github.com/Bastardkb/Elite-C-holder) used in the
+  [Skeletyl](https://github.com/Bastardkb/Skeletyl) (as well Quentin's other
+  boards) is supported as well. In addition to making the required insets/holes
+  in the case, the included helper functions will place configurable eyelets for
+  heatset inserts for mounting. ![BK shield
+  side-view](images/bk_shield_demo_side_view.png) ![BK shield
+  under-view](images/bk_shield_demo_under_view.png)
 
 ## Troubleshooting
 Now and then, when you attempt to render a model, part of it will disappear.
