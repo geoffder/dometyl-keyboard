@@ -59,7 +59,9 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~splay ~swing ()
 
 let plate_welder = Plate.skeleton_bridges
-let ports_cutter = Ports.make ()
+
+(* let ports_cutter = Ports.make () *)
+let ports_cutter = BastardShield.(cutter (make ()))
 
 let build ?hotswap () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
@@ -91,8 +93,9 @@ let bastard_compare () =
     ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
     ]
 
-let bastard_ports_aligned () =
+let bk_skeletyl_w_shield () =
+  let shield = BastardShield.(make ()) in
   Model.union
-    [ Model.translate (0., 2., 0.) bastard_skelly
-    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    [ bastard_skelly
+    ; BastardShield.to_scad ~show_screws:true shield |> Model.translate (-6.71, 35.2, 2.)
     ]
