@@ -21,7 +21,7 @@ let make
     ?(usb_height = 3.6)
     ?(usb_width = 9.575)
     ?(usb_z_off = 0.35)
-    ?(board_width = 21.)
+    ?(board_width = 21.25)
     ?(board_thickness = 2.)
     ?(dist = 15.925)
     ?(x_off = 3.3)
