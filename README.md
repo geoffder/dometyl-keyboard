@@ -32,8 +32,9 @@ that others can begin to tool around with it.
 This generator is written in the [ocaml](https://ocaml.org/) language, so you'll
 need to get an environment set up, including the package manager
 [opam](https://opam.ocaml.org/) and the build system
-[dune](https://github.com/ocaml/dune). You'll of course also want
-[OpenSCAD](https://openscad.org/) to preview/render/export the generated models.
+[dune](https://github.com/ocaml/dune) (which we'll install through opam). You'll
+of course also want [OpenSCAD](https://openscad.org/) to preview/render/export
+the generated models.
 
 After installing `opam`, you can run the [setup.sh](setup.sh) script for
 convenience, or follow the instructions under the [opam
