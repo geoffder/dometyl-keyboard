@@ -2,10 +2,14 @@ open! Base
 open! Scad_ml
 
 module Hotswap : sig
-  val holder_thickness : float
-  val socket_z : float
-  val make : inner_w:float -> inner_h:float -> [< `North | `South ] -> Model.t * Model.t
-  val combo_ex : Model.t
+  val make
+    :  inner_w:float
+    -> inner_h:float
+    -> plate_thickness:float
+    -> [< `North | `South ]
+    -> Model.t * Model.t
+
+  val example : ?alpha:float -> ?show_cutout:bool -> [ `North | `South ] -> Model.t
 end
 
 val teeth : inner_h:float -> thickness:float -> Model.t -> Model.t

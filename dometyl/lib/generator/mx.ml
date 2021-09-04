@@ -2,13 +2,16 @@ open! Base
 open! Scad_ml
 
 module Hotswap = struct
-  let holder_thickness = 3.
-  let socket_z = -2.6 (* hotswap socket cutout position *)
-
-  let make ~inner_w ~inner_h facing =
-    let w = inner_w +. 3.
+  let make ~inner_w ~inner_h ~plate_thickness facing =
+    let holder_thickness = 3.
+    and hole_depth = 5. in
+    let shallowness = hole_depth -. plate_thickness in
+    let socket_z = -2.6 -. ((hole_depth +. shallowness) /. 2.)
+    (* hotswap socket cutout position *)
+    and w = inner_w +. 3.
     and h = inner_h +. 3.
-    and z = holder_thickness /. -2. (* the bottom of the hole.  *)
+    and z = (holder_thickness +. hole_depth +. shallowness) /. -2.
+    (* the bottom of the hole.  *)
     and socket_thickness = holder_thickness +. 0.5 (* plus printing error *)
     and sign =
       match facing with
@@ -62,11 +65,25 @@ module Hotswap = struct
       |> Model.translate (0., 0., z)
       |> Fn.flip Model.difference [ access_cuts; cutout ]
     in
-    hotswap, cutout
+    ( ( if Float.(shallowness > 0.)
+      then (
+        let spacer =
+          Model.difference
+            (Model.square ~center:true (w, h))
+            [ Model.square ~center:true (inner_w, inner_h) ]
+          |> Model.linear_extrude ~height:shallowness
+          |> Model.translate (0., 0., (plate_thickness /. -2.) -. shallowness)
+        in
+        Model.union [ hotswap; spacer ] )
+      else hotswap )
+    , cutout )
 
-  let combo_ex =
-    let swap, cut = make ~inner_w:13.9 ~inner_h:13.8 `North in
-    Model.union [ Model.color Color.FireBrick swap; Model.color Color.DarkMagenta cut ]
+  let example ?alpha ?(show_cutout = false) facing =
+    let swap, cut = make ~inner_w:13.9 ~inner_h:13.8 ~plate_thickness:5. facing in
+    let swap = Model.color ?alpha Color.FireBrick swap in
+    if show_cutout
+    then Model.union [ swap; Model.color ?alpha Color.DarkMagenta cut ]
+    else swap
 end
 
 let teeth ~inner_h ~thickness hole =
@@ -91,18 +108,11 @@ let make_hole
   let thickness, clearance, clip, cutout =
     match hotswap with
     | Some facing ->
-      let thickness = 5. (* Thickness must be 5, correct depth to sockets. *) in
-      let swap, cutout = Hotswap.make ~inner_w ~inner_h facing in
-      let clip hole =
-        Model.union
-          [ teeth ~inner_h ~thickness hole
-          ; Model.translate (0., 0., thickness /. -2.) swap
-          ]
+      let swap, cutout =
+        Hotswap.make ~inner_w ~inner_h ~plate_thickness:thickness facing
       in
-      ( thickness
-      , clearance +. 3.
-      , clip
-      , Some (Model.translate (0., 0., thickness /. -2.) cutout) )
+      let clip hole = Model.union [ teeth ~inner_h ~thickness hole; swap ] in
+      thickness, clearance +. 3., clip, Some cutout
     | None        -> thickness, clearance, teeth ~inner_h ~thickness, None
   in
   KeyHole.(
