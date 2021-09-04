@@ -327,7 +327,7 @@ let straight_base
   ; outline = [ w1.foot.top_right; w2.foot.top_left ]
   ; inline =
       List.map
-        ~f:List.hd_exn
+        ~f:List.last_exn
         ( if outward
         then [ starts true; extra_starts; extra_dests ]
         else [ extra_starts; extra_dests; dests true ] )
