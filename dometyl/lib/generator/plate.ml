@@ -18,7 +18,7 @@ module Lookups = struct
 
   let default_curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ()) (* ring *)
+      Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.5)) ()) (* ring *)
     | i when i > 3 ->
       Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
     | i when i = 0 ->

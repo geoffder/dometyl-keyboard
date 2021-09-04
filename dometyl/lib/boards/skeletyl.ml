@@ -10,7 +10,7 @@ open Generator
    pretty. *)
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_steps:(`Flat 5) ~n_facets:6 ~clearance:1.5 plate
+    { body = Body.make ~n_steps:(`Flat 5) ~n_facets:5 ~clearance:1.5 plate
     ; thumb =
         Thumb.make
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
