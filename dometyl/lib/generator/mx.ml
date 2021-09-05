@@ -105,15 +105,15 @@ let make_hole
     ?(clearance = 3.)
     ()
   =
-  let thickness, clearance, clip, cutout =
+  let clearance, clip, cutout =
     match hotswap with
     | Some facing ->
       let swap, cutout =
         Hotswap.make ~inner_w ~inner_h ~plate_thickness:thickness facing
       in
       let clip hole = Model.union [ teeth ~inner_h ~thickness hole; swap ] in
-      thickness, clearance +. 3., clip, Some cutout
-    | None        -> thickness, clearance, teeth ~inner_h ~thickness, None
+      clearance +. 3., clip, Some cutout
+    | None        -> clearance, teeth ~inner_h ~thickness, None
   in
   KeyHole.(
     make
