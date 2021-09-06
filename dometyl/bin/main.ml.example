@@ -3,8 +3,12 @@ open! Scad_ml
 open Generator
 open Boards
 
+let path_to_root =
+  try (Sys.get_argv ()).(1) with
+  | _ -> ""
+
 let write_thing ?(export = false) name scad =
-  let filename ext = Printf.sprintf "../things/%s.%s" name ext in
+  let filename ext = Printf.sprintf "%s../things/%s.%s" path_to_root name ext in
   Stdio.printf "- %s => scad" name;
   Stdio.(Out_channel.flush stdout);
   let oc = Stdio.Out_channel.create (filename "scad") in
