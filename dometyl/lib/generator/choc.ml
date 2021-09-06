@@ -6,7 +6,7 @@ let kailh_socket =
   Model.import "../things/choc_hotswap_socket.stl"
   |> Model.translate (7., 0., 0.)
   |> Model.rotate (Float.pi /. 2., 0., Float.pi)
-  |> Model.translate (2.05, 3.7, -3.5)
+  |> Model.translate (2.0, 3.7, -3.5)
   |> Model.color ~alpha:0.4 Color.Silver
 
 (* https://grabcad.com/library/kailh-low-profile-mechanical-keyboard-switch-1 *)
@@ -27,6 +27,7 @@ module Hotswap = struct
     and z = (holder_thickness +. hole_depth +. shallowness) /. -2.
     (* the bottom of the hole.  *)
     and socket_thickness = holder_thickness +. 0.5 (* plus printing error *)
+    and pin_radius = 1.5
     and sign =
       match facing with
       | `North -> -1.
@@ -43,11 +44,12 @@ module Hotswap = struct
              [ -.edge_x, edge_y
              ; -5., 3.45
              ; 0.75, 3.45
-             ; 1.3, 3.25
+             ; 1.3, 3.2
              ; 1.6, 3.
-             ; 1.9, 2.7
-             ; 2.6, 1.3
-             ; edge_x, 1.3
+             ; 1.88, 2.7
+             ; 2.4, 1.7
+             ; 2.8, 1.35
+             ; edge_x, 1.35
              ; edge_x, edge_y
              ; 7.2, edge_y
              ; 7.2, 6.05
@@ -61,7 +63,9 @@ module Hotswap = struct
              ; 1.2, edge_y
              ; -5., edge_y
              ]
-      and pin = Model.translate (0., 5.9 *. sign, 0.) (Model.cylinder ~fn:30 1.45 2.4) in
+      and pin =
+        Model.translate (0., 5.9 *. sign, 0.) (Model.cylinder ~fn:30 pin_radius 2.4)
+      in
       Model.union
         [ poly |> Model.linear_extrude ~center:true ~height:socket_thickness; pin ]
       |> Model.translate (0., 0., socket_z)
@@ -71,8 +75,8 @@ module Hotswap = struct
         Model.square ~center:true (6., 6.) |> Model.translate (0., -6. *. sign, 0.)
       and holes =
         let main = Model.circle ~fn:30 1.7
-        and pin = Model.circle ~fn:30 1.45
-        and friction = Model.circle ~fn:30 0.95 in
+        and pin = Model.circle ~fn:30 pin_radius
+        and friction = Model.circle ~fn:30 0.975 in
         let plus = Model.translate (0., 5.9 *. sign, 0.) pin
         and minus = Model.translate (5. *. sign, 3.8 *. sign, 0.) pin
         and fric_left = Model.translate (-5.5, 0., 0.) friction
