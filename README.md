@@ -81,6 +81,9 @@ be filling in over time.
    modify and existing one to suit your preferences / fit your hand.
 3. Generate scads/stls by running `dune exec @dometyl` from the [dometyl](dometyl)
    project folder. Files will be output to the [things](things) directory.
+   Alteratively, if you have/install `fswatch` (cross-platform) or `inotify`
+   (GNU/linux) on your system, you can use `dune build -w @run` to automatically
+   build and execute on file changes.
 4. Open generated `.scad` files in OpenSCAD where they can be
    previewed/rendered/exported to `.stl`. If a viewed `.scad` is overwritten by
    compiling and running the generator, the changes will be visible in the GUI.
