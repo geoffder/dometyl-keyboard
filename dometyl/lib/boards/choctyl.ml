@@ -15,8 +15,8 @@ let wall_builder plate =
             | _ -> No )
           plate
     ; thumb =
-        Thumb.make (* ~south_lookup:(fun i -> if i = 1 then No else Yes) *)
-          ~south_lookup:(fun _ -> Yes)
+        Thumb.make
+          ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east:No
           ~west:Screw
           ~clearance:1.5
@@ -29,7 +29,7 @@ let base_connector =
   Connect.skeleton
     ~height:7.
     ~index_height:15.
-    ~thumb_height:15.
+    ~thumb_height:17.
     ~snake_scale:1.3
     ~snake_d:1.4
     ~cubic_d:2.
@@ -40,7 +40,8 @@ let base_connector =
     ~body_join_steps:3
     ~thumb_join_steps:4
     ~fudge_factor:8.
-    ~close_thumb:true
+    ~overlap_factor:1.2
+    ~close_thumb:false
 
 let default_curve = function
   | i when i = 3 ->
@@ -55,22 +56,22 @@ let default_curve = function
 let lookups =
   let offset = function
     | 2 -> 0., 4., -6. (* middle *)
-    | 3 -> 2.75, -1., 0. (* ring *)
-    | i when i >= 4 -> 1.0, -22., 9.5 (* pinky *)
+    | 3 -> 1.5, -1., 0. (* ring *)
+    | i when i >= 4 -> 0., -22., 9.5 (* pinky *)
     | 0 -> -2.25, 0., 8.
     | _ -> 0., 0., 1.5
   and curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:30. (Float.pi /. 4.5)) ()) (* pinky  *)
+      Curvature.(curve ~well:(spec ~radius:28.2 (Float.pi /. 4.25)) ()) (* ring  *)
     | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:25. (Float.pi /. 3.6)) ()) (* pinky  *)
+      Curvature.(curve ~well:(spec ~radius:24.3 (Float.pi /. 3.55)) ()) (* pinky  *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:32. (Float.pi /. 4.5)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:34. (Float.pi /. 5.25)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 5.) ~radius:31. (Float.pi /. 4.4)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:33.3 (Float.pi /. 5.18)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
-    | i when i >= 4 -> Float.pi /. -15. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -13. (* pinky *)
     | _ -> 0.
   in
   Plate.Lookups.make ~offset ~curve ~splay ()
@@ -82,8 +83,8 @@ let plate_welder plate =
 (* let ports_cutter = Ports.carbonfet_holder ~x_off:0. ~y_off:(-0.75) ()*)
 let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
 
-let build () =
-  let keyhole = Choc.make_hole ~cap:Caps.mbk () in
+let build ?hotswap () =
+  let keyhole = Choc.make_hole ~cap:Caps.mbk ?hotswap ~outer_h:17. () in
   let plate =
     Plate.make
       ~n_rows:3
@@ -95,7 +96,7 @@ let build () =
       ~thumb_curve:
         Curvature.(
           curve
-            ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 24. }
+            ~fan:{ angle = Float.pi /. 10.2; radius = 70.; tilt = Float.pi /. 24. }
             ~well:{ angle = Float.pi /. 5.; radius = 30.; tilt = 0. }
             ())
       ~lookups
