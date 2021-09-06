@@ -73,7 +73,7 @@ be filling in over time.
 1. If you haven't already, copy [main.ml.example](dometyl/bin/main.ml.example)
    to `dometyl/bin/main.ml` and add a line for writing the scad of your
    generated model to the [things](dometyl/things) directory. This can be done
-   simply with the helper function `write_thing` which can also optionally
+   simply with the helper function `Write.thing` which can also optionally
    export and `.stl` using the OpenSCAD cli. You can also pass your generated
    `Case.t` to tent and bottom plate generation functions while you're there and
    write those to `.scad` as well.
