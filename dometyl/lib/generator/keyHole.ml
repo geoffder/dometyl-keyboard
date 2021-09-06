@@ -210,3 +210,7 @@ let make
   ; cap = Option.map ~f:(Model.translate (0., 0., cap_height)) cap
   ; cutout
   }
+
+let cutout_scad = function
+  | { scad; cutout = Some cut; _ } -> Model.difference scad [ cut ]
+  | { scad; _ } -> scad

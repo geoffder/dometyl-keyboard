@@ -156,8 +156,7 @@ let example_assembly
   let hole = make_hole ~hotswap:`South ~cap:Caps.mbk () in
   let cutout = Option.value_exn hole.cutout in
   let hole =
-    hole.scad
-    |> Fn.flip Model.difference [ cutout ]
+    KeyHole.cutout_scad hole
     |> Model.translate (0., 0., -2.)
     |> Model.color ~alpha:0.5 Color.FireBrick
   and cutout =
