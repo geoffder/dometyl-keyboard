@@ -141,6 +141,10 @@ be filling in over time.
   heatset inserts for mounting. ![BK shield
   side-view](images/bk_shield_demo_side_view.png) ![BK shield
   under-view](images/bk_shield_demo_under_view.png)
+  If you would like to use this mounting method rather than one of the trays,
+  and you don't want get PCBs made, there is an
+  [stl](things/holders/bastardkb/printable_shield.stl) available which you can
+  print and solder your components around / glue to.
 
 ## Troubleshooting
 Now and then, when you attempt to render a model, part of it will disappear.
