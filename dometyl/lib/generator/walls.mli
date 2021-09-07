@@ -29,6 +29,7 @@ module Body : sig
       -> ?d2:float
       -> ?z_off:float
       -> ?thickness:float
+      -> ?index_thickness:float
       -> ?clearance:float
       -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
       -> ?n_facets:int
@@ -86,6 +87,7 @@ module Body : sig
     -> ?d2:float
     -> ?z_off:float
     -> ?thickness:float
+    -> ?index_thickness:float
     -> ?clearance:float
     -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
     -> ?n_facets:int

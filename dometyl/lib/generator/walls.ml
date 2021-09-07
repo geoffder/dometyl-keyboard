@@ -26,6 +26,7 @@ module Body = struct
         ?(d2 = 5.)
         ?(z_off = 0.)
         ?(thickness = 3.5)
+        ?index_thickness
         ?(clearance = 2.5)
         ?(n_steps = `Flat 4)
         ?(n_facets = 1)
@@ -39,21 +40,21 @@ module Body = struct
         Plate.{ config = { spacing; _ }; columns; _ }
       =
       let drop =
-        Wall.column_drop
-          ~spacing
-          ~columns
-          ~z_off
-          ~thickness
-          ~clearance
-          ~n_steps
-          ~n_facets
-          ~d1
-          ~d2
-      in
+        Wall.column_drop ~spacing ~columns ~z_off ~clearance ~n_steps ~n_facets ~d1 ~d2
+      and index_thickness' = Option.value ~default:thickness index_thickness in
       let bez_wall = function
         | No    -> fun _ _ -> None
-        | Yes   -> fun side i -> Some (drop side i)
-        | Screw -> fun side i -> Some (drop ~screw_config side i)
+        | Yes   ->
+          fun side i ->
+            Some (drop ~thickness:(if i < 2 then index_thickness' else thickness) side i)
+        | Screw ->
+          fun side i ->
+            Some
+              (drop
+                 ~thickness:(if i < 2 then index_thickness' else thickness)
+                 ~screw_config
+                 side
+                 i )
       in
       Map.mapi
         ~f:(fun ~key:i ~data:_ ->
@@ -158,6 +159,7 @@ module Body = struct
       ?d2
       ?z_off
       ?thickness
+      ?index_thickness
       ?clearance
       ?n_steps
       ?n_facets
@@ -174,6 +176,7 @@ module Body = struct
           ?d2
           ?z_off
           ?thickness
+          ?index_thickness
           ?clearance
           ?n_steps
           ?n_facets
