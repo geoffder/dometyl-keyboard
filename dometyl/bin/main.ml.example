@@ -6,7 +6,8 @@ open! Boards
 (* NOTE: If you aren't using hotswap holders, you can simply mirror the generated case stl,
    but if you are, you will need to make a left-hand case like so. The bottom plate and
    tenting base will of course still be reversible, so you can mirror those in your slicer
-   as you would a case with plain switch holes. *)
+   as you would a case with plain switch holes. Though you can also make bottoms/tent for
+   left cases directly here as well. *)
 
 let splaytyl_right = Splaytyl.build ~hotswap:`South ()
 let splaytyl_left = Splaytyl.build ~right_hand:false ~hotswap:`South ()

@@ -23,11 +23,10 @@ include Sigs.Transformable' with type 'k t := 'k t
 (** [make ?right_hand ~plate_builder ~plate_welder ~wall_builder ~base_connector
       ~ports_cutter keyhole]
 
-A high level helper used to contsruct the case from provided functions and a {!KeyHole.t}.
-If [right_hand] is false, the case will be built with a mirrored [keyhole], then the
-completed case will be flipped. NOTE: Currently only the scad is mirrored, so
-the mirrored case will not correctly produce a mirrored tent or mirrored bottom plate.
-For those, you may mirror exported STLs created for the right-hand case.
+A high level helper used to contsruct the case from provided functions and a
+{!KeyHole.t}. If [right_hand] is false, the case will be built with a mirrored
+[keyhole], then the completed case will be flipped (keeping non-reversible
+clips/cutouts such as those for hotswap holders in the right orientation).
 - [plate_builder] will use the provided {!KeyHole.t} to generate a {!Plate.t}
 - [plate_welder] function intended to generate a {!Model.t} that provides support
   between columns of the built plate.
