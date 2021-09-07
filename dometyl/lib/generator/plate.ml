@@ -11,8 +11,8 @@ module Lookups = struct
 
   let default_offset = function
     | 2 -> 0., 4., -6. (* middle *)
-    | 3 -> 2.25, -2., 0. (* ring *)
-    | i when i >= 4 -> 0.75, -22., 9.5 (* pinky *)
+    | 3 -> 2., -2., 0. (* ring *)
+    | i when i >= 4 -> 3.0, -22., 9.5 (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
@@ -32,7 +32,7 @@ module Lookups = struct
 
   let default_splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
-    | i when i >= 4 -> Float.pi /. -13. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -9. (* pinky *)
     | _ -> 0.
 
   let make
