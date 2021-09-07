@@ -30,19 +30,34 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
-let make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate =
+(* NOTE: Currently only the scad is mirrored, so the mirrored case will not
+   produce a mirrored tent or mirrored bottom plate. Mirror would have to be added
+   transformation to the transformation functions for each relevant type, so that
+   the coordinate information that they rely on are correctly mirrored as well. *)
+let make
+    ?(right_hand = true)
+    ~plate_builder
+    ~plate_welder
+    ~wall_builder
+    ~base_connector
+    ~ports_cutter
+    keyhole
+  =
+  let plate = plate_builder (if right_hand then keyhole else KeyHole.mirror keyhole) in
   let walls = wall_builder plate in
   let connections = base_connector walls in
-  { scad =
-      Model.difference
-        (Model.union
-           [ Plate.to_scad plate
-           ; Walls.to_scad walls
-           ; Connect.to_scad connections
-           ; plate_welder plate
-           ] )
-        [ Plate.collect_cutouts plate ]
-      |> Ports.apply (ports_cutter ~walls ~connections)
+  let scad =
+    Model.difference
+      (Model.union
+         [ Plate.to_scad plate
+         ; Walls.to_scad walls
+         ; Connect.to_scad connections
+         ; plate_welder plate
+         ] )
+      [ Plate.collect_cutouts plate ]
+    |> Ports.apply (ports_cutter ~walls ~connections)
+  in
+  { scad = (if right_hand then scad else Model.mirror (1, 0, 0) scad)
   ; plate
   ; walls
   ; connections

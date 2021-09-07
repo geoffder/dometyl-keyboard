@@ -20,12 +20,18 @@ type 'k t =
 (** Basic transformation functions, applied to all relevant non-config contents. *)
 include Sigs.Transformable' with type 'k t := 'k t
 
-(** [make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate]
+(** [make ?right_hand ~plate_builder ~plate_welder ~wall_builder ~base_connector
+      ~ports_cutter keyhole]
 
-A high level helper used to contsruct the case from provided functions and a {!Plate.t}.
+A high level helper used to contsruct the case from provided functions and a {!KeyHole.t}.
+If [right_hand] is false, the case will be built with a mirrored [keyhole], then the
+completed case will be flipped. NOTE: Currently only the scad is mirrored, so
+the mirrored case will not correctly produce a mirrored tent or mirrored bottom plate.
+For those, you may mirror exported STLs created for the right-hand case.
+- [plate_builder] will use the provided {!KeyHole.t} to generate a {!Plate.t}
 - [plate_welder] function intended to generate a {!Model.t} that provides support
-  between columns.
-- [wall_builder] uses the provided {!Plate.t} to create {!Walls.t} from the ends and
+  between columns of the built plate.
+- [wall_builder] uses the generated {!Plate.t} to create {!Walls.t} from the ends and
   sides of the columns to the ground (likely a closure using {!Walls.Body.make}
   and {!Walls.Thumb.make}).
 - [base_connector] connects the walls around the perimeter of the case, using various
@@ -40,11 +46,13 @@ A high level helper used to contsruct the case from provided functions and a {!P
   a function, which can be configured then wrapped in {!Ports.t} as this
   parameter. *)
 val make
-  :  plate_welder:('k Plate.t -> Model.t)
+  :  ?right_hand:bool
+  -> plate_builder:('k KeyHole.t -> 'k Plate.t)
+  -> plate_welder:('k Plate.t -> Model.t)
   -> wall_builder:('k Plate.t -> Walls.t)
   -> base_connector:(Walls.t -> Connect.t)
   -> ports_cutter:Ports.cutter
-  -> 'k Plate.t
+  -> 'k KeyHole.t
   -> 'k t
 
 (** [to_scad ?show_caps ?show_cutouts]

@@ -211,6 +211,12 @@ let make
   ; cutout
   }
 
+let mirror t =
+  { t with
+    scad = Model.mirror (1, 0, 0) t.scad
+  ; cutout = Option.map ~f:(Model.mirror (1, 0, 0)) t.cutout
+  }
+
 let cutout_scad = function
   | { scad; cutout = Some cut; _ } -> Model.difference scad [ cut ]
   | { scad; _ } -> scad

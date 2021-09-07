@@ -80,4 +80,5 @@ val cycle_faces : 'k t -> 'k t
 val orthogonal : 'k t -> [< `East | `North | `South | `West ] -> Vec3.t
 val normal : 'k t -> Vec3.t
 val make : ?cap:Model.t -> ?cutout:Model.t -> 'k config -> 'k t
+val mirror : 'k t -> 'k t
 val cutout_scad : 'k t -> Model.t
