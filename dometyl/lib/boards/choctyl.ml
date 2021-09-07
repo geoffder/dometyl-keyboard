@@ -88,8 +88,9 @@ let base_connector =
 (* let ports_cutter = Ports.carbonfet_holder ~x_off:0. ~y_off:(-0.75) ()*)
 let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
 
-let build ?hotswap () =
+let build ?right_hand ?hotswap () =
   Case.make
+    ?right_hand
     ~plate_builder
     ~plate_welder
     ~wall_builder

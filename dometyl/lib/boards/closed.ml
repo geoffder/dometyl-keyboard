@@ -24,9 +24,10 @@ let base_connector = Connect.closed ~n_steps:4
 let plate_welder = Plate.column_joins
 let ports_cutter = Ports.make ()
 
-let build ?hotswap () =
+let build ?right_hand ?hotswap () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ?hotswap () in
   Case.make
+    ?right_hand
     ~plate_builder
     ~plate_welder
     ~wall_builder

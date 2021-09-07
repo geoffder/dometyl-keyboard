@@ -75,9 +75,10 @@ let base_connector =
 
 let ports_cutter = BastardShield.(cutter (make ()))
 
-let build ?hotswap () =
+let build ?right_hand ?hotswap () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
   Case.make
+    ?right_hand
     ~plate_builder
     ~plate_welder
     ~wall_builder
