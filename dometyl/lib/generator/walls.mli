@@ -1,11 +1,15 @@
 open! Base
 open! Scad_ml
 
+(** Used for lookups, indicating whether to place a wall at a particular position
+    on the plate, and if so, whether there should be an eyelet attached. *)
 type presence =
   | No
   | Yes
   | Screw
 
+(** Generation and storage of {!Wall.t}s from the {!KeyHole.t}s of the main body
+    of the plate (excluding the thumb cluster). *)
 module Body : sig
   module Cols : sig
     type col =
@@ -17,9 +21,8 @@ module Body : sig
 
     type t = col Map.M(Int).t
 
-    val translate : Vec3.t -> t -> t
-    val rotate : Vec3.t -> t -> t
-    val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+    (** Basic transformation functions *)
+    include Sigs.Transformable with type t := t
 
     val make
       :  ?d1:float
@@ -48,9 +51,9 @@ module Body : sig
       }
 
     val map : f:(Wall.t -> Wall.t) -> t -> t
-    val translate : Vec3.t -> t -> t
-    val rotate : Vec3.t -> t -> t
-    val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+
+    (** Basic transformation functions *)
+    include Sigs.Transformable with type t := t
 
     val make
       :  ?d1:float
@@ -75,9 +78,8 @@ module Body : sig
     ; sides : Sides.t
     }
 
-  val translate : Vec3.t -> t -> t
-  val rotate : Vec3.t -> t -> t
-  val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+  (** Basic transformation functions *)
+  include Sigs.Transformable with type t := t
 
   val make
     :  ?d1:float
@@ -120,9 +122,9 @@ module Thumb : sig
     }
 
   val map : f:(Wall.t -> Wall.t) -> t -> t
-  val translate : Vec3.t -> t -> t
-  val rotate : Vec3.t -> t -> t
-  val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+
+  (** Basic transformation functions *)
+  include Sigs.Transformable with type t := t
 
   val make
     :  ?d1:float
@@ -149,8 +151,8 @@ type t =
   ; thumb : Thumb.t
   }
 
-val translate : Vec3.t -> t -> t
-val rotate : Vec3.t -> t -> t
-val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+(** Basic transformation functions *)
+include Sigs.Transformable with type t := t
+
 val to_scad : t -> Model.t
 val collect_screws : t -> Screw.t list

@@ -88,7 +88,34 @@ include Sigs.Transformable with type t := t
     and it's new orthogonal {!Vec3.t}. *)
 val swing_face : ?step:float -> Vec3.t -> KeyHole.Face.t -> KeyHole.Face.t * Vec3.t
 
-(** [] *)
+(** [poly_siding ?x_off ?y_off ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
+      ?screw_config side keyhole]
+
+Generate a {!type:t} using an OpenScad polyhedron, drawn from a set of bezier curves
+from the [side] facing edges of [keyhole]. Optional parameters influence the shape of the
+generated wall:
+- [x_off] and [y_off] shift the target endpoints (on the ground) of the wall
+- [z_off] shifts the second bezier control point in z (positive would lead to more arc)
+- [clearance] moves the start of the wall out from the face of the keyhole
+- [n_steps] controls the number of points used to draw the wall (see:
+  {!module:Steps}). This impact the aeshetics of the wall, but it also
+  determines how well the wall follows the bezier curve, which can have
+  implications for positioning the cutouts for ports near the bottom of the
+  case. A number of steps that is too high can sometimes cause the generated
+  polyhedrons to fail, as points can bunch up, leading to a mesh that is
+  difficult for the OpenScad engine (CGAL) to close. When this happens, either
+  decreasing number of steps (can be done preferentially for short walls with
+  `PerZ), or increasing [n_facets] to increase the number of (and decrease the
+  size of) triangles that CGAL can use to close the wall shape.
+- [n_facets] sets the number of polyhedron faces assigned to the outside and
+  inside of the wall. Values above one will introduce additional beziers of
+  vertices spaced between the ends of the wall, leading to a finer triangular mesh.
+- [d1] and [d2] set the distance projected outward along the orthogonal of the [side]
+  of the [keyhole] on the xy-plane used to for the second and third quadratic bezier
+  control points respectively.
+- [thickness] influences the thickness of the wall (from inside to outside face)
+- If provided, [screw_config] describes the screw/bumpon eyelet that should be added
+  to the bottom of the generated wall. *)
 val poly_siding
   :  ?x_off:float
   -> ?y_off:float
@@ -104,15 +131,23 @@ val poly_siding
   -> 'a KeyHole.t
   -> t
 
-(** [] *)
+(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?screw_config
+      ~spacing ~columns idx]
+
+    Wrapper function for {!val:poly_siding} specifically for (north and south)
+    column end walls. Unlike {!val:poly_siding}, which takes a {!KeyHole.t},
+    this takes the map [columns], and an [idx] specifying the column to generate
+    the wall for. Overhang over the next column (to the right) that may have
+    been introduced by tenting is checked for, and an x offset that will reclaim
+    the desired column [spacing] is calculated and passed along to {!val:poly_siding}. *)
 val column_drop
   :  ?z_off:float
   -> ?clearance:float
+  -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+  -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
-  -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?n_facets:int
   -> ?screw_config:Screw.config
   -> spacing:float
   -> columns:'k Columns.t

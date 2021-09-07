@@ -95,6 +95,8 @@ other examples with divergent parameters are provided in the modules within the
 - [centre_row] is used by key distribution functions, namely {!Curvature.place}.
   Relevant to [thumb_curve] and {!Lookups.curve}.
 - [n_cols] specifies number of columns on the main body of the switch plate
+- [centre_col] specifies the column around which the others are positioned
+  (typically 2, the middle finger) on the main body of the switch plate
 - [spacing] gives the distance in mm between each column by default. Further adjustment
   can of course be done with {!Lookups.offset}.
 - [tent] angle in radians that the entire plate (including thumb) will be y-rotated

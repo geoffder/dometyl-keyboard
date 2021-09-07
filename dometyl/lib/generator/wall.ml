@@ -241,11 +241,11 @@ let poly_siding
 let column_drop
     ?z_off
     ?clearance
+    ?n_steps
+    ?n_facets
     ?d1
     ?d2
     ?thickness
-    ?n_steps
-    ?n_facets
     ?screw_config
     ~spacing
     ~columns
