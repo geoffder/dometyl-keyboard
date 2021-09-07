@@ -18,6 +18,12 @@ let translate p t =
   ; inline = List.map ~f:(Vec3.add p) t.inline
   }
 
+let mirror ax t =
+  { scad = Model.mirror ax t.scad
+  ; outline = List.map ~f:(Vec3.mirror ax) t.outline
+  ; inline = List.map ~f:(Vec3.mirror ax) t.inline
+  }
+
 let rotate r t =
   { scad = Model.rotate r t.scad
   ; outline = List.map ~f:(Vec3.rotate r) t.outline

@@ -22,9 +22,8 @@ type t =
   ; config : config
   }
 
-val translate : Vec3.t -> t -> t
-val rotate : Vec3.t -> t -> t
-val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+include Sigs.Transformable with type t := t
+
 val default_config : config
 val m4_config : config
 val bumpon_config : config

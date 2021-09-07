@@ -15,6 +15,13 @@ let translate p t =
   ; screw_r = Vec3.add p t.screw_r
   }
 
+let mirror ax t =
+  { t with
+    scad = Model.mirror ax t.scad
+  ; screw_l = Vec3.mirror ax t.screw_l
+  ; screw_r = Vec3.mirror ax t.screw_r
+  }
+
 let rotate r t =
   { t with
     scad = Model.rotate r t.scad

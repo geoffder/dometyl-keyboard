@@ -30,6 +30,7 @@ let fold ~f ~init t =
   f init t.top_left |> flipped t.top_right |> flipped t.bot_left |> flipped t.bot_right
 
 let translate p = map ~f:(Vec3.add p)
+let mirror ax = map ~f:(Vec3.mirror ax)
 let rotate r = map ~f:(Vec3.rotate r)
 let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
 let quaternion q = map ~f:(Quaternion.rotate_vec3 q)

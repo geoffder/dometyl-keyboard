@@ -17,6 +17,7 @@ module Edge = struct
   type t = float -> Vec3.t
 
   let translate p = Fn.compose (Vec3.add p)
+  let mirror ax = Fn.compose (Vec3.mirror ax)
   let rotate r = Fn.compose (Vec3.rotate r)
   let rotate_about_pt r p = Fn.compose (Vec3.rotate_about_pt r p)
 
@@ -43,6 +44,7 @@ module Edges = struct
     }
 
   let translate p = map ~f:(Edge.translate p)
+  let mirror ax = map ~f:(Edge.mirror ax)
   let rotate r = map ~f:(Edge.rotate r)
   let rotate_about_pt r p = map ~f:(Edge.rotate_about_pt r p)
 
@@ -76,6 +78,14 @@ let translate p t =
   ; foot = Points.translate p t.foot
   ; edges = Edges.translate p t.edges
   ; screw = Option.map ~f:(Screw.translate p) t.screw
+  }
+
+let mirror ax t =
+  { scad = Model.mirror ax t.scad
+  ; start = Points.mirror ax t.start
+  ; foot = Points.mirror ax t.foot
+  ; edges = Edges.mirror ax t.edges
+  ; screw = Option.map ~f:(Screw.mirror ax) t.screw
   }
 
 let rotate r t =

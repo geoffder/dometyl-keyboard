@@ -22,6 +22,7 @@ module Face = struct
   let translate p t =
     { scad = Model.translate p t.scad; points = Points.translate p t.points }
 
+  let mirror ax t = { scad = Model.mirror ax t.scad; points = Points.mirror ax t.points }
   let rotate r t = { scad = Model.rotate r t.scad; points = Points.rotate r t.points }
 
   let rotate_about_pt r p t =
@@ -79,6 +80,7 @@ module Faces = struct
     | `West  -> t.west
 
   let translate p = map ~f:(Face.translate p)
+  let mirror ax = map ~f:(Face.mirror ax)
   let rotate r = map ~f:(Face.rotate r)
   let rotate_about_pt r p = map ~f:(Face.rotate_about_pt r p)
   let quaternion q = map ~f:(Face.quaternion q)
@@ -133,6 +135,15 @@ let translate p t =
   ; faces = Faces.translate p t.faces
   ; cap = Option.map ~f:(Model.translate p) t.cap
   ; cutout = Option.map ~f:(Model.translate p) t.cutout
+  }
+
+let mirror ax t =
+  { t with
+    scad = Model.mirror ax t.scad
+  ; origin = Vec3.mirror ax t.origin
+  ; faces = Faces.mirror ax t.faces
+  ; cap = Option.map ~f:(Model.mirror ax) t.cap
+  ; cutout = Option.map ~f:(Model.mirror ax) t.cutout
   }
 
 let rotate r t =
@@ -211,10 +222,10 @@ let make
   ; cutout
   }
 
-let mirror t =
+let mirror_internals t =
   { t with
-    scad = Model.mirror (1, 0, 0) t.scad
-  ; cutout = Option.map ~f:(Model.mirror (1, 0, 0)) t.cutout
+    scad = Model.mirror (1., 0., 0.) t.scad
+  ; cutout = Option.map ~f:(Model.mirror (1., 0., 0.)) t.cutout
   }
 
 let cutout_scad = function

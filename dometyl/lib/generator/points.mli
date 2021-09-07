@@ -19,9 +19,9 @@ type pos =
 
 val map : f:(Vec3.t -> Vec3.t) -> t -> t
 val fold : f:('a -> Vec3.t -> 'a) -> init:'a -> t -> 'a
-val translate : Vec3.t -> t -> t
-val rotate : Vec3.t -> t -> t
-val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+
+include Sigs.Transformable with type t := t
+
 val quaternion : Quaternion.t -> t -> t
 val quaternion_about_pt : Quaternion.t -> Vec3.t -> t -> t
 val to_clockwise_list : t -> Vec3.t list

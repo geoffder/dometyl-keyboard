@@ -16,6 +16,13 @@ let translate p t =
   ; connections = Connect.translate p t.connections
   }
 
+let mirror ax t =
+  { scad = Model.mirror ax t.scad
+  ; plate = Plate.mirror ax t.plate
+  ; walls = Walls.mirror ax t.walls
+  ; connections = Connect.mirror ax t.connections
+  }
+
 let rotate r t =
   { scad = Model.rotate r t.scad
   ; plate = Plate.rotate r t.plate
@@ -30,10 +37,6 @@ let rotate_about_pt r p t =
   ; connections = Connect.rotate_about_pt r p t.connections
   }
 
-(* NOTE: Currently only the scad is mirrored, so the mirrored case will not
-   produce a mirrored tent or mirrored bottom plate. Mirror would have to be added
-   transformation to the transformation functions for each relevant type, so that
-   the coordinate information that they rely on are correctly mirrored as well. *)
 let make
     ?(right_hand = true)
     ~plate_builder
@@ -43,25 +46,28 @@ let make
     ~ports_cutter
     keyhole
   =
-  let plate = plate_builder (if right_hand then keyhole else KeyHole.mirror keyhole) in
+  let plate =
+    plate_builder (if right_hand then keyhole else KeyHole.mirror_internals keyhole)
+  in
   let walls = wall_builder plate in
   let connections = base_connector walls in
-  let scad =
-    Model.difference
-      (Model.union
-         [ Plate.to_scad plate
-         ; Walls.to_scad walls
-         ; Connect.to_scad connections
-         ; plate_welder plate
-         ] )
-      [ Plate.collect_cutouts plate ]
-    |> Ports.apply (ports_cutter ~walls ~connections)
+  let t =
+    { scad =
+        Model.difference
+          (Model.union
+             [ Plate.to_scad plate
+             ; Walls.to_scad walls
+             ; Connect.to_scad connections
+             ; plate_welder plate
+             ] )
+          [ Plate.collect_cutouts plate ]
+        |> Ports.apply (ports_cutter ~walls ~connections)
+    ; plate
+    ; walls
+    ; connections
+    }
   in
-  { scad = (if right_hand then scad else Model.mirror (1, 0, 0) scad)
-  ; plate
-  ; walls
-  ; connections
-  }
+  if right_hand then t else mirror (1., 0., 0.) t
 
 let to_scad ?(show_caps = false) ?(show_cutouts = false) t =
   let caps = if show_caps then Some (Plate.collect_caps t.plate) else None

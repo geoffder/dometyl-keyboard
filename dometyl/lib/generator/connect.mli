@@ -8,9 +8,8 @@ type t =
   }
 
 val centre : float * float * float * float -> float * float
-val translate : Vec3.t -> t -> t
-val rotate : Vec3.t -> t -> t
-val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+
+include Sigs.Transformable with type t := t
 
 val prism_connection
   :  (float -> Vec3.t) list

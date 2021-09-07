@@ -20,9 +20,7 @@ module Join : sig
     ; faces : Faces.t
     }
 
-  val translate : Vec3.t -> t -> t
-  val rotate : Vec3.t -> t -> t
-  val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
+  include Sigs.Transformable with type t := t
 end
 
 type 'k config =
@@ -38,9 +36,7 @@ type 'k t =
   ; joins : Join.t Map.M(Int).t
   }
 
-val translate : Vec3.t -> 'k t -> 'k t
-val rotate : Vec3.t -> 'k t -> 'k t
-val rotate_about_pt : Vec3.t -> Vec3.t -> 'k t -> 'k t
+include Sigs.Transformable' with type 'k t := 'k t
 
 val make
   :  ?join_ax:[< `EW | `NS > `NS ]

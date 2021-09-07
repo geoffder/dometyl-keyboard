@@ -69,9 +69,8 @@ type 'k t =
   ; cutout : Model.t option
   }
 
-val translate : Vec3.t -> 'k t -> 'k t
-val rotate : Vec3.t -> 'k t -> 'k t
-val rotate_about_pt : Vec3.t -> Vec3.t -> 'k t -> 'k t
+include Sigs.Transformable' with type 'k t := 'k t
+
 val quaternion : Quaternion.t -> 'k t -> 'k t
 val quaternion_about_pt : Quaternion.t -> Vec3.t -> 'k t -> 'k t
 val rotate_about_origin : Vec3.t -> 'k t -> 'k t
@@ -80,5 +79,5 @@ val cycle_faces : 'k t -> 'k t
 val orthogonal : 'k t -> [< `East | `North | `South | `West ] -> Vec3.t
 val normal : 'k t -> Vec3.t
 val make : ?cap:Model.t -> ?cutout:Model.t -> 'k config -> 'k t
-val mirror : 'k t -> 'k t
+val mirror_internals : 'k t -> 'k t
 val cutout_scad : 'k t -> Model.t

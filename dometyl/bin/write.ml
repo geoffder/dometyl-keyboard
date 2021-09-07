@@ -1,4 +1,5 @@
 open! Base
+open! Scad_ml
 
 (* The relative path to the project root is given as an argument to the dometyl
    executable when it is run by the `run` rule (used with `dune build -w @run`
@@ -12,7 +13,7 @@ let thing ?(export = false) name scad =
   Stdio.printf "- %s => scad" name;
   Stdio.(Out_channel.flush stdout);
   let oc = Stdio.Out_channel.create (filename "scad") in
-  Scad_ml.Core.write oc scad;
+  Scad.write oc scad;
   if export
   then (
     Stdio.printf " => stl\n";

@@ -18,6 +18,7 @@ module Body = struct
     type t = col Map.M(Int).t
 
     let translate p = Map.map ~f:(map_col ~f:(Wall.translate p))
+    let mirror ax = Map.map ~f:(map_col ~f:(Wall.mirror ax))
     let rotate r = Map.map ~f:(map_col ~f:(Wall.rotate r))
     let rotate_about_pt r p = Map.map ~f:(map_col ~f:(Wall.rotate_about_pt r p))
 
@@ -92,6 +93,7 @@ module Body = struct
 
     let map ~f t = { west = Map.map ~f t.west; east = Map.map ~f t.east }
     let translate p = map ~f:(Wall.translate p)
+    let mirror ax = map ~f:(Wall.mirror ax)
     let rotate r = map ~f:(Wall.rotate r)
     let rotate_about_pt r p = map ~f:(Wall.rotate_about_pt r p)
 
@@ -147,6 +149,7 @@ module Body = struct
   let translate p t =
     { cols = Cols.translate p t.cols; sides = Sides.translate p t.sides }
 
+  let mirror ax t = { cols = Cols.mirror ax t.cols; sides = Sides.mirror ax t.sides }
   let rotate r t = { cols = Cols.rotate r t.cols; sides = Sides.rotate r t.sides }
 
   let rotate_about_pt r p t =
@@ -227,6 +230,7 @@ module Thumb = struct
 
   let map ~f t = { keys = Map.map ~f:(map_key ~f) t.keys; sides = map_sides ~f t.sides }
   let translate p = map ~f:(Wall.translate p)
+  let mirror ax = map ~f:(Wall.mirror ax)
   let rotate r = map ~f:(Wall.rotate r)
   let rotate_about_pt r p = map ~f:(Wall.rotate_about_pt r p)
 
@@ -293,6 +297,7 @@ let rotate r t = { body = Body.rotate r t.body; thumb = Thumb.rotate r t.thumb }
 let rotate_about_pt r p t =
   { body = Body.rotate_about_pt r p t.body; thumb = Thumb.rotate_about_pt r p t.thumb }
 
+let mirror ax t = { body = Body.mirror ax t.body; thumb = Thumb.mirror ax t.thumb }
 let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
 
 let collect_screws { body; thumb } =

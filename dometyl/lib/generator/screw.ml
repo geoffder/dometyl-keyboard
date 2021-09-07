@@ -25,6 +25,9 @@ type t =
 let translate p t =
   { t with scad = Model.translate p t.scad; centre = Vec3.add p t.centre }
 
+let mirror ax t =
+  { t with scad = Model.mirror ax t.scad; centre = Vec3.mirror ax t.centre }
+
 let rotate r t = { t with scad = Model.rotate r t.scad; centre = Vec3.rotate r t.centre }
 
 let rotate_about_pt r p t =

@@ -52,15 +52,28 @@ let make
     ?(bumpon_inset = 0.5)
     (case : _ Case.t)
   =
-  let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
+  let bb_index, bb_pinky, rot_sign =
+    let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
+    and pinky_home =
+      (Columns.key_exn
+         case.plate.columns
+         (case.plate.config.n_cols - 1)
+         case.plate.config.centre_row )
+        .origin
+    in
+    if Float.(
+         Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))
+         < Vec3.(norm (pinky_home <-> (bb_left, 0., 0.))))
+    then bb_left, bb_right, 1.
+    else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
   and perimeter =
     Model.difference
       (Model.polygon (Connect.outline_2d case.connections))
       [ Model.polygon (Connect.inline_2d case.connections) ]
   in
-  let rot = 0., degrees *. Float.pi /. 180., 0.
-  and pivot_pt = -.bb_right, 0., 0. in
+  let rot = 0., degrees *. Float.pi /. 180. *. rot_sign, 0.
+  and pivot_pt = -.bb_pinky, 0., 0. in
   let screws_filled =
     let hole_fills =
       List.map
@@ -71,7 +84,7 @@ let make
     in
     Model.union (perimeter :: hole_fills)
   and trans s = Model.rotate_about_pt rot pivot_pt s |> Model.translate (0., 0., z_offset)
-  and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_left, 0., 0.))) in
+  and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
   let top =
     let screw_hole =
       Model.circle outer_screw_rad

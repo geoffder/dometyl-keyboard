@@ -70,6 +70,13 @@ let translate p t =
   ; thumb = Column.translate p t.thumb
   }
 
+let mirror ax t =
+  { t with
+    scad = Model.mirror ax t.scad
+  ; columns = Columns.mirror ax t.columns
+  ; thumb = Column.mirror ax t.thumb
+  }
+
 let rotate r t =
   { t with
     scad = Model.rotate r t.scad

@@ -32,14 +32,14 @@ module Bottom = struct
     Model.difference
       (Model.square ~center:true (x, y))
       [ ellipse
-      ; Model.mirror (1, 0, 0) ellipse
+      ; Model.mirror (1., 0., 0.) ellipse
       ; cutter
-      ; Model.mirror (1, 0, 0) cutter
-      ; Model.mirror (1, 1, 0) cutter
-      ; Model.mirror (0, 1, 0) cutter
+      ; Model.mirror (1., 0., 0.) cutter
+      ; Model.mirror (1., 1., 0.) cutter
+      ; Model.mirror (0., 1., 0.) cutter
       ]
     |> Model.linear_extrude ~height:z
-    |> fun b -> Model.union [ b; bulge; Model.mirror (0, 1, 0) bulge ]
+    |> fun b -> Model.union [ b; bulge; Model.mirror (0., 1., 0.) bulge ]
 end
 
 let hole_config =
@@ -79,7 +79,7 @@ let hole_config =
       in
       Model.union [ slot; ramp ]
     in
-    Model.difference hole [ inset; bot; snap; Model.mirror (1, 0, 0) snap ]
+    Model.difference hole [ inset; bot; snap; Model.mirror (1., 0., 0.) snap ]
   in
   KeyHole.
     { spec = Kind.Niz { clip_height; snap_slot_h }
@@ -183,7 +183,7 @@ module Platform = struct
                  , 0. )
           ]
       in
-      Model.difference (Model.union [ cyl; Model.mirror (1, 0, 0) cyl ]) [ waist_cut ]
+      Model.difference (Model.union [ cyl; Model.mirror (1., 0., 0.) cyl ]) [ waist_cut ]
     and dome_cut =
       (* ensure overlap *)
       let fudged_w = dome_w +. 0.01 in
@@ -234,16 +234,16 @@ module Platform = struct
         in
         Model.union
           [ intersect
-          ; Model.mirror (0, 1, 0) intersect
-          ; Model.mirror (1, 0, 0) intersect
-          ; Model.mirror (1, 0, 0) intersect |> Model.mirror (0, 1, 0)
+          ; Model.mirror (0., 1., 0.) intersect
+          ; Model.mirror (1., 0., 0.) intersect
+          ; Model.mirror (1., 0., 0.) intersect |> Model.mirror (0., 1., 0.)
           ]
       in
       Model.union
         [ x_prism
-        ; Model.mirror (0, 1, 0) x_prism
+        ; Model.mirror (0., 1., 0.) x_prism
         ; y_prism
-        ; Model.mirror (1, 0, 0) y_prism
+        ; Model.mirror (1., 0., 0.) y_prism
         ; corners
         ]
     and lugs =
@@ -285,7 +285,8 @@ module Platform = struct
         |> Model.linear_extrude ~height:(z -. wall_height)
         |> Model.translate (0., 0., wall_height +. snap_slot_h -. snap_clearance)
       in
-      Model.union [ tab; Model.mirror (1, 0, 0) tab; neck; Model.mirror (1, 0, 0) neck ]
+      Model.union
+        [ tab; Model.mirror (1., 0., 0.) tab; neck; Model.mirror (1., 0., 0.) neck ]
     in
     { config
     ; wall_height

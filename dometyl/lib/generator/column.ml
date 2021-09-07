@@ -10,6 +10,7 @@ module Join = struct
 
     let map ~f t = { west = f t.west; east = f t.east }
     let translate p = map ~f:(Model.translate p)
+    let mirror ax = map ~f:(Model.mirror ax)
     let rotate r = map ~f:(Model.rotate r)
     let rotate_about_pt r p = map ~f:(Model.rotate_about_pt r p)
 
@@ -26,6 +27,7 @@ module Join = struct
   let translate p t =
     { scad = Model.translate p t.scad; faces = Faces.translate p t.faces }
 
+  let mirror ax t = { scad = Model.mirror ax t.scad; faces = Faces.mirror ax t.faces }
   let rotate r t = { scad = Model.rotate r t.scad; faces = Faces.rotate r t.faces }
 
   let rotate_about_pt r p t =
@@ -50,6 +52,13 @@ let translate p t =
     scad = Model.translate p t.scad
   ; keys = Map.map ~f:(KeyHole.translate p) t.keys
   ; joins = Map.map ~f:(Join.translate p) t.joins
+  }
+
+let mirror ax t =
+  { t with
+    scad = Model.mirror ax t.scad
+  ; keys = Map.map ~f:(KeyHole.mirror ax) t.keys
+  ; joins = Map.map ~f:(Join.mirror ax) t.joins
   }
 
 let rotate r t =
