@@ -64,7 +64,9 @@ module Hotswap = struct
              ; -5., edge_y
              ]
       and pin =
-        Model.translate (0., 5.9 *. sign, 0.) (Model.cylinder ~fn:30 pin_radius 2.4)
+        Model.translate
+          (0., 5.9 *. sign, 0.)
+          (Model.cylinder ~fn:30 pin_radius (z -. socket_z +. (holder_thickness /. 2.)))
       in
       Model.union
         [ poly |> Model.linear_extrude ~center:true ~height:socket_thickness; pin ]
@@ -166,7 +168,7 @@ let example_assembly
   and cutout =
     if show_cutout
     then
-      Some (Model.translate (0., 0., -2.) cutout |> Model.color Color.DarkGray ~alpha:0.5)
+      Some (Model.translate (0., 0., -20.) cutout |> Model.color Color.DarkGray ~alpha:0.5)
     else None
   and choc = Option.some_if show_switch switch
   and socket = Option.some_if show_socket kailh_socket
