@@ -146,6 +146,12 @@ be filling in over time.
   this mounting method rather than one of the trays, and you don't want get PCBs
   made, there is an [stl](things/holders/bastardkb/printable_shield.stl)
   available which you can print and solder your components around / glue to.
+* When using one of the trays, be mindful that the rails/slots are cut nicely in
+  the wall, and for an option that cuts ports into the wall, be sure that they
+  don't start too far away from the outside, so that the plugs will be able to
+  reach. `Walls.make` has an `index_thickness` parameter so that these
+  holder-relevant walls can be tuned separately from the rest to adapt to your
+  chosen mounting method.
 
 ## Troubleshooting
 Now and then, when you attempt to render a model, part of it will disappear.
