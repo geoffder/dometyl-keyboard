@@ -3,38 +3,6 @@ open! Scad_ml
 open! Generator
 open! Infix
 
-let wall_builder plate =
-  Walls.
-    { body =
-        Body.make
-          ~west_lookup:(fun i -> if i = 1 then Screw else Yes)
-          ~east_lookup:(fun i -> if i = 1 then Screw else Yes)
-          ~n_steps:(`Flat 5)
-          ~n_facets:2
-          ~clearance:4.
-          plate
-    ; thumb =
-        Thumb.make
-          ~east:No
-          ~north_lookup:(fun _ -> No)
-          ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
-          ~n_steps:(`Flat 5)
-          ~n_facets:4
-          plate
-    }
-
-let base_connector =
-  Connect.closed
-    ~join_west:true
-    ~n_steps:5
-    ~snake_d:2.
-    ~snake_scale:3.
-    ~snake_height:10.
-    ~snake_steps:6
-    ~cubic_d:3.
-    ~cubic_scale:0.25
-    ~cubic_height:15.
-
 let lookups =
   let offset = function
     | 0 -> -2.5, -5., 7.5 (* outer index *)
@@ -64,28 +32,65 @@ let lookups =
   in
   Plate.Lookups.make ~offset ~curve ~swing ~splay ()
 
+let plate_builder =
+  Plate.make
+    ~n_rows:4
+    ~n_cols:6
+    ~spacing:1.
+    ~tent:(Float.pi /. 12.)
+    ~thumb_offset:(7., -52., 11.5)
+    ~thumb_angle:Float.(0., pi /. -3.8, pi /. 6.5)
+    ~thumb_curve:
+      Curvature.(
+        curve
+          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
+          ~fan:{ angle = Float.pi /. 28.; radius = 200.; tilt = 0. }
+          ())
+    ~lookups
+
+let wall_builder plate =
+  Walls.
+    { body =
+        Body.make
+          ~west_lookup:(fun i -> if i = 1 then Screw else Yes)
+          ~east_lookup:(fun i -> if i = 1 then Screw else Yes)
+          ~n_steps:(`Flat 5)
+          ~n_facets:2
+          ~clearance:4.
+          plate
+    ; thumb =
+        Thumb.make
+          ~east:No
+          ~north_lookup:(fun _ -> No)
+          ~south_lookup:(fun i -> if i = 1 then Screw else Yes)
+          ~n_steps:(`Flat 5)
+          ~n_facets:4
+          plate
+    }
+
 let plate_welder = Plate.column_joins
+
+let base_connector =
+  Connect.closed
+    ~join_west:true
+    ~n_steps:5
+    ~snake_d:2.
+    ~snake_scale:3.
+    ~snake_height:10.
+    ~snake_steps:6
+    ~cubic_d:3.
+    ~cubic_scale:0.25
+    ~cubic_height:15.
 
 let build ?hotswap ~ports_cutter () =
   let keyhole = Mx.make_hole ?hotswap ~cap:Caps.sa_r3 () in
-  let plate =
-    Plate.make
-      ~n_rows:4
-      ~n_cols:6
-      ~spacing:1.
-      ~tent:(Float.pi /. 12.)
-      ~thumb_offset:(7., -52., 11.5)
-      ~thumb_angle:Float.(0., pi /. -3.8, pi /. 6.5)
-      ~thumb_curve:
-        Curvature.(
-          curve
-            ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
-            ~fan:{ angle = Float.pi /. 28.; radius = 200.; tilt = 0. }
-            ())
-      ~lookups
-      keyhole
-  in
-  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
+  Case.make
+    ~plate_builder
+    ~plate_welder
+    ~wall_builder
+    ~base_connector
+    ~ports_cutter
+    keyhole
 
 let ports_build ?hotswap = build ?hotswap ~ports_cutter:(Ports.make ())
 let carbon_x = 0.

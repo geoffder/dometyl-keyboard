@@ -8,6 +8,40 @@ open Generator
    This is is a good place to start from if you'd like to have something like the
    skeletyl, but with some more pinky stagger. Though, it will never be as
    pretty. *)
+let lookups =
+  let offset = function
+    | 2 -> 0., 3.5, -8. (* middle *)
+    | 3 -> 1., -1., -1.5 (* ring *)
+    | i when i >= 4 -> 0., -12., 7. (* pinky *)
+    | 0 -> -1., 0., -2.
+    | _ -> 0., 0., -3.
+  and curve = function
+    | 0 ->
+      Curvature.(
+        curve ~well:(spec ~radius:85. (Float.pi /. 12.) ~tilt:(Float.pi /. 24.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:85. (Float.pi /. 12.)) ())
+  and swing = function
+    | 2 -> Float.pi /. -48.
+    | 3 -> Float.pi /. -19.
+    | 4 -> Float.pi /. -14.
+    | _ -> 0.
+  and splay _ = 0. in
+  Plate.Lookups.make ~offset ~curve ~splay ~swing ()
+
+let plate_builder =
+  Plate.make
+    ~n_rows:3
+    ~n_cols:5
+    ~spacing:1.5
+    ~tent:(Float.pi /. 10.)
+    ~lookups
+    ~thumb_offset:(-1., -50., -6.)
+    ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
+    ~thumb_curve:
+      Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
+
+let plate_welder = Plate.skeleton_bridges
+
 let wall_builder plate =
   Walls.
     { body = Body.make ~n_steps:(`Flat 5) ~n_facets:5 ~clearance:1.5 plate
@@ -39,47 +73,17 @@ let base_connector =
     ~fudge_factor:8.
     ~close_thumb:false
 
-let lookups =
-  let offset = function
-    | 2 -> 0., 3.5, -8. (* middle *)
-    | 3 -> 1., -1., -1.5 (* ring *)
-    | i when i >= 4 -> 0., -12., 7. (* pinky *)
-    | 0 -> -1., 0., -2.
-    | _ -> 0., 0., -3.
-  and curve = function
-    | 0 ->
-      Curvature.(
-        curve ~well:(spec ~radius:85. (Float.pi /. 12.) ~tilt:(Float.pi /. 24.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:85. (Float.pi /. 12.)) ())
-  and swing = function
-    | 2 -> Float.pi /. -48.
-    | 3 -> Float.pi /. -19.
-    | 4 -> Float.pi /. -14.
-    | _ -> 0.
-  and splay _ = 0. in
-  Plate.Lookups.make ~offset ~curve ~splay ~swing ()
-
-let plate_welder = Plate.skeleton_bridges
-
-(* let ports_cutter = Ports.make () *)
 let ports_cutter = BastardShield.(cutter (make ()))
 
 let build ?hotswap () =
   let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
-  let plate =
-    Plate.make
-      ~n_rows:3
-      ~n_cols:5
-      ~spacing:1.5
-      ~tent:(Float.pi /. 10.)
-      ~lookups
-      ~thumb_offset:(-1., -50., -6.)
-      ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
-      ~thumb_curve:
-        Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
-      keyhole
-  in
-  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
+  Case.make
+    ~plate_builder
+    ~plate_welder
+    ~wall_builder
+    ~base_connector
+    ~ports_cutter
+    keyhole
 
 let bastard_skelly =
   Model.import "../things/others/bastardkb_skeletyl_v3_v5.stl"

@@ -2,6 +2,8 @@ open! Base
 open! Scad_ml
 open! Generator
 
+let plate_builder = Plate.make ~n_rows:3 ~n_cols:5
+
 let wall_builder plate =
   Walls.
     { body =
@@ -22,8 +24,12 @@ let base_connector = Connect.closed ~n_steps:4
 let plate_welder = Plate.column_joins
 let ports_cutter = Ports.make ()
 
-let build () =
-  (* let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~hotswap:`South () in *)
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 () in
-  let plate = Plate.make ~n_rows:3 ~n_cols:5 keyhole in
-  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
+let build ?hotswap () =
+  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ?hotswap () in
+  Case.make
+    ~plate_builder
+    ~plate_welder
+    ~wall_builder
+    ~base_connector
+    ~ports_cutter
+    keyhole

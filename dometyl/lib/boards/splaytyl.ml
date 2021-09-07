@@ -2,6 +2,8 @@ open! Base
 open! Scad_ml
 open! Generator
 
+let plate_builder = Plate.make ~n_rows:3 ~n_cols:5
+
 let wall_builder plate =
   Walls.
     { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
@@ -34,13 +36,17 @@ let base_connector =
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
-(* let ports_cutter = Ports.make () *)
 let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
 
-let build ?hotswap () =
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ?hotswap () in
-  let plate = Plate.make ~n_rows:3 ~n_cols:5 keyhole in
-  Case.make ~plate_welder ~wall_builder ~base_connector ~ports_cutter plate
+let build ?right_hand ?hotswap () =
+  Case.make
+    ?right_hand
+    ~plate_builder
+    ~plate_welder
+    ~wall_builder
+    ~base_connector
+    ~ports_cutter
+    (Mx.make_hole ~cap:Caps.sa_r3 ?hotswap ())
 
 let bastard_compare () =
   Model.union
