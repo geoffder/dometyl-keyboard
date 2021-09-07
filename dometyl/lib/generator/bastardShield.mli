@@ -10,6 +10,7 @@ type t =
 
 include Sigs.Transformable with type t := t
 
+val print_pcb : float -> Model.t
 val pcb : float -> Model.t
 val make : ?inset_depth:float -> ?thickness:float -> unit -> t
 val screws : t -> Model.t

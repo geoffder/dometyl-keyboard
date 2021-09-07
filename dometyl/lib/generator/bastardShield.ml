@@ -40,11 +40,48 @@ let screws t =
 let to_scad ?(show_screws = false) t =
   if show_screws then Model.union [ t.scad; screws t ] else t.scad
 
-let pcb thickness =
+let print_pcb thickness =
   let import n = Model.import (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
   Model.difference
     (import "shield_plate")
-    [ import "shield_screwholes"; import "shield_window" ]
+    [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]
+  |> Model.linear_extrude ~height:thickness
+  |> Model.color ~alpha:0.5 Color.Crimson
+
+let screw_l_start = -0.45, -31.25, 0.
+let screw_r_start = 34.13, -3.375, 0.
+
+let pcb thickness =
+  let poly =
+    Model.polygon
+      [ 0., 0.
+      ; 0.8, 1.
+      ; 9.5, 1.
+      ; 11., 0.
+      ; 35., 0.
+      ; 36.5, -0.5
+      ; 37.6, -2.0
+      ; 37.6, -11.5
+      ; 30.8, -34.
+      ; 30., -35.5
+      ; 28., -35.9
+      ; 0., -35.9
+      ; -3., -35.
+      ; -4.5, -33.
+      ; -4.8, -31.
+      ; -4.4, -29.
+      ; -3., -27.5
+      ; -1.2, -26.5
+      ; 0., -24.
+      ]
+  in
+  let hole = Model.circle ~fn:36 2.45 in
+  Model.difference
+    poly
+    [ Model.translate screw_l_start hole
+    ; Model.translate screw_r_start hole
+    ; Model.translate (11.5, -31.3, 0.) (Model.square (17.65, 15.9))
+    ]
   |> Model.linear_extrude ~height:thickness
   |> Model.color ~alpha:0.5 Color.Crimson
 
@@ -81,12 +118,7 @@ let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
     |> Model.color ~alpha:0.5 Color.Silver
   in
   let t =
-    { scad = pcb thickness
-    ; thickness
-    ; screw_l = 4.2, 4.6, 0.
-    ; screw_r = 38.78, 32.475, 0.
-    }
-    |> translate (-4.65, -35.85, 0.)
+    { scad = pcb thickness; thickness; screw_l = screw_l_start; screw_r = screw_r_start }
   in
   { t with scad = Model.union [ t.scad; jack; usb; inset ] }
 
