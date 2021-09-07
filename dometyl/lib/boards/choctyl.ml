@@ -6,7 +6,7 @@ let lookups =
   let offset = function
     | 2 -> 0., 4., -6. (* middle *)
     | 3 -> 1.5, -1., 0. (* ring *)
-    | i when i >= 4 -> 0., -22., 9.5 (* pinky *)
+    | i when i >= 4 -> 1.25, -22., 9.5 (* pinky *)
     | 0 -> -2.25, 0., 8.
     | _ -> 0., 0., 1.5
   and curve = function
@@ -20,7 +20,7 @@ let lookups =
     | _ -> Curvature.(curve ~well:(spec ~radius:33.3 (Float.pi /. 5.18)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
-    | i when i >= 4 -> Float.pi /. -13. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -9. (* pinky *)
     | _ -> 0.
   in
   Plate.Lookups.make ~offset ~curve ~splay ()
