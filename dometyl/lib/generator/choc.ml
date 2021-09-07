@@ -106,7 +106,7 @@ end
 
 let teeth ~inner_w ~thickness hole =
   let depth = 1.2 in
-  let block = Model.cube ~center:true (0.51, 3., thickness -. depth)
+  let block = Model.cube ~center:true (0.51, 3.5, thickness -. depth)
   and x = (inner_w /. 2.) +. 0.25
   and y = 3.5 in
   let nw = Model.translate (-.x, y, -.depth) block
