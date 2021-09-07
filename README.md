@@ -110,7 +110,7 @@ be filling in over time.
 * (Mostly) closed [configuration](dometyl/lib/boards/deractyl.ml) with thumb and
   plate based off of the
   [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
-  the addition of aggresive secondary column tilt. ![deractyl
+  the addition of aggressive secondary column tilt. ![deractyl
   prototype](images/deractyl_prototype.png)
 * Configurable heat-set insert screw holes (visible in other examples) or
   bumpon feet can be placed at the base of walls of your choosing
@@ -121,14 +121,14 @@ be filling in over time.
   ![splaytyl tent underside](images/splaytyl_tent_underside.png)
 
 ## MCU / TRRS jack holders
-* A few solutions for MCU (elite-C and pro-micro at the moment) and TRRS jack
+* A few solutions for MCU (elite-C and pro-micro currently) and TRRS jack
   mounting are available at the moment. Rough placement is done with the help of
   coordinates kept within the records of the `Case.t` type, with offset and
   rotation parameters available to fine-tune.
 * Firstly, there is support for using the familiar slot-in trays from
-  ![dereknheiley](https://github.com/dereknheiley/dactyl-manuform-tight)
+  [dereknheiley](https://github.com/dereknheiley/dactyl-manuform-tight)
   (reversible, elite-C without and without reset button access) and
-  ![carbonfet](https://github.com/carbonfet/dactyl-manuform) (non-reversible,
+  [carbonfet](https://github.com/carbonfet/dactyl-manuform) (non-reversible,
   elite-C and pro-micro). Eventually a more tailored tray holder that should be
   available, but these existing stls can get the job done today.
   ![derek holder with reset button](images/deractyl_elite_w_reset_button.png)
