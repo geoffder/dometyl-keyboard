@@ -119,8 +119,8 @@ let make
           ~well:{ angle = Float.pi /. 6.2; radius = 47.; tilt = 0. })
         ())
     ?(rotate_thumb_clips = false)
-    ?(thumb_offset = -16., -44.5, 13.5)
-    ?(thumb_angle = Float.(pi /. 12., pi /. -4.75, pi /. 5.5))
+    ?(thumb_offset = -17., -44., 13.5)
+    ?(thumb_angle = Float.(pi /. 20., pi /. -6.5, pi /. 4.5))
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
