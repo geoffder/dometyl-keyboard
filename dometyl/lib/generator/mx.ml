@@ -106,8 +106,8 @@ let make_hole
     ?hotswap
     ?(outer_w = 19.)
     ?(outer_h = 19.)
-    ?(inner_w = 13.9)
-    ?(inner_h = 13.8)
+    ?(inner_w = 13.95)
+    ?(inner_h = 13.95)
     ?(thickness = 4.)
     ?(cap_height = 6.25)
     ?(clearance = 3.)
