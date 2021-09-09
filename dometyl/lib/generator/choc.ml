@@ -3,7 +3,7 @@ open! Scad_ml
 
 (* https://grabcad.com/library/kailh-1350-socket-2 *)
 let kailh_socket =
-  Model.import "../things/choc_hotswap_socket.stl"
+  Model.import "../things/switches/choc_hotswap_socket.stl"
   |> Model.translate (7., 0., 0.)
   |> Model.rotate (Float.pi /. 2., 0., Float.pi)
   |> Model.translate (2.0, 3.7, -3.5)
@@ -11,7 +11,7 @@ let kailh_socket =
 
 (* https://grabcad.com/library/kailh-low-profile-mechanical-keyboard-switch-1 *)
 let switch =
-  Model.import "../things/kailh_choc.stl"
+  Model.import "../things/switches/kailh_choc.stl"
   |> Model.rotate Float.(pi / 2., 0., pi / 2.)
   |> Model.translate (0., 0., 0.4)
   |> Model.color ~alpha:0.5 Color.SkyBlue
@@ -27,7 +27,7 @@ module Hotswap = struct
     and z = (holder_thickness +. hole_depth +. shallowness) /. -2.
     (* the bottom of the hole.  *)
     and socket_thickness = holder_thickness +. 0.5 (* plus printing error *)
-    and pin_radius = 1.5
+    and pin_radius = 1.65
     and sign =
       match facing with
       | `North -> -1.
@@ -42,25 +42,25 @@ module Hotswap = struct
         @@ List.map
              ~f:(fun (x, y) -> x *. sign, y *. sign)
              [ -.edge_x, edge_y
-             ; -5., 3.45
-             ; 0.74, 3.45
-             ; 1.29, 3.2
-             ; 1.59, 3.
-             ; 1.87, 2.7
-             ; 2.39, 1.7
-             ; 2.79, 1.34
-             ; edge_x, 1.34
+             ; -5., 3.4
+             ; 0.64, 3.4
+             ; 1.19, 3.2
+             ; 1.49, 3.
+             ; 1.77, 2.7
+             ; 2.29, 1.7
+             ; 2.69, 1.3
+             ; edge_x, 1.3
              ; edge_x, edge_y
              ; 7.2, edge_y
-             ; 7.2, 6.05
-             ; 4., 6.05
-             ; 3.4, 6.1
-             ; 3.1, 6.2
-             ; 2.9, 6.3
-             ; 2.6, 6.7
-             ; 2.5, 7.0
-             ; 2.5, 7.4
-             ; 1.2, edge_y
+             ; 7.2, 6.12
+             ; 4., 6.12
+             ; 3.4, 6.12
+             ; 3.15, 6.2
+             ; 2.95, 6.3
+             ; 2.65, 6.7
+             ; 2.55, 7.0
+             ; 2.55, 7.4
+             ; 1.25, edge_y
              ; -5., edge_y
              ]
       and pin =
@@ -76,9 +76,9 @@ module Hotswap = struct
       let led_cut =
         Model.square ~center:true (6., 6.) |> Model.translate (0., -6. *. sign, 0.)
       and holes =
-        let main = Model.circle ~fn:30 1.7
+        let main = Model.circle ~fn:30 1.75
         and pin = Model.circle ~fn:30 pin_radius
-        and friction = Model.circle ~fn:30 0.975 in
+        and friction = Model.circle ~fn:30 1. in
         let plus = Model.translate (0., 5.9 *. sign, 0.) pin
         and minus = Model.translate (5. *. sign, 3.8 *. sign, 0.) pin
         and fric_left = Model.translate (-5.5, 0., 0.) friction
@@ -105,7 +105,7 @@ module Hotswap = struct
 end
 
 let teeth ~inner_w ~thickness hole =
-  let depth = 1.2 in
+  let depth = 1.0 in
   let block = Model.cube ~center:true (0.51, 3.5, thickness -. depth)
   and x = (inner_w /. 2.) +. 0.25
   and y = 3.5 in

@@ -1,6 +1,14 @@
 open! Base
 open! Scad_ml
 
+(* Taken from here: https://grabcad.com/library/kailh-hotswap-mx-1
+   For rough visualization. It does not seem to line up with the holes, even
+   when holes are positioned more exactly according to specifications. *)
+let kailh_socket =
+  Model.import "../things/switches/mx_hotswap_socket.stl"
+  |> Model.translate (0.65, -4.8, -5.15)
+  |> Model.color ~alpha:0.4 Color.Silver
+
 module Hotswap = struct
   let make ~inner_w ~inner_h ~plate_thickness facing =
     let holder_thickness = 3.
