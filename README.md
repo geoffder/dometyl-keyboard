@@ -66,7 +66,7 @@ install from the package repository).
 
 ## Organization
 Online documentation is available
-[here](https://geoffder.github.io/dometyl-keyboard/dometyl/index.html), and will
+[here](https://geoffder.github.io/dometyl-keyboard/dometyl/Dometyl/index.html), and will
 be filling in over time.
 
 ## Usage
