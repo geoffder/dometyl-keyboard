@@ -110,6 +110,7 @@ let make_hole
     ?(inner_h = 13.95)
     ?(thickness = 4.)
     ?(cap_height = 6.25)
+    ?(cap_cutout_height = Some 1.5)
     ?(clearance = 3.)
     ()
   =
@@ -122,11 +123,18 @@ let make_hole
       let clip hole = Model.union [ teeth ~inner_h ~thickness hole; swap ] in
       clearance +. 3., clip, Some cutout
     | None        -> clearance, teeth ~inner_h ~thickness, None
+  and cap_cutout =
+    Option.map
+      ~f:(fun h ->
+        Model.translate
+          (0., 0., 2.5 +. h +. (thickness /. 2.))
+          (Model.cube ~center:true (20., 20., 5.)) )
+      cap_cutout_height
   in
   KeyHole.(
     make
       ?cap
-      ?cutout
+      ?cutout:(Option.merge ~f:(fun a b -> Model.union [ a; b ]) cutout cap_cutout)
       { spec = Kind.Mx ()
       ; outer_w
       ; outer_h

@@ -60,7 +60,13 @@ let overlapping_bounds a b =
   and right = Float.min a_r b_r
   and bot = Float.max a_b b_b
   and left = Float.max a_l b_l in
-  not Float.(right < left || top < bot)
+  if not Float.(right < left || top < bot)
+  then (
+    let intersect = (right -. left) *. (top -. bot)
+    and area_a = (a_r -. a_l) *. (a_t -. a_b)
+    and area_b = (b_r -. b_l) *. (b_t -. b_b) in
+    intersect /. (area_a +. area_b -. intersect) )
+  else 0.
 
 let get t = function
   | `TL -> t.top_left

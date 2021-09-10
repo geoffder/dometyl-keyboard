@@ -94,7 +94,7 @@ let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) =
     (Points.get w.foot bot)
 
 let base_steps ~n_steps starts dests =
-  let norms = List.map2_exn ~f:(fun s d -> Vec3.(norm (s <-> d))) starts dests in
+  let norms = List.map2_exn ~f:Vec3.distance starts dests in
   let lowest_norm = List.fold ~init:Float.max_value ~f:Float.min norms in
   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in
   `Ragged (List.map ~f:adjust norms)
@@ -129,7 +129,7 @@ let cubic_base
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
   and dist = d, d, 0.
-  and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
+  and width = Vec3.distance w1.foot.top_right w1.foot.bot_right *. scale in
   let get_bez top start dest =
     let outward =
       if Bool.equal top bow_out then Vec3.add (width, width, 0.) dist else dist
@@ -166,7 +166,7 @@ let snake_base
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
   and dist = d, d, 0.
-  and width = Vec3.(norm (w1.foot.top_right <-> w1.foot.bot_right)) *. scale in
+  and width = Vec3.distance w1.foot.top_right w1.foot.bot_right *. scale in
   let get_bez top start dest =
     let outward = Vec3.add (width, width, 0.) dist in
     let p1 = Vec3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
@@ -215,7 +215,7 @@ let inward_elbow_base
     Bezier.quad_vec3 ~p1 ~p2 ~p3
   in
   let starts =
-    let w = Vec3.(norm (w1.foot.bot_right <-> w1.foot.top_right)) in
+    let w = Vec3.distance w1.foot.bot_right w1.foot.top_right in
     let slide p = Vec3.(add p (mul dir1 (w, w, 0.))) in
     endpoints
       ~n_facets
@@ -240,15 +240,13 @@ let straight_base
     (w2 : Wall.t)
   =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2 in
-  let major_diff, minor_diff =
-    let x, y, _ =
-      Vec3.(
-        mean [ w1.foot.bot_right; w1.foot.top_right ]
-        <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
-    in
-    if Float.(abs dx > abs dy) then x, y else y, x
+  and dir2 = Wall.foot_direction w2
+  and ((lx, ly, _) as line) =
+    Vec3.(
+      mean [ w1.foot.bot_right; w1.foot.top_right ]
+      <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
   in
+  let major_diff, minor_diff = if Float.(abs dx > abs dy) then lx, ly else ly, lx in
   let fudge d =
     (* For adjustment of bottom (inside face) points to account for steep angles
      * that would otherwise cause the polyhedron to fail. Distance moved is a
@@ -257,30 +255,43 @@ let straight_base
       if Float.(abs minor_diff > abs major_diff)
       then Float.(abs (min (abs major_diff -. fudge_factor) 0.)) /. 2.
       else 0.
-    in
-    (* Check now thick the connection is in the middle, and create a rough adjustment
+    and width_extra =
+      (* Check now thick the connection is in the middle, and create a rough adjustment
        if it is less than the specified minimum. *)
-    let extra =
-      if Float.(angle_extra = 0.)
-      then (
-        let mid_top = Vec3.mean [ w1.foot.top_right; w2.foot.top_left ]
-        and mid_bot = Vec3.mean [ w1.foot.bot_right; w2.foot.bot_left ] in
-        let thickness = Vec3.(norm (mid_top <-> mid_bot)) in
-        if Float.(thickness < min_width) then min_width -. thickness else 0. )
-      else angle_extra
+      let mid_top = Vec3.mean [ w1.foot.top_right; w2.foot.top_left ]
+      and mid_bot = Vec3.mean [ w1.foot.bot_right; w2.foot.bot_left ] in
+      let mid_diff = Vec3.(mid_top <-> mid_bot) in
+      let align = 1. -. Vec3.(norm @@ cross (normalize mid_diff) (normalize line)) in
+      let thickness =
+        Float.max
+          0.
+          Vec3.(norm mid_diff -. (distance w1.foot.top_right w1.foot.bot_right *. align))
+      in
+      if Float.(thickness < min_width) then min_width -. thickness else 0.
     in
+    let extra = Float.max angle_extra width_extra in
     Vec3.(add (mul d (extra, extra, 0.)))
   and overlap =
-    let major_ax = if Float.(abs dx > abs dy) then dx else dy in
-    if not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax))
-    then Float.abs major_diff *. overlap_factor
+    let major_ax = if Float.(abs dx > abs dy) then dx else dy
+    and intersect = Points.overlapping_bounds w1.foot w2.foot in
+    if Float.(
+         ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
+         && abs major_diff > abs minor_diff )
+         || intersect > 0.)
+    then (
+      let rough_area =
+        Vec3.(
+          distance w1.foot.top_right w1.foot.top_left
+          *. distance w1.foot.top_right w1.foot.bot_right)
+      in
+      Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
     else 0.01
   (* If the walls are overlapping, move back the start positions to counter. *)
   and outward =
     (* away from the centre of mass, or not? *)
     Float.(
-      Vec3.(norm (w1.foot.top_right <-> w2.foot.top_left))
-      > Vec3.(norm (w1.foot.top_right <-> w2.foot.bot_left)))
+      Vec3.distance w1.foot.top_right w2.foot.top_left
+      > Vec3.distance w1.foot.top_right w2.foot.bot_left)
   in
   (* The connector has two parts, and is drawn depending on whether it is going
      outward (away from plate). If moving inward, the straight move (along wall
@@ -360,8 +371,8 @@ let join_walls
   let outward =
     (* away from the centre of mass, or not? *)
     Float.(
-      Vec3.(norm (w1.foot.top_right <-> w2.foot.top_left))
-      > Vec3.(norm (w1.foot.top_right <-> w2.foot.bot_left)))
+      Vec3.distance w1.foot.top_right w2.foot.top_left
+      > Vec3.distance w1.foot.top_right w2.foot.bot_left)
   in
   let fudge =
     let dir = if outward then Vec3.zero else dir2 in
@@ -372,11 +383,19 @@ let join_walls
     in
     Vec3.(add (mul dir (-.extra, -.extra, 0.)))
   and overlap =
-    let major_ax = if Float.(abs dx > abs dy) then dx else dy in
-    if ( (not Float.(Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
-       && Float.(abs major_diff > abs minor_diff) )
-       || Points.overlapping_bounds w1.foot w2.foot
-    then Float.abs major_diff *. overlap_factor
+    let major_ax = if Float.(abs dx > abs dy) then dx else dy
+    and intersect = Points.overlapping_bounds w1.foot w2.foot in
+    if Float.(
+         ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
+         && abs major_diff > abs minor_diff )
+         || intersect > 0.)
+    then (
+      let rough_area =
+        Vec3.(
+          distance w1.foot.top_right w1.foot.top_left
+          *. distance w1.foot.top_right w1.foot.bot_right)
+      in
+      Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
     else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
@@ -450,6 +469,7 @@ let skeleton
     ?(north_joins = fun i -> i < 2)
     ?(south_joins = fun _ -> false)
     ?(pinky_idx = 4)
+    ?(pinky_elbow = true)
     ?(close_thumb = false)
     Walls.{ body; thumb }
   =
@@ -538,7 +558,7 @@ let skeleton
     let base i =
       if south_joins i
       then join_walls ?n_steps:body_join_steps ?fudge_factor ?overlap_factor
-      else if i = pinky_idx
+      else if i = pinky_idx && pinky_elbow
       then inward_elbow_base ~n_facets ~d:1.5 ?height ?n_steps
       else
         straight_base

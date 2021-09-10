@@ -25,6 +25,7 @@ val make_hole
   -> ?inner_h:float
   -> ?thickness:float
   -> ?cap_height:float
+  -> ?cap_cutout_height:float option
   -> ?clearance:float
   -> unit
   -> KeyHole.Kind.mx KeyHole.t

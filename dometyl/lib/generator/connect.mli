@@ -115,6 +115,7 @@ val skeleton
   -> ?north_joins:(int -> bool)
   -> ?south_joins:(int -> bool)
   -> ?pinky_idx:int
+  -> ?pinky_elbow:bool
   -> ?close_thumb:bool
   -> Walls.t
   -> t
