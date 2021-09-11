@@ -47,6 +47,7 @@ val derek_reversible_stl : bool -> Model.t
 
 val reversible_holder
   :  ?reset_button:bool
+  -> ?rail_w:float
   -> ?x_off:float
   -> ?y_off:float
   -> ?z_rot:float

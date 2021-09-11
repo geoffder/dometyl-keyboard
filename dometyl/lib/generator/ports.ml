@@ -134,6 +134,7 @@ let derek_reversible_stl reset_button =
 
 let reversible_holder
     ?(reset_button = false)
+    ?(rail_w = 1.5)
     ?x_off
     ?y_off
     ?z_rot
@@ -141,22 +142,25 @@ let reversible_holder
     ~walls
     ~connections:_
   =
-  let h = if reset_button then 15. else 8.4 in
-  let through =
-    Model.cube (27.6, 12., h)
-    |> Model.translate (1.5, -7., 0.)
+  let w = 30.6
+  and h = if reset_button then 15. else 8.4 in
+  let tray =
+    Model.cube (27.6, 38.8, 7.7)
+    |> Model.translate (3., -38.8, 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
   and front =
-    Model.cube (30.6, 4., h)
-    |> Model.translate (0., -0.5, 0.)
+    Model.cube (w, 5.5, h)
+    |> Model.translate (0., -5.5, 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
+  and rails =
+    let rail = Model.cube (rail_w, rail_w, h) in
+    [ Model.translate (0., -.rail_w -. 1.5, 0.) rail
+    ; Model.translate (w -. rail_w, -.rail_w -. 1.5, 0.) rail
+    ]
   in
-  let tray =
-    place_tray
-      ?x_off
-      ?y_off
-      ?z_rot
-      walls
-      (Model.union [ derek_reversible_stl reset_button; through; front ])
+  let minus =
+    Model.difference (Model.union [ tray; front ]) rails
+    |> place_tray ?x_off ?y_off ?z_rot walls
+    |> Option.some
   in
-  { plus = None; minus = Some tray }
+  { plus = None; minus }
