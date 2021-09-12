@@ -27,7 +27,7 @@ module Hotswap = struct
     and z = (holder_thickness +. hole_depth +. shallowness) /. -2.
     (* the bottom of the hole.  *)
     and socket_thickness = holder_thickness +. 0.5 (* plus printing error *)
-    and pin_radius = 1.75
+    and pin_radius = 1.65
     and sign =
       match facing with
       | `North -> -1.
