@@ -25,3 +25,4 @@ module Sensor = Sensor
 module Util = Util
 module Infix = Infix
 module Sigs = Sigs
+module Hand = Hand
