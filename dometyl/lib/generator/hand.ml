@@ -59,10 +59,11 @@ module Bone = struct
     }
 
   let splay a t =
-    let q = Quaternion.make t.normal a in
+    let q = Quaternion.make t.normal a
+    and p = Vec3.negate t.base in
     { t with
-      scad = Model.quaternion_about_pt q t.base t.scad
-    ; tip = Quaternion.rotate_vec3_about_pt q t.base t.tip
+      scad = Model.quaternion_about_pt q p t.scad
+    ; tip = Quaternion.rotate_vec3_about_pt q p t.tip
     ; joint = Quaternion.rotate_vec3 q t.joint
     }
 
@@ -96,7 +97,9 @@ module Finger = struct
   let rotate_about_pt r p = map ~f:(Bone.rotate_about_pt r p)
   let quaternion q = map ~f:(Bone.quaternion q)
   let quaternion_about_pt q p = map ~f:(Bone.quaternion_about_pt q p)
-  let splay a t = quaternion_about_pt (Quaternion.make t.prox.normal a) t.prox.base t
+
+  let splay a t =
+    quaternion_about_pt (Quaternion.make t.prox.normal a) (Vec3.negate t.prox.base) t
 
   let bend ?mult a t =
     let p, m, d = Option.value ~default:(1., 1., 1.) mult in
@@ -116,49 +119,40 @@ module Finger = struct
     ; dist = Bone.bend (a *. d) (mid_bend t'.dist)
     }
 
+  let extend = bend
   let flex ?mult a = bend ?mult (-.a)
 
-  let make ?(oppose = false) ?splay ?(offset = Vec3.zero) ?rads (lp, lm, ld) =
+  let make ?splay ?(offset = Vec3.zero) ?rads (lp, lm, ld) =
     let rp, rm, rd = Option.value ~default:(6., 5., 4.) rads in
     let prox = Bone.make ?angle:splay ~rad:rp lp
     and mid = Bone.make ?angle:splay ~rad:rm lm
     and dist = Bone.make ?angle:splay ~rad:rd ld in
-    let t =
-      { prox
-      ; mid = Bone.translate prox.tip mid
-      ; dist = Bone.translate (Vec3.add prox.tip mid.tip) dist
-      }
-    in
-    translate offset
-    @@
-    if oppose
-    then quaternion (Quaternion.make (Vec3.sub prox.base prox.tip) (Float.pi /. 2.)) t
-    else t
+    { prox
+    ; mid = Bone.translate prox.tip mid
+    ; dist = Bone.translate (Vec3.add prox.tip mid.tip) dist
+    }
+    |> translate offset
 
   let to_scad { prox; mid; dist } =
     Model.union [ Bone.to_scad prox; Bone.to_scad mid; Bone.to_scad dist ]
 end
 
+(* TODO: remove thumb, and place in own type with duct axis? Don't want to flex it with
+the other fingers really most of the time, diminishing the usefullness of the helpers. *)
 module Fingers = struct
   type t =
-    { thumb : Finger.t
-    ; index : Finger.t
+    { index : Finger.t
     ; middle : Finger.t
     ; ring : Finger.t
     ; pinky : Finger.t
     }
 
   let map ~f t =
-    { thumb = f t.thumb
-    ; index = f t.index
-    ; middle = f t.middle
-    ; ring = f t.ring
-    ; pinky = f t.pinky
-    }
+    { index = f t.index; middle = f t.middle; ring = f t.ring; pinky = f t.pinky }
 
-  let fold ~f ~init { thumb; index; middle; ring; pinky } =
+  let fold ~f ~init { index; middle; ring; pinky } =
     let flipped = Fn.flip f in
-    f init thumb |> flipped index |> flipped middle |> flipped ring |> flipped pinky
+    f init index |> flipped middle |> flipped ring |> flipped pinky
 
   let translate p = map ~f:(Finger.translate p)
   let rotate r = map ~f:(Finger.rotate r)
@@ -171,59 +165,163 @@ module Fingers = struct
   let to_scad t = Model.union @@ (fold ~init:[] ~f:(fun l a -> Finger.to_scad a :: l)) t
 end
 
+module Thumb = struct
+  type t =
+    { bones : Finger.t
+    ; duct : Vec3.t
+    }
+
+  let make ?splay ?offset ?rads lengths =
+    let bones = Finger.make ?splay ?offset ?rads lengths in
+    { bones =
+        Finger.quaternion_about_pt
+          (Quaternion.make (Vec3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
+          (Vec3.negate bones.prox.base)
+          bones
+    ; duct = 0., 1., 0.
+    }
+
+  let translate p t = { t with bones = Finger.translate p t.bones }
+  let rotate r t = { bones = Finger.rotate r t.bones; duct = Vec3.rotate r t.duct }
+
+  let rotate_about_pt r p t =
+    { bones = Finger.rotate_about_pt r p t.bones; duct = Vec3.rotate r t.duct }
+
+  let quaternion q t =
+    { bones = Finger.quaternion q t.bones; duct = Quaternion.rotate_vec3 q t.duct }
+
+  let quaternion_about_pt q p t =
+    { bones = Finger.quaternion_about_pt q p t.bones
+    ; duct = Quaternion.rotate_vec3 q t.duct
+    }
+
+  let extend ?mult a t = { t with bones = Finger.extend ?mult a t.bones }
+  let flex ?mult a = extend ?mult (-.a)
+  let splay a t = { t with bones = Finger.splay a t.bones }
+
+  let abduction a t =
+    { t with
+      bones =
+        Finger.quaternion_about_pt
+          (Quaternion.make t.duct a)
+          (Vec3.negate t.bones.prox.base)
+          t.bones
+    }
+
+  let adduction a = abduction (-.a)
+  let to_scad t = Finger.to_scad t.bones
+end
+
 type t =
   { fingers : Fingers.t
+  ; thumb : Thumb.t
   ; carpals : Scad.t
   ; knuckle_rad : float
+  ; origin : Vec3.t
+  ; wrist : Vec3.t
+  ; heading : Vec3.t
+  ; normal : Vec3.t
   }
 
 let translate p t =
   { t with
     fingers = Fingers.translate p t.fingers
+  ; thumb = Thumb.translate p t.thumb
   ; carpals = Model.translate p t.carpals
+  ; origin = Vec3.add p t.origin
   }
 
 let rotate r t =
-  { t with fingers = Fingers.rotate r t.fingers; carpals = Model.rotate r t.carpals }
+  { t with
+    fingers = Fingers.rotate r t.fingers
+  ; thumb = Thumb.rotate r t.thumb
+  ; carpals = Model.rotate r t.carpals
+  ; origin = Vec3.rotate r t.origin
+  ; wrist = Vec3.rotate r t.wrist
+  ; heading = Vec3.rotate r t.heading
+  ; normal = Vec3.rotate r t.normal
+  }
 
 let rotate_about_pt r p t =
   { t with
     fingers = Fingers.rotate_about_pt r p t.fingers
+  ; thumb = Thumb.rotate_about_pt r p t.thumb
   ; carpals = Model.rotate_about_pt r p t.carpals
+  ; origin = Vec3.rotate_about_pt r p t.origin
+  ; wrist = Vec3.rotate r t.wrist
+  ; heading = Vec3.rotate r t.heading
+  ; normal = Vec3.rotate r t.normal
   }
 
 let quaternion q t =
   { t with
     fingers = Fingers.quaternion q t.fingers
+  ; thumb = Thumb.quaternion q t.thumb
   ; carpals = Model.quaternion q t.carpals
+  ; origin = Quaternion.rotate_vec3 q t.origin
+  ; wrist = Quaternion.rotate_vec3 q t.wrist
+  ; heading = Quaternion.rotate_vec3 q t.heading
+  ; normal = Quaternion.rotate_vec3 q t.normal
   }
 
 let quaternion_about_pt q p t =
   { t with
     fingers = Fingers.quaternion_about_pt q p t.fingers
+  ; thumb = Thumb.quaternion_about_pt q p t.thumb
   ; carpals = Model.quaternion_about_pt q p t.carpals
+  ; origin = Quaternion.rotate_vec3_about_pt q p t.origin
+  ; wrist = Quaternion.rotate_vec3 q t.wrist
+  ; heading = Quaternion.rotate_vec3 q t.heading
+  ; normal = Quaternion.rotate_vec3 q t.normal
   }
 
-let flex ?mult a t = { t with fingers = Fingers.flex ?mult a t.fingers }
-let extend ?mult a t = { t with fingers = Fingers.extend ?mult a t.fingers }
+let flex_fingers ?mult a t = { t with fingers = Fingers.flex ?mult a t.fingers }
+let extend_fingers ?mult a t = { t with fingers = Fingers.extend ?mult a t.fingers }
+let flex_thumb ?mult a t = { t with thumb = Thumb.flex ?mult a t.thumb }
+let extend_thumb ?mult a t = { t with thumb = Thumb.extend ?mult a t.thumb }
+let extend a t = quaternion_about_pt (Quaternion.make t.wrist a) (Vec3.negate t.origin) t
+let flex a = extend (-.a)
+let adduction a t = { t with thumb = Thumb.abduction a t.thumb }
+let abduction a = adduction (-.a)
 
-let make ?(carpal_len = 54.) ?(knuckle_rad = 5.) (fingers : Fingers.t) =
+let suppinate a t =
+  quaternion_about_pt (Quaternion.make t.heading a) (Vec3.negate t.origin) t
+
+let pronate a = suppinate (-.a)
+
+let radial_dev a t =
+  quaternion_about_pt (Quaternion.make t.normal a) (Vec3.negate t.origin) t
+
+let ulnar_dev a = radial_dev (-.a)
+
+let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : Thumb.t) =
   let carpals =
     Model.cylinder knuckle_rad carpal_len
     |> Model.rotate (0., Float.pi /. 2., 0.)
-    |> Model.translate fingers.thumb.prox.base
+    |> Model.translate thumb.bones.prox.base
   in
-  let x, _, _ = fingers.middle.prox.base
-  and _, y, _ = fingers.thumb.prox.base
+  let mid_x, mid_y, _ = fingers.middle.prox.base
+  and _, y, _ = thumb.bones.prox.base
   and z =
     Fingers.fold
-      ~init:Float.max_value
+      ~init:(Vec3.get_z thumb.bones.prox.base)
       ~f:(fun m a -> Float.min m (Vec3.get_z a.prox.base))
       fingers
   in
-  { fingers; carpals; knuckle_rad } |> translate (-.x, -.y, -.z)
+  let heading = Vec3.normalize (0., mid_y, -.z)
+  and origin = mid_x, y, z in
+  { fingers
+  ; thumb
+  ; carpals
+  ; knuckle_rad
+  ; origin
+  ; wrist = 1., 0., 0.
+  ; heading
+  ; normal = Vec3.rotate (Float.pi /. 2., 0., 0.) heading
+  }
+  |> translate (Vec3.negate origin)
 
-let to_scad { fingers; carpals; knuckle_rad } =
+let to_scad { fingers; thumb; carpals; knuckle_rad; _ } =
   let palm =
     Model.hull
       [ carpals
@@ -232,7 +330,7 @@ let to_scad { fingers; carpals; knuckle_rad } =
           ~f:(fun l fgr -> Model.translate fgr.prox.base (Model.sphere knuckle_rad) :: l)
           fingers
         |> Model.union
-      ; fingers.thumb.prox.scad
+      ; thumb.bones.prox.scad
       ]
   in
-  Model.union [ Fingers.to_scad fingers; palm ]
+  Model.union [ Fingers.to_scad fingers; Thumb.to_scad thumb; palm ]
