@@ -101,7 +101,7 @@ module Finger = struct
   let splay a t =
     quaternion_about_pt (Quaternion.make t.prox.normal a) (Vec3.negate t.prox.base) t
 
-  let bend ?mult a t =
+  let extend ?mult a t =
     let p, m, d = Option.value ~default:(1., 1., 1.) mult in
     let t' =
       quaternion_about_pt
@@ -119,8 +119,7 @@ module Finger = struct
     ; dist = Bone.bend (a *. d) (mid_bend t'.dist)
     }
 
-  let extend = bend
-  let flex ?mult a = bend ?mult (-.a)
+  let flex ?mult a = extend ?mult (-.a)
 
   let make ?splay ?(offset = Vec3.zero) ?rads (lp, lm, ld) =
     let rp, rm, rd = Option.value ~default:(6., 5., 4.) rads in
@@ -159,9 +158,8 @@ module Fingers = struct
   let rotate_about_pt r p = map ~f:(Finger.rotate_about_pt r p)
   let quaternion q = map ~f:(Finger.quaternion q)
   let quaternion_about_pt q p = map ~f:(Finger.quaternion_about_pt q p)
-  let bend ?mult a = map ~f:(Finger.bend ?mult a)
+  let extend ?mult a = map ~f:(Finger.extend ?mult a)
   let flex ?mult a = map ~f:(Finger.flex ?mult a)
-  let extend = bend
   let to_scad t = Model.union @@ (fold ~init:[] ~f:(fun l a -> Finger.to_scad a :: l)) t
 end
 
