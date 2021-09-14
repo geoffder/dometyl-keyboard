@@ -169,8 +169,8 @@ module Thumb = struct
     ; duct : Vec3.t
     }
 
-  let make ?splay ?offset ?rads lengths =
-    let bones = Finger.make ?splay ?offset ?rads lengths in
+  let make ?splay ?offset ?(rads = 7., 6., 5.) lengths =
+    let bones = Finger.make ?splay ?offset ~rads lengths in
     { bones =
         Finger.quaternion_about_pt
           (Quaternion.make (Vec3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
@@ -197,7 +197,7 @@ module Thumb = struct
   let flex ?mult a = extend ?mult (-.a)
   let splay a t = { t with bones = Finger.splay a t.bones }
 
-  let abduction a t =
+  let adduction a t =
     { t with
       bones =
         Finger.quaternion_about_pt
@@ -206,7 +206,7 @@ module Thumb = struct
           t.bones
     }
 
-  let adduction a = abduction (-.a)
+  let abduction a = adduction (-.a)
   let to_scad t = Finger.to_scad t.bones
 end
 
@@ -279,7 +279,7 @@ let flex_thumb ?mult a t = { t with thumb = Thumb.flex ?mult a t.thumb }
 let extend_thumb ?mult a t = { t with thumb = Thumb.extend ?mult a t.thumb }
 let extend a t = quaternion_about_pt (Quaternion.make t.wrist a) (Vec3.negate t.origin) t
 let flex a = extend (-.a)
-let adduction a t = { t with thumb = Thumb.abduction a t.thumb }
+let adduction a t = { t with thumb = Thumb.adduction a t.thumb }
 let abduction a = adduction (-.a)
 
 let suppinate a t =
@@ -291,6 +291,20 @@ let radial_dev a t =
   quaternion_about_pt (Quaternion.make t.normal a) (Vec3.negate t.origin) t
 
 let ulnar_dev a = radial_dev (-.a)
+
+(* TODO: obviously the flex_fingers start isn't super great if I need to adjust almost
+   all the fingers. Should I bother with the two steps? *)
+let home_curl t =
+  let t' = flex_fingers ~mult:(0., 1.0, 0.5) (Float.pi /. 3.) t in
+  { t' with
+    fingers =
+      { t'.fingers with
+        ring = Finger.flex ~mult:(-0.1, 1., 0.1) (Float.pi /. 16.) t'.fingers.ring
+      ; middle = Finger.flex ~mult:(-0.1, 1., 0.1) (Float.pi /. 20.) t'.fingers.middle
+      ; pinky = Finger.flex ~mult:(-0.5, 1., 0.) (Float.pi /. 12.) t'.fingers.pinky
+      }
+  }
+  |> flex_thumb ~mult:(-0.4, 1.0, 0.2) (Float.pi /. 8.)
 
 let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : Thumb.t) =
   let carpals =
@@ -332,3 +346,38 @@ let to_scad { fingers; thumb; carpals; knuckle_rad; _ } =
       ]
   in
   Model.union [ Fingers.to_scad fingers; Thumb.to_scad thumb; palm ]
+
+let home ?(hover = 19.) Plate.{ columns; config; _ } t =
+  let key = Columns.key_exn columns config.centre_col config.centre_row in
+  let pos = Vec3.(add key.origin (mul_scalar (KeyHole.normal key) hover))
+  and aligned =
+    let column_vec =
+      Vec3.(
+        normalize
+          (mul
+             ( (Columns.key_exn columns config.centre_col (config.centre_row + 1)).origin
+             <-> key.origin )
+             (1., 1., 0.) ))
+    in
+    let tented = suppinate config.tent t in
+    quaternion_about_pt
+      (Quaternion.alignment
+         Vec3.(normalize @@ tented.heading <*> (1., 1., 0.))
+         column_vec )
+      (Vec3.negate tented.origin)
+      tented
+  in
+  translate (Vec3.sub pos aligned.fingers.middle.dist.tip) aligned
+
+(* TODO: create a finger config type, and a hand config. This way this can be bundled
+   up a bit better and be a bit more approachable. Also, record updating can be used to
+   modify the provided default configs. *)
+let default =
+  let thumb = Thumb.make ~offset:(15., 0., -25.) ~splay:(Float.pi /. 8.) (52., 30., 28.8)
+  and index = Finger.make ~offset:(21., 60., 0.) (47.5, 27., 21.)
+  and middle = Finger.make ~offset:(41., 62., 0.) (55., 31., 27.)
+  and ring = Finger.make ~offset:(55., 60., 0.) ~splay:(Float.pi /. -32.) (50., 31., 24.)
+  and pinky =
+    Finger.make ~offset:(70., 52., 0.) ~splay:(Float.pi /. -12.) (37.5, 26., 22.)
+  in
+  make Fingers.{ index; middle; ring; pinky } thumb
