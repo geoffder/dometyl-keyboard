@@ -22,7 +22,7 @@ let base_connector =
     ~n_facets:1
     ~height:9.
     ~thumb_height:11.
-    ~snake_scale:1.3
+    ~snake_scale:2.
     ~snake_d:1.4
     ~cubic_d:2.
     ~cubic_scale:1.
