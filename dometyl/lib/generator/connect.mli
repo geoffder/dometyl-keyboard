@@ -109,6 +109,7 @@ val skeleton
   -> ?snake_scale:float
   -> ?cubic_d:float
   -> ?cubic_scale:float
+  -> ?west_link_cubic:bool
   -> ?thumb_cubic_d:float
   -> ?thumb_cubic_scale:float
   -> ?thumb_height:float

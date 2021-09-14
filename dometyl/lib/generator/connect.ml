@@ -4,6 +4,14 @@ open! Infix
 
 (* TODO: cubic base for w_link of skeleton thumb is unreliable. Worked before,
    but with current rotation and closeness to the body it is faltering. *)
+(* TODO: related to jank fix of allowing switch to straight base rather than cubic
+  for the w_link:
+  - should I make config types for each of the connections?
+  - would allow giving sum types holding the configs for some of the places
+    where options for the type of connection are desirable.
+  - this way I can cut down on the enormous number of separate parameters (some
+    of which are ignored.)
+ *)
 type t =
   { scad : Model.t
   ; outline : Vec3.t list
@@ -463,6 +471,7 @@ let skeleton
     ?snake_scale
     ?cubic_d
     ?cubic_scale
+    ?(west_link_cubic = true)
     ?thumb_cubic_d
     ?thumb_cubic_scale
     ?thumb_height
@@ -498,7 +507,12 @@ let skeleton
         joiner
           ~get:Option.some
           ~join:
-            (straight_base ~n_facets ~height:index_height ?fudge_factor ?overlap_factor)
+            (straight_base
+               ~n_facets
+               ~height:index_height
+               ?fudge_factor
+               ?overlap_factor
+               ?min_width:min_straight_width )
       in
       Map.fold ~init:(None, []) ~f body.sides.west
     in
@@ -546,7 +560,13 @@ let skeleton
         let f =
           joiner
             ~get:Option.some
-            ~join:(straight_base ~n_facets ?height ?fudge_factor ?overlap_factor)
+            ~join:
+              (straight_base
+                 ~n_facets
+                 ?height
+                 ?fudge_factor
+                 ?overlap_factor
+                 ?min_width:min_straight_width )
         in
         Map.fold_right ~init:(None, Option.to_list south_corner) ~f body.sides.east
       and north_corner =
@@ -624,17 +644,25 @@ let skeleton
           thumb.sides.west
     and nw = corner thumb.sides.west w_n
     and w_link =
-      Option.map2
-        ~f:
-          (cubic_base
-             ~n_facets
-             ?height:thumb_height
-             ?scale:thumb_cubic_scale
-             ?d:thumb_cubic_d
-             ?n_steps
-             ~bow_out:false )
-        (Option.first_some w_n thumb.sides.west)
-        (Map.find body.sides.west 0)
+      let f =
+        if west_link_cubic
+        then
+          cubic_base
+            ~n_facets
+            ?height:thumb_height
+            ?scale:thumb_cubic_scale
+            ?d:thumb_cubic_d
+            ?n_steps
+            ~bow_out:false
+        else
+          straight_base
+            ~n_facets
+            ~height:index_height
+            ?fudge_factor
+            ?overlap_factor
+            ?min_width:min_straight_width
+      in
+      Option.map2 ~f (Option.first_some w_n thumb.sides.west) (Map.find body.sides.west 0)
     in
     let east_swoop =
       Util.prepend_opt e_link
