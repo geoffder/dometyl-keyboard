@@ -12,7 +12,7 @@ module Lookups = struct
   let default_offset = function
     | 2 -> 0., 3.5, -6. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 1.5, -22., 9.5 (* pinky *)
+    | i when i >= 4 -> 1., -22., 9.5 (* pinky *)
     | 0 -> -2., 0., 7.
     | _ -> 0., 0., 1.5
 
@@ -115,12 +115,12 @@ let make
     ?(thumb_curve =
       Curvature.(
         curve
-          ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 24. }
-          ~well:{ angle = Float.pi /. 6.2; radius = 47.; tilt = 0. })
+          ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 48. }
+          ~well:{ angle = Float.pi /. 5.5; radius = 47.; tilt = 0. })
         ())
     ?(rotate_thumb_clips = false)
-    ?(thumb_offset = -17., -44., 13.5)
-    ?(thumb_angle = Float.(pi /. 20., pi /. -6.5, pi /. 4.5))
+    ?(thumb_offset = -14., -42., 13.5)
+    ?(thumb_angle = Float.(pi /. 20., pi /. -9., pi /. 12.))
     ?(lookups = Lookups.make ())
     (keyhole : _ KeyHole.t)
   =
