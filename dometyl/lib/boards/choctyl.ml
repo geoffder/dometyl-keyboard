@@ -50,7 +50,9 @@ let wall_builder plate =
         Body.make
           ~n_facets:3
           ~n_steps:(`Flat 3)
-          ~clearance:2.5
+          ~north_clearance:2.5
+          ~south_clearance:2.5
+          ~side_clearance:2.5
           ~west_lookup:(function
             | 0 -> Screw
             | 1 -> Yes

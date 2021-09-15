@@ -28,7 +28,8 @@ module Body = struct
         ?(z_off = 0.)
         ?(thickness = 3.5)
         ?index_thickness
-        ?(clearance = 2.5)
+        ?(north_clearance = 2.5)
+        ?(south_clearance = 2.5)
         ?(n_steps = `Flat 4)
         ?(n_facets = 1)
         ?(north_lookup = fun i -> if i = 2 || i = 4 then Screw else Yes)
@@ -40,18 +41,25 @@ module Body = struct
         ?(screw_config = Screw.m4_config)
         Plate.{ config = { spacing; _ }; columns; _ }
       =
-      let drop =
-        Wall.column_drop ~spacing ~columns ~z_off ~clearance ~n_steps ~n_facets ~d1 ~d2
+      let drop = Wall.column_drop ~spacing ~columns ~z_off ~n_steps ~n_facets ~d1 ~d2
       and index_thickness' = Option.value ~default:thickness index_thickness in
-      let bez_wall = function
+      let bez_wall north presence =
+        let clearance = if north then north_clearance else south_clearance in
+        match presence with
         | No    -> fun _ _ -> None
         | Yes   ->
           fun side i ->
-            Some (drop ~thickness:(if i < 2 then index_thickness' else thickness) side i)
+            Some
+              (drop
+                 ~clearance
+                 ~thickness:(if i < 2 then index_thickness' else thickness)
+                 side
+                 i )
         | Screw ->
           fun side i ->
             Some
               (drop
+                 ~clearance
                  ~thickness:(if i < 2 then index_thickness' else thickness)
                  ~screw_config
                  side
@@ -59,8 +67,8 @@ module Body = struct
       in
       Map.mapi
         ~f:(fun ~key:i ~data:_ ->
-          { north = bez_wall (north_lookup i) `North i
-          ; south = bez_wall (south_lookup i) `South i
+          { north = bez_wall true (north_lookup i) `North i
+          ; south = bez_wall false (south_lookup i) `South i
           } )
         columns
 
@@ -163,7 +171,9 @@ module Body = struct
       ?z_off
       ?thickness
       ?index_thickness
-      ?clearance
+      ?north_clearance
+      ?south_clearance
+      ?side_clearance
       ?n_steps
       ?n_facets
       ?north_lookup
@@ -180,7 +190,8 @@ module Body = struct
           ?z_off
           ?thickness
           ?index_thickness
-          ?clearance
+          ?north_clearance
+          ?south_clearance
           ?n_steps
           ?n_facets
           ?north_lookup
@@ -193,7 +204,7 @@ module Body = struct
           ?d2
           ?z_off
           ?thickness
-          ?clearance
+          ?clearance:side_clearance
           ?n_steps
           ?n_facets
           ?west_lookup

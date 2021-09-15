@@ -6,7 +6,13 @@ let plate_builder = Plate.make ~n_rows:3 ~n_cols:5
 
 let wall_builder plate =
   Walls.
-    { body = Body.make ~n_steps:(`Flat 3) ~clearance:1.5 plate
+    { body =
+        Body.make
+          ~n_steps:(`Flat 3)
+          ~north_clearance:1.5
+          ~south_clearance:1.5
+          ~side_clearance:1.5
+          plate
     ; thumb =
         Thumb.make
           ~south_lookup:(fun _ -> Yes)

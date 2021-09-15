@@ -30,7 +30,8 @@ module Body : sig
       -> ?z_off:float
       -> ?thickness:float
       -> ?index_thickness:float
-      -> ?clearance:float
+      -> ?north_clearance:float
+      -> ?south_clearance:float
       -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
       -> ?n_facets:int
       -> ?north_lookup:(int -> presence)
@@ -88,7 +89,9 @@ module Body : sig
     -> ?z_off:float
     -> ?thickness:float
     -> ?index_thickness:float
-    -> ?clearance:float
+    -> ?north_clearance:float
+    -> ?south_clearance:float
+    -> ?side_clearance:float
     -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
     -> ?n_facets:int
     -> ?north_lookup:(int -> presence)

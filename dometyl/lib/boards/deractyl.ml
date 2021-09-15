@@ -5,26 +5,37 @@ open! Infix
 
 let lookups =
   let offset = function
-    | 0 -> -2.5, -5., 7.5 (* outer index *)
+    | 0 -> -2.4, -6., 7. (* outer index *)
     | 2 -> 0., 3., -5.5 (* middle *)
     | 3 -> 0., 0., 0. (* ring *)
     | 4 -> 0., -12., 9.5 (* pinky *)
-    | 5 -> 5., -14., 21. (* outer pinky *)
+    | 5 -> 3.75, -13.5, 19. (* outer pinky *)
     | _ -> 0., -5., 1.
   and curve = function
+    (* | i when i = 0 ->
+     *   Curvature.(
+     *     curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ()) *)
     | i when i = 0 ->
-      Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ())
-    | i when i = 5 ->
       let f = function
         | 3 ->
-          KeyHole.quaternion_about_origin (Float.pi /. 128.)
-          >> KeyHole.translate (-0.5, -0.5, 1.)
+          KeyHole.quaternion_about_origin (Float.pi /. -128.)
+          >> KeyHole.translate (-0.5, -1.5, 1.6)
         | _ -> Fn.id
       in
       Curvature.(
-        post_tweak ~well:(spec ~tilt:(Float.pi /. -4.) ~radius:58. (Float.pi /. 8.)) f)
-    | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ())
+        post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:42. (Float.pi /. 5.4)) f)
+    | i when i = 5 ->
+      let f = function
+        | 0 -> KeyHole.translate (-1., 0., 3.)
+        | 3 ->
+          KeyHole.quaternion_about_origin (Float.pi /. 55.)
+          >> KeyHole.translate (-0.75, -4., 4.)
+        | _ -> Fn.id
+      in
+      Curvature.(
+        post_tweak ~well:(spec ~tilt:(Float.pi /. -4.7) ~radius:42. (Float.pi /. 5.4)) f)
+    (* | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ()) *)
+    | _ -> Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ())
   and swing = function
     | _ -> 0.
   and splay = function
@@ -56,7 +67,9 @@ let wall_builder plate =
           ~east_lookup:(fun i -> if i = 1 then Screw else Yes)
           ~n_steps:(`Flat 5)
           ~n_facets:2
-          ~clearance:4.
+          ~north_clearance:6.
+          ~side_clearance:2.
+          ~index_thickness:5.
           plate
     ; thumb =
         Thumb.make
@@ -72,12 +85,12 @@ let plate_welder = Plate.column_joins
 
 let base_connector =
   Connect.closed
-    ~join_west:true
+    ~join_west:false
     ~n_steps:5
     ~snake_d:2.
     ~snake_scale:3.
     ~snake_height:10.
-    ~snake_steps:6
+    ~snake_steps:12
     ~cubic_d:3.
     ~cubic_scale:0.25
     ~cubic_height:15.
@@ -104,7 +117,7 @@ let carbon_build ?hotswap =
       (Ports.carbonfet_holder ~x_off:carbon_x ~y_off:carbon_y ~z_rot:carbon_z ())
 
 let derek_x = 0.
-let derek_y = -2.8
+let derek_y = -2.5
 let derek_z = Float.pi /. 25.
 
 let derek_build reset_button =
