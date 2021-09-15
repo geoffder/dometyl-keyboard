@@ -12,9 +12,6 @@ let lookups =
     | 5 -> 3.75, -13.5, 19. (* outer pinky *)
     | _ -> 0., -5., 1.
   and curve = function
-    (* | i when i = 0 ->
-     *   Curvature.(
-     *     curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:57.5 (Float.pi /. 8.)) ()) *)
     | i when i = 0 ->
       let f = function
         | 3 ->
@@ -34,7 +31,6 @@ let lookups =
       in
       Curvature.(
         post_tweak ~well:(spec ~tilt:(Float.pi /. -4.7) ~radius:42. (Float.pi /. 5.4)) f)
-    (* | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 8.)) ()) *)
     | _ -> Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ())
   and swing = function
     | _ -> 0.
@@ -67,7 +63,7 @@ let wall_builder plate =
           ~east_lookup:(fun i -> if i = 1 then Screw else Yes)
           ~n_steps:(`Flat 5)
           ~n_facets:2
-          ~north_clearance:6.
+          ~north_clearance:7.
           ~side_clearance:2.
           ~index_thickness:5.
           plate
@@ -106,16 +102,6 @@ let build ?hotswap ~ports_cutter () =
     keyhole
 
 let ports_build ?hotswap = build ?hotswap ~ports_cutter:(Ports.make ())
-let carbon_x = 0.
-let carbon_y = -2.5
-let carbon_z = Float.pi /. 30.
-
-let carbon_build ?hotswap =
-  build
-    ?hotswap
-    ~ports_cutter:
-      (Ports.carbonfet_holder ~x_off:carbon_x ~y_off:carbon_y ~z_rot:carbon_z ())
-
 let derek_x = 0.
 let derek_y = -2.5
 let derek_z = Float.pi /. 25.
@@ -141,18 +127,6 @@ let compactyl_compare () =
     [ compactyl
     ; Case.to_scad ~show_caps:false (build ~ports_cutter:(Ports.make ()) ())
       |> Model.color ~alpha:0.5 Color.Yellow
-    ]
-
-let carbonfet_ex () =
-  let case = carbon_build () in
-  Model.union
-    [ Case.to_scad ~show_caps:true case
-    ; Ports.place_tray
-        ~x_off:carbon_x
-        ~y_off:carbon_y
-        ~z_rot:carbon_z
-        case.walls
-        (Ports.carbonfet_stl false)
     ]
 
 let reversible_ex ?(reset_button = false) () =
