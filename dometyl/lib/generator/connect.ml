@@ -385,8 +385,8 @@ let join_walls
   let fudge =
     let dir = if outward then Vec3.zero else dir2 in
     let extra =
-      if Float.(abs minor_diff > fudge_factor)
-      then Float.(abs (min (abs major_diff -. fudge_factor) 0.))
+      if Float.(Vec3.(get_z w1.start.top_right > get_z w2.start.top_left))
+      then Float.(abs (max (fudge_factor -. major_diff) 0.))
       else 0.
     in
     Vec3.(add (mul dir (-.extra, -.extra, 0.)))
@@ -422,14 +422,14 @@ let join_walls
      * key face and moving it out for clearance prior to drawing the walls. *)
     Util.prism_exn
       (List.map
-         ~f:Vec3.(add (mul (Wall.start_direction w1) (overlap, overlap, overlap)))
+         ~f:Vec3.(add (mul (Wall.start_direction w1) (overlap, overlap, 0.)))
          [ w1.start.top_right
          ; w1.start.bot_right
          ; w1.edges.bot_right 0.
          ; (if outward then fudge else Fn.id) @@ w1.edges.top_right 0.0001
          ] )
       (List.map
-         ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, -0.01)))
+         ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, 0.)))
          [ w2.start.top_left
          ; w2.start.bot_left
          ; w2.edges.bot_left 0.
