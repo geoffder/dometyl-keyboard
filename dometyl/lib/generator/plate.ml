@@ -7,6 +7,7 @@ module Lookups = struct
     ; curve : int -> 'k Curvature.t
     ; swing : int -> float
     ; splay : int -> float
+    ; rows : int -> int
     }
 
   let default_offset = function
@@ -27,26 +28,28 @@ module Lookups = struct
     | _ -> Curvature.(curve ~well:(spec ~radius:46. (Float.pi /. 6.3)) ())
 
   (* post tenting, this can be used to undo tent angle (y-rotation) *)
-  let default_swing = function
-    | _ -> 0.
+  let default_swing _ = 0.
 
   let default_splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -9. (* pinky *)
     | _ -> 0.
 
+  let default_rows _ = 3
+
   let make
       ?(offset = default_offset)
       ?(curve = default_curve)
       ?(swing = default_swing)
       ?(splay = default_splay)
+      ?(rows = default_rows)
       ()
     =
-    { offset; curve; swing; splay }
+    { offset; curve; swing; splay; rows }
 end
 
 type 'k config =
-  { n_rows : int
+  { n_rows : int -> int
   ; centre_row : int
   ; n_cols : int
   ; centre_col : int
@@ -91,12 +94,13 @@ let rotate_about_pt r p t =
   ; thumb = Column.rotate_about_pt r p t.thumb
   }
 
-let make_thumb ~n_keys ~centre_idx ~curve ~rotate_clips keyhole =
+let make_thumb ~n_keys ~centre_idx ~curve ~caps ~rotate_clips keyhole =
   Column.(
     make
       ~join_ax:`EW
       ~n_keys
       ~curve:(Curvature.apply ~centre_idx curve)
+      ~caps
       ( if rotate_clips
       then KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole
       else KeyHole.cycle_faces keyhole )
@@ -104,7 +108,6 @@ let make_thumb ~n_keys ~centre_idx ~curve ~rotate_clips keyhole =
     |> rotate (0., 0., Float.pi /. -2.))
 
 let make
-    ?(n_rows = 3)
     ?(centre_row = 1)
     ?(n_cols = 5)
     ?(centre_col = 2)
@@ -122,13 +125,12 @@ let make
     ?(thumb_offset = -14., -42., 13.5)
     ?(thumb_angle = Float.(pi /. 20., pi /. -9., pi /. 12.))
     ?(lookups = Lookups.make ())
+    ?(caps = Caps.SA.uniform)
+    ?thumb_caps
     (keyhole : _ KeyHole.t)
   =
-  let curve_column curv =
-    Column.make
-      ~n_keys:n_rows
-      ~curve:(Curvature.apply ~centre_idx:centre_row curv)
-      keyhole
+  let curve_column n_keys curv =
+    Column.make ~n_keys ~curve:(Curvature.apply ~centre_idx:centre_row curv) ~caps keyhole
   in
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
@@ -143,7 +145,7 @@ let make
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
   in
   let place_col ~key:i ~data:off =
-    let tented = apply_tent off (curve_column @@ lookups.curve i) in
+    let tented = apply_tent off (curve_column (lookups.rows i) (lookups.curve i)) in
     Column.rotate_about_pt
       (0., lookups.swing i, lookups.splay i)
       (Vec3.negate (Map.find_exn tented.keys centre_row).origin)
@@ -183,6 +185,7 @@ let make
             ~n_keys:n_thumb_keys
             ~centre_idx:thumb_centre
             ~curve:thumb_curve
+            ~caps:(Option.value ~default:caps thumb_caps)
             ~rotate_clips:rotate_thumb_clips
             keyhole
           |> rotate thumb_angle
@@ -193,7 +196,15 @@ let make
     Map.map ~f:lift placed_cols, thumb
   in
   { config =
-      { n_rows; centre_row; n_cols; centre_col; spacing; tent; thumb_offset; thumb_angle }
+      { n_rows = lookups.rows
+      ; centre_row
+      ; n_cols
+      ; centre_col
+      ; spacing
+      ; tent
+      ; thumb_offset
+      ; thumb_angle
+      }
   ; scad =
       Model.union
         (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
@@ -216,7 +227,7 @@ let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; col
   in
   Model.union
   @@ List.init
-       ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows - 1))
+       ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows i - 1))
        (n_cols - 1)
 
 let to_scad t = t.scad

@@ -42,5 +42,6 @@ val make
   :  ?join_ax:[< `EW | `NS > `NS ]
   -> n_keys:int
   -> curve:(int -> 'k KeyHole.t -> 'k KeyHole.t)
+  -> caps:(int -> Scad.t)
   -> 'k KeyHole.t
   -> 'k t

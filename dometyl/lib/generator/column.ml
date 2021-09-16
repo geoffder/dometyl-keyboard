@@ -75,8 +75,16 @@ let rotate_about_pt r p t =
   ; joins = Map.map ~f:(Join.rotate_about_pt r p) t.joins
   }
 
-let make ?(join_ax = `NS) ~n_keys ~curve key =
-  let place_key keys i = Map.add_exn ~key:i ~data:(curve i key) keys in
+let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
+  let place_key keys i =
+    let cap =
+      let p =
+        Vec3.(add (mul_scalar (KeyHole.normal key) key.config.cap_height) key.origin)
+      in
+      Option.some @@ Model.translate p (caps i)
+    in
+    Map.add_exn ~key:i ~data:(curve i { key with cap }) keys
+  in
   let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
     match join_ax with
     | `NS -> Model.hull [ a.faces.north.scad; b.faces.south.scad ]
