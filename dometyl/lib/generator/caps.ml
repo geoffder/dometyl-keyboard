@@ -5,6 +5,7 @@ let path n = Printf.sprintf "../things/caps/%s" n
 let color = Model.color Color.DarkSlateBlue
 
 module SA = struct
+  (* Generated with https://github.com/rsheldiii/KeyV2 *)
   let path n = path (Printf.sprintf "KeyV2_SA/SA-R%s.stl" n)
   let r0 = Model.import (path "0") |> color
   let r2 = Model.import (path "2") |> color
@@ -22,6 +23,7 @@ module SA = struct
 end
 
 module MT3 = struct
+  (* STLs released by the designer matt3o (https://matt3o.com/) *)
   let path n = path (Printf.sprintf "MT3/MT3-%s.stl" n)
   let space_1u = Model.import (path "1u-space") |> color
   let space_1_25u = Model.import (path "1.25u-space") |> color
@@ -32,6 +34,7 @@ module MT3 = struct
 end
 
 module Matty3 = struct
+  (* Generated with https://github.com/mrebersv/KeyV2 *)
   let path n = path (Printf.sprintf "KeyV2_matty3/matty3-deep-R%s.stl" n)
   let r0 = Model.import (path "0") |> color
   let r1 = Model.import (path "1") |> color
@@ -48,6 +51,7 @@ module Matty3 = struct
 end
 
 module MBK = struct
+  (* Reproduction by darryldh, found at https://www.thingiverse.com/thing:4564253 *)
   let mbk = Model.import (path "MBK_darryldh_1u.stl") |> Model.color Color.DarkSlateBlue
   let row _ = mbk
 end
