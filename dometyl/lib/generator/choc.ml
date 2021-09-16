@@ -167,7 +167,7 @@ let example_assembly
     ?(show_cap = false)
     ()
   =
-  let hole = make_hole ~hotswap:`South ~cap:Caps.mbk () in
+  let hole = make_hole ~hotswap:`South ~cap:Caps.MBK.mbk () in
   let cutout = Option.value_exn hole.cutout in
   let hole =
     KeyHole.cutout_scad hole
