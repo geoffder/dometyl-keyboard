@@ -6,12 +6,12 @@ let color = Model.color Color.DarkSlateBlue
 
 module SA = struct
   (* Generated with https://github.com/rsheldiii/KeyV2 *)
-  let path n = path (Printf.sprintf "KeyV2_SA/SA-R%s.stl" n)
-  let r0 = Model.import (path "0") |> color
-  let r2 = Model.import (path "2") |> color
-  let r3 = Model.import (path "3") |> color
-  let r4 = Model.import (path "4") |> color
-  let r5 = Model.import (path "5") |> color
+  let path n = path (Printf.sprintf "KeyV2_SA/SA-%s.stl" n)
+  let r0 = Model.import (path "R0") |> color
+  let r2 = Model.import (path "R2") |> color
+  let r3 = Model.import (path "R3") |> color
+  let r4 = Model.import (path "R4") |> color
+  let r5 = Model.import (path "R5") |> color
 
   let row = function
     | 0 -> r4
@@ -35,13 +35,13 @@ end
 
 module Matty3 = struct
   (* Generated with https://github.com/mrebersv/KeyV2 *)
-  let path n = path (Printf.sprintf "KeyV2_matty3/matty3-deep-R%s.stl" n)
-  let r0 = Model.import (path "0") |> color
-  let r1 = Model.import (path "1") |> color
-  let r2 = Model.import (path "2") |> color
-  let r3 = Model.import (path "3") |> color
-  let r4 = Model.import (path "4") |> color
-  let r5 = Model.import (path "5") |> color
+  let path n = path (Printf.sprintf "KeyV2_matty3/matty3-deep-%s.stl" n)
+  let r0 = Model.import (path "R0") |> color
+  let r1 = Model.import (path "R1") |> color
+  let r2 = Model.import (path "R2") |> color
+  let r3 = Model.import (path "R3") |> color
+  let r4 = Model.import (path "R4") |> color
+  let r5 = Model.import (path "R5") |> color
 
   let row = function
     | 0 -> r4
@@ -52,6 +52,43 @@ end
 
 module MBK = struct
   (* Reproduction by darryldh, found at https://www.thingiverse.com/thing:4564253 *)
-  let mbk = Model.import (path "MBK_darryldh_1u.stl") |> Model.color Color.DarkSlateBlue
-  let row _ = mbk
+  let mbk = Model.import (path "darryldh/MBK_1u.stl") |> Model.color Color.DarkSlateBlue
+  let uniform _ = mbk
+end
+
+module Cherry = struct
+  (* Generated with https://github.com/rsheldiii/KeyV2 *)
+  let path n = path (Printf.sprintf "KeyV2_cherry/cherry-%s.stl" n)
+  let r0 = Model.import (path "R0") |> color
+  let r2 = Model.import (path "R2") |> color
+  let r3 = Model.import (path "R3") |> color
+  let r4 = Model.import (path "R4") |> color
+
+  let row = function
+    | 0 -> r4
+    | 1 -> r3
+    | 2 -> r2
+    | _ -> r0
+end
+
+module OEM = struct
+  (* Generated with https://github.com/rsheldiii/KeyV2 *)
+  let path n = path (Printf.sprintf "KeyV2_OEM/OEM-%s.stl" n)
+  let r1 = Model.import (path "R1") |> color
+  let r2 = Model.import (path "R2") |> color
+  let r3 = Model.import (path "R3") |> color
+  let r4 = Model.import (path "R4") |> color
+  let r5 = Model.import (path "R5") |> color
+
+  let row = function
+    | 0 -> r4
+    | 1 -> r3
+    | 2 -> r2
+    | 3 -> r1
+    | _ -> r5
+end
+
+module DSA = struct
+  let r3 = Model.import (path "KeyV2_DSA/DSA-R3.stl") |> color
+  let uniform _ = r3
 end

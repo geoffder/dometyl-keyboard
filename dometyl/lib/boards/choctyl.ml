@@ -39,7 +39,7 @@ let plate_builder =
           ~well:{ angle = Float.pi /. 5.; radius = 30.; tilt = 0. }
           ())
     ~lookups
-    ~caps:Caps.MBK.row
+    ~caps:Caps.MBK.uniform
 
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
