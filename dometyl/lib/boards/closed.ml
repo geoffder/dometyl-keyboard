@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 open! Generator
 
-let plate_builder = Plate.make ~n_rows:3 ~n_cols:5
+let plate_builder = Plate.make ~n_cols:5
 
 let wall_builder plate =
   Walls.
@@ -25,7 +25,7 @@ let plate_welder = Plate.column_joins
 let ports_cutter = Ports.make ()
 
 let build ?right_hand ?hotswap () =
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ?hotswap () in
+  let keyhole = Mx.make_hole ?hotswap () in
   Case.make
     ?right_hand
     ~plate_builder

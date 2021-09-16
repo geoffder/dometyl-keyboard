@@ -25,12 +25,12 @@ let lookups =
     | 3 -> Float.pi /. -19.
     | 4 -> Float.pi /. -14.
     | _ -> 0.
-  and splay _ = 0. in
-  Plate.Lookups.make ~offset ~curve ~splay ~swing ()
+  and splay _ = 0.
+  and rows _ = 3 in
+  Plate.Lookups.make ~offset ~curve ~splay ~swing ~rows ()
 
 let plate_builder =
   Plate.make
-    ~n_rows:3
     ~n_cols:5
     ~spacing:1.5
     ~tent:(Float.pi /. 10.)
@@ -83,7 +83,7 @@ let base_connector =
 let ports_cutter = BastardShield.(cutter (make ()))
 
 let build ?right_hand ?hotswap () =
-  let keyhole = Mx.make_hole ~cap:Caps.sa_r3 ~clearance:2.75 ?hotswap () in
+  let keyhole = Mx.make_hole ~clearance:2.75 ?hotswap () in
   Case.make
     ?right_hand
     ~plate_builder

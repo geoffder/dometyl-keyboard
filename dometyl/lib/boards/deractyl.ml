@@ -36,12 +36,14 @@ let lookups =
     | _ -> 0.
   and splay = function
     | _ -> 0.
+  and rows = function
+    | 5 -> 3
+    | _ -> 4
   in
-  Plate.Lookups.make ~offset ~curve ~swing ~splay ()
+  Plate.Lookups.make ~offset ~curve ~swing ~splay ~rows ()
 
 let plate_builder =
   Plate.make
-    ~n_rows:4
     ~n_cols:6
     ~spacing:1.
     ~tent:(Float.pi /. 12.)
@@ -54,6 +56,7 @@ let plate_builder =
           ~fan:{ angle = Float.pi /. 28.; radius = 200.; tilt = 0. }
           ())
     ~lookups
+    ~caps:Caps.SA.uniform
 
 let wall_builder plate =
   Walls.
@@ -92,7 +95,7 @@ let base_connector =
     ~cubic_height:15.
 
 let build ?hotswap ~ports_cutter () =
-  let keyhole = Mx.make_hole ?hotswap ~cap:Caps.sa_r3 () in
+  let keyhole = Mx.make_hole ?hotswap () in
   Case.make
     ~plate_builder
     ~plate_welder

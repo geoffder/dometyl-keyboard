@@ -22,12 +22,11 @@ let lookups =
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -9. (* pinky *)
     | _ -> 0.
-  in
-  Plate.Lookups.make ~offset ~curve ~splay ()
+  and rows _ = 3 in
+  Plate.Lookups.make ~offset ~curve ~splay ~rows ()
 
 let plate_builder =
   Plate.make
-    ~n_rows:3
     ~n_cols:5
     ~spacing:0.5
     ~tent:(Float.pi /. 12.)
@@ -40,6 +39,7 @@ let plate_builder =
           ~well:{ angle = Float.pi /. 5.; radius = 30.; tilt = 0. }
           ())
     ~lookups
+    ~caps:Caps.MBK.row
 
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
@@ -98,4 +98,4 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Choc.make_hole ~cap:Caps.mbk ?hotswap ~outer_h:17. ())
+    (Choc.make_hole ?hotswap ~outer_h:17. ())

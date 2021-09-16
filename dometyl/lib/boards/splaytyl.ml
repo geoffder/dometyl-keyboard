@@ -2,7 +2,31 @@ open! Base
 open! Scad_ml
 open! Generator
 
-let plate_builder = Plate.make ~n_rows:3 ~n_cols:5
+let lookups =
+  let offset = function
+    | 2 -> 0., 3.5, -6. (* middle *)
+    | 3 -> 1., -2.5, 0.5 (* ring *)
+    | i when i >= 4 -> 1., -22., 9.5 (* pinky *)
+    | 0 -> -2., -1., 7.
+    | _ -> 0., -1., 1.5
+  and curve = function
+    | i when i = 3 ->
+      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.65)) ()) (* ring *)
+    | i when i > 3 ->
+      Curvature.(curve ~well:(spec ~radius:34. (Float.pi /. 4.2)) ()) (* pinky *)
+    | i when i = 0 ->
+      Curvature.(
+        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:44. (Float.pi /. 5.9)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:43.5 (Float.pi /. 6.)) ())
+  and splay = function
+    | i when i = 3 -> Float.pi /. -25. (* ring *)
+    | i when i >= 4 -> Float.pi /. -9. (* pinky *)
+    | _ -> 0.
+  and rows _ = 3 in
+  Plate.Lookups.make ~offset ~curve ~splay ~rows ()
+
+let plate_builder =
+  Plate.make ~n_cols:5 ~lookups ~caps:Caps.Matty3.row ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
   Walls.
@@ -54,7 +78,7 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Mx.make_hole ~cap:Caps.sa_r3 ?hotswap ())
+    (Mx.make_hole ?hotswap ())
 
 let bastard_compare () =
   Model.union
