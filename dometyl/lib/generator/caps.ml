@@ -52,7 +52,9 @@ end
 
 module MBK = struct
   (* Reproduction by darryldh, found at https://www.thingiverse.com/thing:4564253 *)
-  let mbk = Model.import (path "darryldh/MBK_1u.stl") |> Model.color Color.DarkSlateBlue
+  let mbk =
+    Model.import (path "darryldh_MBK/MBK_1u.stl") |> Model.color Color.DarkSlateBlue
+
   let uniform _ = mbk
 end
 
@@ -91,4 +93,20 @@ end
 module DSA = struct
   let r3 = Model.import (path "KeyV2_DSA/DSA-R3.stl") |> color
   let uniform _ = r3
+end
+
+module DSS = struct
+  let path n = path (Printf.sprintf "KeyV2_DSS/DSS-%s.stl" n)
+  let r1 = Model.import (path "R1") |> color
+  let r2 = Model.import (path "R2") |> color
+  let r3 = Model.import (path "R3") |> color
+  let r4 = Model.import (path "R4") |> color
+  let r5 = Model.import (path "R5") |> color
+
+  let row = function
+    | 0 -> r4
+    | 1 -> r3
+    | 2 -> r2
+    | 3 -> r1
+    | _ -> r5
 end
