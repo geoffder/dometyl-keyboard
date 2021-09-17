@@ -149,8 +149,8 @@ let reversible_holder
     |> Model.translate (3., -38.8, 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
   and front =
-    Model.cube (w, 10., h)
-    |> Model.translate (0., -5.5, 0.)
+    Model.cube (w, 13., h)
+    |> Model.translate (0., -8., 0.)
     |> Model.color ~alpha:0.5 Color.Salmon
   and rails =
     let rail = Model.cube (rail_w, rail_w, h) in
