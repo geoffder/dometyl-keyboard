@@ -6,7 +6,7 @@ let lookups =
   let offset = function
     | 2 -> 0., 3.5, -6. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 1., -22., 9.5 (* pinky *)
+    | i when i >= 4 -> 1., -19., 9.5 (* pinky *)
     | 0 -> -2., -1., 7.
     | _ -> 0., -1., 1.5
   and curve = function
@@ -20,7 +20,7 @@ let lookups =
     | _ -> Curvature.(curve ~well:(spec ~radius:43.5 (Float.pi /. 6.)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
-    | i when i >= 4 -> Float.pi /. -9. (* pinky *)
+    | i when i >= 4 -> Float.pi /. -11. (* pinky *)
     | _ -> 0.
   and rows _ = 3 in
   Plate.Lookups.make ~offset ~curve ~splay ~rows ()
@@ -52,10 +52,10 @@ let base_connector =
     ~n_facets:1
     ~height:9.
     ~thumb_height:11.
-    ~snake_scale:2.
-    ~snake_d:1.4
+    ~snake_scale:1.
+    ~snake_d:1.2
     ~cubic_d:2.
-    ~cubic_scale:1.
+    ~cubic_scale:1.5
     ~west_link_cubic:false
     ~thumb_cubic_d:4.
     ~thumb_cubic_scale:2.
