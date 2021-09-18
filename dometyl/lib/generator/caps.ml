@@ -34,7 +34,10 @@ module MT3 = struct
 end
 
 module Matty3 = struct
-  (* Generated with https://github.com/mrebersv/KeyV2 *)
+  (* Generated with https://github.com/mrebersv/KeyV2
+     NOTE: Be mindful of clearance between the keys. The shape of real MT3 caps
+     seem to have a bit more of a bulge. These can be close to touching (but not
+     quite) and the caps will rub irl. *)
   let path n = path (Printf.sprintf "KeyV2_matty3/matty3-deep-%s.stl" n)
   let r0 = Model.import (path "R0") |> color
   let r1 = Model.import (path "R1") |> color

@@ -6,18 +6,18 @@ let lookups =
   let offset = function
     | 2 -> 0., 3.5, -6. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 1., -19., 9.5 (* pinky *)
+    | i when i >= 4 -> 1., -18., 8.5 (* pinky *)
     | 0 -> -2., -1., 7.
     | _ -> 0., -1., 1.5
   and curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.65)) ()) (* ring *)
+      Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.5)) ()) (* ring *)
     | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:34. (Float.pi /. 4.2)) ()) (* pinky *)
+      Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:44. (Float.pi /. 5.9)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:43.5 (Float.pi /. 6.)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 6.9) ~radius:45. (Float.pi /. 6.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:45.5 (Float.pi /. 6.3)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
@@ -26,7 +26,7 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~splay ~rows ()
 
 let plate_builder =
-  Plate.make ~n_cols:5 ~lookups ~caps:Caps.Matty3.row ~thumb_caps:Caps.MT3.thumb_1u
+  Plate.make ~n_cols:5 ~lookups ~caps:Caps.SA.row ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
   Walls.
