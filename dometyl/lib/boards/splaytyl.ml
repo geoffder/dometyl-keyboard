@@ -6,18 +6,18 @@ let lookups =
   let offset = function
     | 2 -> 0., 3.5, -6. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 1., -18., 8.5 (* pinky *)
-    | 0 -> -2., -1., 7.
-    | _ -> 0., -1., 1.5
+    | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
+    | 0 -> -2., 0., 5.5
+    | _ -> 0., 0., 0.
   and curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.5)) ()) (* ring *)
+      Curvature.(curve ~well:(spec ~radius:37.5 (Float.pi /. 4.5)) ()) (* ring *)
     | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
+      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.3)) ()) (* pinky *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 6.9) ~radius:45. (Float.pi /. 6.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:45.5 (Float.pi /. 6.3)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:45. (Float.pi /. 5.95)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:45.5 (Float.pi /. 6.1)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
@@ -26,7 +26,19 @@ let lookups =
   Plate.Lookups.make ~offset ~curve ~splay ~rows ()
 
 let plate_builder =
-  Plate.make ~n_cols:5 ~lookups ~caps:Caps.SA.row ~thumb_caps:Caps.MT3.thumb_1u
+  Plate.make
+    ~n_cols:5
+    ~lookups
+    ~thumb_curve:
+      Curvature.(
+        curve
+          ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 48. }
+          ~well:{ angle = Float.pi /. 5.5; radius = 47.; tilt = 0. }
+          ())
+    ~thumb_offset:(-16., -40., 10.)
+    ~thumb_angle:Float.(pi /. 20., pi /. -9., pi /. 12.)
+    ~caps:Caps.Matty3.row
+    ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
   Walls.
@@ -52,7 +64,7 @@ let base_connector =
     ~n_facets:1
     ~height:9.
     ~thumb_height:11.
-    ~snake_scale:1.
+    ~snake_scale:1.5
     ~snake_d:1.2
     ~cubic_d:2.
     ~cubic_scale:1.5
@@ -78,7 +90,7 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Mx.make_hole ?hotswap ())
+    (Mx.make_hole ?hotswap ~clearance:2. ())
 
 let bastard_compare () =
   Model.union
