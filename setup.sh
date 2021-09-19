@@ -3,7 +3,7 @@
 # install opam depenencies
 opam --yes install \
     dune base stdio ppx_jane ppx_inline_test  \
-    merlin ocp-indent ocaml-lsp-server ocamlformat
+    merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
 # make user copy of main.ml from example
 if [ ! -f dometyl/bin/main.ml ]
