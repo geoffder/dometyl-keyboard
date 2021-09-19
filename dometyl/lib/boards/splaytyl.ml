@@ -64,13 +64,10 @@ let base_connector =
     ~n_facets:1
     ~height:9.
     ~thumb_height:11.
-    ~snake_scale:1.5
-    ~snake_d:1.2
+    ~east_link:(Connect.snake ~height:11. ~scale:1.5 ~d:1.2 ())
+    ~west_link:(Connect.straight ~height:11. ())
     ~cubic_d:2.
     ~cubic_scale:1.5
-    ~west_link_cubic:false
-    ~thumb_cubic_d:4.
-    ~thumb_cubic_scale:2.
     ~body_join_steps:3
     ~thumb_join_steps:3
     ~fudge_factor:8.

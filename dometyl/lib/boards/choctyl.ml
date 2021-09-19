@@ -74,12 +74,10 @@ let base_connector =
     ~height:7.
     ~index_height:15.
     ~thumb_height:17.
-    ~snake_scale:1.3
-    ~snake_d:1.4
+    ~east_link:(Connect.snake ~scale:1.3 ~d:1.4 ())
+    ~west_link:(Connect.cubic ~scale:0.5 ~d:1.5 ~bow_out:false ())
     ~cubic_d:2.
     ~cubic_scale:1.
-    ~thumb_cubic_d:0.5
-    ~thumb_cubic_scale:1.5
     ~n_steps:9
     ~body_join_steps:3
     ~thumb_join_steps:4

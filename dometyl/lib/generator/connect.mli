@@ -94,6 +94,86 @@ val joiner
   -> Wall.t option * t list
   -> Wall.t option * t list
 
+type config =
+  | Straight of
+      { n_facets : int option
+      ; height : float option
+      ; fudge_factor : float option
+      ; overlap_factor : float option
+      ; min_width : float option
+      }
+  | Bez of
+      { n_facets : int option
+      ; height : float option
+      ; n_steps : int option
+      }
+  | Cubic of
+      { n_facets : int option
+      ; height : float option
+      ; scale : float option
+      ; d : float option
+      ; n_steps : int option
+      ; bow_out : bool option
+      }
+  | Snake of
+      { n_facets : int option
+      ; height : float option
+      ; scale : float option
+      ; d : float option
+      ; n_steps : int option
+      }
+  | FullJoin of
+      { n_steps : int option
+      ; fudge_factor : float option
+      ; overlap_factor : float option
+      }
+  | InwardElbow of
+      { n_facets : int option
+      ; height : float option
+      ; n_steps : int option
+      ; d : float option
+      }
+
+val straight
+  :  ?n_facets:int
+  -> ?height:float
+  -> ?fudge_factor:float
+  -> ?overlap_factor:float
+  -> ?min_width:float
+  -> unit
+  -> config
+
+val bez : ?n_facets:int -> ?height:float -> ?n_steps:int -> unit -> config
+
+val cubic
+  :  ?n_facets:int
+  -> ?height:float
+  -> ?scale:float
+  -> ?d:float
+  -> ?n_steps:int
+  -> ?bow_out:bool
+  -> unit
+  -> config
+
+val snake
+  :  ?n_facets:int
+  -> ?height:float
+  -> ?scale:float
+  -> ?d:float
+  -> ?n_steps:int
+  -> unit
+  -> config
+
+val full_join
+  :  ?n_steps:int
+  -> ?fudge_factor:float
+  -> ?overlap_factor:float
+  -> unit
+  -> config
+
+val elbow : ?n_facets:int -> ?height:float -> ?n_steps:int -> ?d:float -> unit -> config
+val connect : config -> Wall.t -> Wall.t -> t
+
 val skeleton
   :  ?n_facets:int
   -> ?index_height:float
@@ -105,14 +185,11 @@ val skeleton
   -> ?fudge_factor:float
   -> ?join_fudge_factor:float
   -> ?overlap_factor:float
-  -> ?snake_d:float
-  -> ?snake_scale:float
   -> ?cubic_d:float
   -> ?cubic_scale:float
-  -> ?west_link_cubic:bool
-  -> ?thumb_cubic_d:float
-  -> ?thumb_cubic_scale:float
   -> ?thumb_height:float
+  -> ?east_link:config
+  -> ?west_link:config
   -> ?north_joins:(int -> bool)
   -> ?south_joins:(int -> bool)
   -> ?pinky_idx:int

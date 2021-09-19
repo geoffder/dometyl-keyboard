@@ -164,7 +164,7 @@ let cubic_base
 
 let snake_base
     ?(n_facets = 1)
-    ?(height = 4.)
+    ?(height = 11.)
     ?(scale = 1.5)
     ?(d = 2.)
     ?(n_steps = 12)
@@ -456,6 +456,75 @@ let joiner ~get ~join ~key:_ ~data (last, scads) =
   in
   Option.first_some next last, scads'
 
+type config =
+  | Straight of
+      { n_facets : int option
+      ; height : float option
+      ; fudge_factor : float option
+      ; overlap_factor : float option
+      ; min_width : float option
+      }
+  | Bez of
+      { n_facets : int option
+      ; height : float option
+      ; n_steps : int option
+      }
+  | Cubic of
+      { n_facets : int option
+      ; height : float option
+      ; scale : float option
+      ; d : float option
+      ; n_steps : int option
+      ; bow_out : bool option
+      }
+  | Snake of
+      { n_facets : int option
+      ; height : float option
+      ; scale : float option
+      ; d : float option
+      ; n_steps : int option
+      }
+  | FullJoin of
+      { n_steps : int option
+      ; fudge_factor : float option
+      ; overlap_factor : float option
+      }
+  | InwardElbow of
+      { n_facets : int option
+      ; height : float option
+      ; n_steps : int option
+      ; d : float option
+      }
+
+let straight ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width () =
+  Straight { n_facets; height; fudge_factor; overlap_factor; min_width }
+
+let bez ?n_facets ?height ?n_steps () = Bez { n_facets; height; n_steps }
+
+let cubic ?n_facets ?height ?scale ?d ?n_steps ?bow_out () =
+  Cubic { n_facets; height; scale; d; n_steps; bow_out }
+
+let snake ?n_facets ?height ?scale ?d ?n_steps () =
+  Snake { n_facets; height; scale; d; n_steps }
+
+let full_join ?n_steps ?fudge_factor ?overlap_factor () =
+  FullJoin { n_steps; fudge_factor; overlap_factor }
+
+let elbow ?n_facets ?height ?n_steps ?d () = InwardElbow { n_facets; height; n_steps; d }
+
+let connect = function
+  | Straight { n_facets; height; fudge_factor; overlap_factor; min_width } ->
+    straight_base ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width
+  | Bez { n_facets; height; n_steps } -> bez_base ?n_facets ?height ?n_steps
+  | Cubic { n_facets; height; scale; d; n_steps; bow_out } ->
+    cubic_base ?n_facets ?height ?scale ?d ?n_steps ?bow_out
+  | Snake { n_facets; height; scale; d; n_steps } ->
+    snake_base ?n_facets ?height ?scale ?d ?n_steps
+  | FullJoin { n_steps; fudge_factor; overlap_factor } ->
+    join_walls ?n_steps ?fudge_factor ?overlap_factor
+  | InwardElbow { n_facets; height; n_steps; d } ->
+    inward_elbow_base ?n_facets ?height ?n_steps ?d
+
 let skeleton
     ?(n_facets = 1)
     ?(index_height = 11.)
@@ -467,14 +536,11 @@ let skeleton
     ?fudge_factor
     ?join_fudge_factor
     ?overlap_factor
-    ?snake_d
-    ?snake_scale
     ?cubic_d
     ?cubic_scale
-    ?(west_link_cubic = true)
-    ?thumb_cubic_d
-    ?thumb_cubic_scale
     ?thumb_height
+    ?(east_link = snake ())
+    ?(west_link = cubic ~bow_out:false ())
     ?(north_joins = fun i -> i < 2)
     ?(south_joins = fun _ -> false)
     ?(pinky_idx = 4)
@@ -601,16 +667,7 @@ let skeleton
     and corner =
       Option.map2
         ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor)
-    and link =
-      Option.map2
-        ~f:
-          (snake_base
-             ~n_facets
-             ?height:thumb_height
-             ?scale:snake_scale
-             ?d:snake_d
-             ?n_steps )
-    in
+    and link = Option.map2 ~f:(connect east_link) in
     (* TODO: es and sw are pretty repetitive, can probably clean up, and also take
        lessons from using closest key into other places. *)
     let es =
@@ -634,34 +691,17 @@ let skeleton
         in
         Option.map2
           ~f:
-            (cubic_base
+            (straight_base
                ~n_facets
-               ?n_steps
                ?height:thumb_height
-               ?scale:thumb_cubic_scale
-               ?d:thumb_cubic_d )
+               ?fudge_factor
+               ?overlap_factor
+               ?min_width:min_straight_width )
           next
           thumb.sides.west
     and nw = corner thumb.sides.west w_n
     and w_link =
-      let f =
-        if west_link_cubic
-        then
-          cubic_base
-            ~n_facets
-            ?height:thumb_height
-            ?scale:thumb_cubic_scale
-            ?d:thumb_cubic_d
-            ?n_steps
-            ~bow_out:false
-        else
-          straight_base
-            ~n_facets
-            ~height:index_height
-            ?fudge_factor
-            ?overlap_factor
-            ?min_width:min_straight_width
-      in
+      let f = connect west_link in
       Option.map2 ~f (Option.first_some w_n thumb.sides.west) (Map.find body.sides.west 0)
     in
     let east_swoop =
