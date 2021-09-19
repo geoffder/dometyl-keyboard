@@ -4,16 +4,15 @@ open! Generator
 
 let lookups =
   let offset = function
-    | 2 -> 0., 3.5, -6. (* middle *)
+    | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
     | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
     | 0 -> -2., 0., 5.5
     | _ -> 0., 0., 0.
   and curve = function
-    | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:37.5 (Float.pi /. 4.5)) ()) (* ring *)
-    | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.3)) ()) (* pinky *)
+    | i when i >= 3 ->
+      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.25)) ())
+      (* ring and pinky *)
     | i when i = 0 ->
       Curvature.(
         curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:45. (Float.pi /. 5.95)) ())
@@ -32,11 +31,11 @@ let plate_builder =
     ~thumb_curve:
       Curvature.(
         curve
-          ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 48. }
-          ~well:{ angle = Float.pi /. 5.5; radius = 47.; tilt = 0. }
+          ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
+          ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
           ())
-    ~thumb_offset:(-16., -40., 10.)
-    ~thumb_angle:Float.(pi /. 20., pi /. -9., pi /. 12.)
+    ~thumb_offset:(-18., -40., 12.)
+    ~thumb_angle:Float.(pi /. 30., pi /. -9., pi /. 12.)
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.thumb_1u
 
@@ -45,8 +44,8 @@ let wall_builder plate =
     { body =
         Body.make
           ~n_steps:(`Flat 3)
-          ~north_clearance:1.5
-          ~south_clearance:1.5
+          ~north_clearance:2.5
+          ~south_clearance:2.5
           ~side_clearance:1.5
           plate
     ; thumb =
@@ -54,7 +53,7 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Screw
-          ~clearance:1.5
+          ~clearance:2.0
           ~n_steps:(`Flat 3)
           plate
     }
@@ -73,6 +72,7 @@ let base_connector =
     ~fudge_factor:8.
     ~close_thumb:true
     ~pinky_elbow:false
+    ~overlap_factor:1.
 
 let plate_welder plate =
   Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]

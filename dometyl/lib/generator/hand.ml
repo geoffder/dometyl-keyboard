@@ -298,8 +298,8 @@ let home_curl t =
   let t' = flex_fingers ~mult:(0., 1.0, 0.5) (Float.pi /. 2.8) t in
   { t' with
     fingers =
-      { t'.fingers with
-        ring = Finger.flex ~mult:(-0.1, 1., -0.2) (Float.pi /. 16.) t'.fingers.ring
+      { index = Finger.flex ~mult:(1., 0., -1.) (Float.pi /. 60.) t'.fingers.index
+      ; ring = Finger.flex ~mult:(-0.2, 1., -0.2) (Float.pi /. 16.) t'.fingers.ring
       ; middle = Finger.flex ~mult:(-0.1, 1., 0.1) (Float.pi /. 20.) t'.fingers.middle
       ; pinky = Finger.flex ~mult:(-0.5, 1., -0.2) (Float.pi /. 30.) t'.fingers.pinky
       }
