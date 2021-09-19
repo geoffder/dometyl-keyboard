@@ -125,7 +125,7 @@ let make_hole
     ?(thickness = 4.)
     ?(cap_height = 4.4)
     ?(cap_cutout_height = Some 0.8)
-    ?(clearance = 3.)
+    ?(clearance = 2.)
     ()
   =
   let clearance, clip, cutout =
@@ -135,7 +135,7 @@ let make_hole
         Hotswap.make ~inner_w ~inner_h ~outer_w ~outer_h ~plate_thickness:thickness facing
       in
       let clip hole = Model.union [ teeth ~inner_w ~thickness hole; swap ] in
-      clearance +. 3., clip, Some cutout
+      clearance +. 1.5, clip, Some cutout
     | None        -> clearance, teeth ~inner_w ~thickness, None
   and cap_cutout =
     Option.map
