@@ -20,7 +20,7 @@ The name **Dometyl** comes from my original mission of creating a
 switch housings are available to purchase). The planned switching mechanism
 using magnets and cheap hall-effect sensors rather than the typical capacitive
 sensor PCBs works as expected in hand (images and video of prototype assembly to
-come), however a sturdy enough and relible mounting scheme for dome and sensor
+come), however a sturdy enough and reliable mounting scheme for dome and sensor
 platform to the bottom of the plate is yet to be worked out (WIP parts can be
 found in the [Niz module](dometyl/lib/generator/niz.ml)).
 
@@ -50,7 +50,7 @@ The other dependencies include the build system
 from janestreet, as well as a couple ppx rewriters, and some dev tools, all of
 which are available through the opam package manager.
 * `opam install dune base stdio ppx_jane ppx_inline_test merlin ocp-indent ocaml-lsp-server
-  ocamlformat`
+  ocamlformat ocamlformat-rpc`
 
 ### Installing Scad_ml
 One day I may get to upstreaming my drammatic changes to
