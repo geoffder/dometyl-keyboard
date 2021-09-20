@@ -160,6 +160,17 @@ their respective configurations.
   holder-relevant walls can be tuned separately from the rest to adapt to your
   chosen mounting method.
 
+## The Hand
+![Hand](images/hand_example.png)
+There is an as yet undocumented (and subject to evolution) [Hand
+module](dometyl/lib/generator/hand.ml) available to play around with. One can
+generate hand from a knuckle (base of proximal bones, or the meta-carpal for the
+thumb) offset coordinates and bone lengths, then pose it with the available
+flexion/extension/abduction/adduction/etc functions, and place it over the home
+row of a generated `Plate.t`. Hopefully this can help give you a sense of what
+column offsets and curvatures are going to work for you before you commit to a
+test print.
+
 ## Troubleshooting
 Now and then, when you attempt to render a model, part of it will disappear.
 This is due to my imperfect abuse of
