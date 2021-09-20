@@ -123,7 +123,7 @@ let make_hole
     ?(inner_w = 13.8)
     ?(inner_h = 13.8)
     ?(thickness = 4.)
-    ?(cap_height = 4.4)
+    ?(cap_height = 5.)
     ?(cap_cutout_height = Some 0.8)
     ?(clearance = 2.)
     ()

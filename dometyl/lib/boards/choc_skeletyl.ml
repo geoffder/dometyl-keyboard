@@ -15,8 +15,8 @@ let lookups =
   and curve = function
     | 0 ->
       Curvature.(
-        curve ~well:(spec ~radius:60. (Float.pi /. 10.) ~tilt:(Float.pi /. 11.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:60. (Float.pi /. 10.1)) ())
+        curve ~well:(spec ~radius:60.5 (Float.pi /. 10.) ~tilt:(Float.pi /. 11.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:60.5 (Float.pi /. 10.1)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -19.
