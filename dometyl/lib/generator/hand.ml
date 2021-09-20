@@ -91,6 +91,14 @@ module Finger = struct
     ; dist : Bone.t
     }
 
+  type config =
+    { offset : Vec3.t option
+    ; lengths : float * float * float
+    ; radii : (float * float * float) option
+    ; splay : float option
+    }
+
+  let config ?offset ?radii ?splay lengths = { offset; lengths; radii; splay }
   let map ~f t = { prox = f t.prox; mid = f t.mid; dist = f t.dist }
   let translate p = map ~f:(Bone.translate p)
   let rotate r = map ~f:(Bone.rotate r)
@@ -121,8 +129,8 @@ module Finger = struct
 
   let flex ?mult a = extend ?mult (-.a)
 
-  let make ?splay ?(offset = Vec3.zero) ?rads (lp, lm, ld) =
-    let rp, rm, rd = Option.value ~default:(6., 5., 4.) rads in
+  let make ?splay ?(offset = Vec3.zero) ?radii (lp, lm, ld) =
+    let rp, rm, rd = Option.value ~default:(6., 5., 4.) radii in
     let prox = Bone.make ?angle:splay ~rad:rp lp
     and mid = Bone.make ?angle:splay ~rad:rm lm
     and dist = Bone.make ?angle:splay ~rad:rd ld in
@@ -132,12 +140,12 @@ module Finger = struct
     }
     |> translate offset
 
+  let of_config { offset; lengths; radii; splay } = make ?splay ?offset ?radii lengths
+
   let to_scad { prox; mid; dist } =
     Model.union [ Bone.to_scad prox; Bone.to_scad mid; Bone.to_scad dist ]
 end
 
-(* TODO: remove thumb, and place in own type with duct axis? Don't want to flex it with
-the other fingers really most of the time, diminishing the usefullness of the helpers. *)
 module Fingers = struct
   type t =
     { index : Finger.t
@@ -153,6 +161,13 @@ module Fingers = struct
     let flipped = Fn.flip f in
     f init index |> flipped middle |> flipped ring |> flipped pinky
 
+  let update ?(index = Fn.id) ?(ring = Fn.id) ?(middle = Fn.id) ?(pinky = Fn.id) t =
+    { index = index t.index
+    ; middle = middle t.middle
+    ; ring = ring t.ring
+    ; pinky = pinky t.pinky
+    }
+
   let translate p = map ~f:(Finger.translate p)
   let rotate r = map ~f:(Finger.rotate r)
   let rotate_about_pt r p = map ~f:(Finger.rotate_about_pt r p)
@@ -160,6 +175,14 @@ module Fingers = struct
   let quaternion_about_pt q p = map ~f:(Finger.quaternion_about_pt q p)
   let extend ?mult a = map ~f:(Finger.extend ?mult a)
   let flex ?mult a = map ~f:(Finger.flex ?mult a)
+
+  let of_configs ~index ~middle ~ring ~pinky =
+    { index = Finger.of_config index
+    ; middle = Finger.of_config middle
+    ; ring = Finger.of_config ring
+    ; pinky = Finger.of_config pinky
+    }
+
   let to_scad t = Model.union @@ (fold ~init:[] ~f:(fun l a -> Finger.to_scad a :: l)) t
 end
 
@@ -169,8 +192,8 @@ module Thumb = struct
     ; duct : Vec3.t
     }
 
-  let make ?splay ?offset ?(rads = 9., 8., 7.) lengths =
-    let bones = Finger.make ?splay ?offset ~rads lengths in
+  let make ?splay ?offset ?(radii = 9., 8., 7.) lengths =
+    let bones = Finger.make ?splay ?offset ~radii lengths in
     { bones =
         Finger.quaternion_about_pt
           (Quaternion.make (Vec3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
@@ -178,6 +201,9 @@ module Thumb = struct
           bones
     ; duct = 0., 1., 0.
     }
+
+  let of_config Finger.{ offset; lengths; radii; splay } =
+    make ?splay ?offset ?radii lengths
 
   let translate p t = { t with bones = Finger.translate p t.bones }
   let rotate r t = { bones = Finger.rotate r t.bones; duct = Vec3.rotate r t.duct }
@@ -209,6 +235,16 @@ module Thumb = struct
   let abduction a = adduction (-.a)
   let to_scad t = Finger.to_scad t.bones
 end
+
+type config =
+  { index : Finger.config
+  ; middle : Finger.config
+  ; ring : Finger.config
+  ; pinky : Finger.config
+  ; thumb : Finger.config
+  ; carpal_len : float option
+  ; knuckle_rad : float option
+  }
 
 type t =
   { fingers : Fingers.t
@@ -292,19 +328,18 @@ let radial_dev a t =
 
 let ulnar_dev a = radial_dev (-.a)
 
-(* TODO: obviously the flex_fingers start isn't super great if I need to adjust almost
-   all the fingers. Should I bother with the two steps? *)
-let home_curl t =
-  let t' = flex_fingers ~mult:(0., 1.0, 0.5) (Float.pi /. 2.8) t in
-  { t' with
-    fingers =
-      { index = Finger.flex ~mult:(1., 0., -1.) (Float.pi /. 60.) t'.fingers.index
-      ; ring = Finger.flex ~mult:(-0.2, 1., -0.2) (Float.pi /. 16.) t'.fingers.ring
-      ; middle = Finger.flex ~mult:(-0.1, 1., 0.1) (Float.pi /. 20.) t'.fingers.middle
-      ; pinky = Finger.flex ~mult:(-0.5, 1., -0.2) (Float.pi /. 30.) t'.fingers.pinky
-      }
+let update_digits
+    ?(index = Fn.id)
+    ?(ring = Fn.id)
+    ?(middle = Fn.id)
+    ?(pinky = Fn.id)
+    ?(thumb = Fn.id)
+    t
+  =
+  { t with
+    fingers = Fingers.update ~index ~ring ~middle ~pinky t.fingers
+  ; thumb = { t.thumb with bones = thumb t.thumb.bones }
   }
-  |> flex_thumb ~mult:(-0.5, 1.0, 0.2) (Float.pi /. 8.)
 
 let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : Thumb.t) =
   let carpals =
@@ -332,6 +367,11 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
   ; normal = Vec3.rotate (Float.pi /. 2., 0., 0.) heading
   }
   |> translate (Vec3.negate origin)
+
+let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
+  let fingers = Fingers.of_configs ~index ~middle ~ring ~pinky
+  and thumb = Thumb.of_config thumb in
+  make ?carpal_len ?knuckle_rad fingers thumb
 
 let to_scad { fingers; thumb; carpals; knuckle_rad; _ } =
   let palm =
@@ -369,15 +409,28 @@ let home ?(hover = 18.) Plate.{ columns; config; _ } t =
   in
   translate (Vec3.sub pos aligned.fingers.middle.dist.tip) aligned
 
-(* TODO: create a finger config type, and a hand config. This way this can be bundled
-   up a bit better and be a bit more approachable. Also, record updating can be used to
-   modify the provided default configs. *)
-let default =
-  let thumb = Thumb.make ~offset:(15., 0., -25.) ~splay:(Float.pi /. 8.) (52., 30., 28.8)
-  and index = Finger.make ~offset:(21., 60., 0.) (47.5, 27., 21.)
-  and middle = Finger.make ~offset:(41., 62., 0.) (55., 31., 27.)
-  and ring = Finger.make ~offset:(55., 60., 0.) ~splay:(Float.pi /. -25.) (50., 31., 24.)
-  and pinky =
-    Finger.make ~offset:(70., 52., 0.) ~splay:(Float.pi /. -11.) (37.5, 26., 22.)
-  in
-  make Fingers.{ index; middle; ring; pinky } thumb
+(* TODO: obviously the flex_fingers start isn't super great if I need to adjust almost
+   all the fingers. Should I bother with the two steps? *)
+let home_curl t =
+  let t' = flex_fingers ~mult:(0., 1.0, 0.5) (Float.pi /. 2.8) t in
+  { t' with
+    fingers =
+      { index = Finger.flex ~mult:(1., 0., -1.) (Float.pi /. 60.) t'.fingers.index
+      ; ring = Finger.flex ~mult:(-0.2, 1., -0.2) (Float.pi /. 16.) t'.fingers.ring
+      ; middle = Finger.flex ~mult:(-0.1, 1., 0.1) (Float.pi /. 20.) t'.fingers.middle
+      ; pinky = Finger.flex ~mult:(-0.5, 1., -0.2) (Float.pi /. 30.) t'.fingers.pinky
+      }
+  }
+  |> flex_thumb ~mult:(-0.5, 1.0, 0.2) (Float.pi /. 8.)
+
+let default_config =
+  { index = Finger.config ~offset:(21., 60., 0.) (47.5, 27., 21.)
+  ; middle = Finger.config ~offset:(41., 62., 0.) (55., 31., 27.)
+  ; ring = Finger.config ~offset:(55., 60., 0.) ~splay:(Float.pi /. -25.) (50., 31., 24.)
+  ; pinky = Finger.config ~offset:(70., 52., 0.) ~splay:(Float.pi /. -11.) (37.5, 26., 22.)
+  ; thumb = Finger.config ~offset:(15., 0., -25.) ~splay:(Float.pi /. 8.) (52., 30., 28.8)
+  ; carpal_len = None
+  ; knuckle_rad = None
+  }
+
+let example = of_config default_config
