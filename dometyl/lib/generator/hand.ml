@@ -373,7 +373,11 @@ let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
   and thumb = Thumb.of_config thumb in
   make ?carpal_len ?knuckle_rad fingers thumb
 
-let to_scad { fingers; thumb; carpals; knuckle_rad; _ } =
+let to_scad
+    ?(alpha = 0.5)
+    ?(color = Color.Pink)
+    { fingers; thumb; carpals; knuckle_rad; _ }
+  =
   let palm =
     Model.hull
       [ carpals
@@ -386,6 +390,7 @@ let to_scad { fingers; thumb; carpals; knuckle_rad; _ } =
       ]
   in
   Model.union [ Fingers.to_scad fingers; Thumb.to_scad thumb; palm ]
+  |> Model.color ~alpha color
 
 let home ?(hover = 18.) Plate.{ columns; config; _ } t =
   let key = Columns.key_exn columns config.centre_col config.centre_row in
