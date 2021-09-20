@@ -121,7 +121,7 @@ be filling in over time.
   ![splaytyl tent underside](images/splaytyl_tent_underside.png)
 
 ## STLs
-Check out [](things/boards) for some example STLs, including a low profile choc
+Check out  for some example STLs [here](things/boards), including a low profile choc
 version of the [Skeletyl](https://github.com/Bastardkb/Skeletyl), and prototypes
 of the [splaytyl](dometyl/lib/boards/splaytyl.ml) pictured at the top of this
 readme. Please note that they may not be fully up-to-date representations of the
