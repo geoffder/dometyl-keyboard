@@ -727,7 +727,6 @@ let skeleton
   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
 let closed
-    ?(join_west = true)
     ?(n_facets = 1)
     ?n_steps
     ?fudge_factor
@@ -736,9 +735,7 @@ let closed
     ?snake_scale
     ?snake_height
     ?snake_steps
-    ?cubic_height
-    ?cubic_scale
-    ?cubic_d
+    ?(west_link = full_join ~fudge_factor:0. ())
     Walls.{ body; thumb }
   =
   let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0. ?overlap_factor) in
@@ -799,20 +796,7 @@ let closed
         (col `S 2)
         southeast
     and w_link =
-      let link =
-        if join_west
-        then corner
-        else
-          Option.map2
-            ~f:
-              (cubic_base
-                 ~n_facets
-                 ?height:cubic_height
-                 ?scale:cubic_scale
-                 ?d:cubic_d
-                 ?n_steps
-                 ~bow_out:false )
-      in
+      let link = Option.map2 ~f:(connect west_link) in
       link (Option.first_some northwest thumb.sides.west) west_body
     in
     prepend_corner southwest thumb.sides.west south

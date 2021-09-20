@@ -1,13 +1,14 @@
-open! Base
-open! Scad_ml
-open Generator
-
-(* This is configuration is a mimicry of BastardKB's skeletyl keyboard.
+(** This is configuration is a mimicry of BastardKB's skeletyl keyboard.
    (https://github.com/Bastardkb/Skeletyl).
 
    This is is a good place to start from if you'd like to have something like the
    skeletyl, but with some more pinky stagger. Though, it will never be as
    pretty. *)
+
+open! Base
+open! Scad_ml
+open Generator
+
 let lookups =
   let offset = function
     | 2 -> 0., 3.5, -8. (* middle *)
@@ -69,8 +70,8 @@ let base_connector =
   Connect.skeleton
     ~height:5.
     ~thumb_height:9.
-    ~east_link:(Connect.snake ~scale:1. ~d:1.4 ())
-    ~west_link:(Connect.cubic ~scale:1.25 ~d:1. ~bow_out:false ())
+    ~east_link:(Connect.snake ~height:9. ~scale:1. ~d:1.4 ())
+    ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
     ~cubic_d:2.
     ~cubic_scale:1.
     ~body_join_steps:5

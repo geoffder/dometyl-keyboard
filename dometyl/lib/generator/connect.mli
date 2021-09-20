@@ -199,8 +199,7 @@ val skeleton
   -> t
 
 val closed
-  :  ?join_west:bool
-  -> ?n_facets:int
+  :  ?n_facets:int
   -> ?n_steps:int
   -> ?fudge_factor:float
   -> ?overlap_factor:float
@@ -208,9 +207,7 @@ val closed
   -> ?snake_scale:float
   -> ?snake_height:float
   -> ?snake_steps:int
-  -> ?cubic_height:float
-  -> ?cubic_scale:float
-  -> ?cubic_d:float
+  -> ?west_link:config
   -> Walls.t
   -> t
 

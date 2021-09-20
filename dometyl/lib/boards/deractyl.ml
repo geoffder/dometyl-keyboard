@@ -84,15 +84,12 @@ let plate_welder = Plate.column_joins
 
 let base_connector =
   Connect.closed
-    ~join_west:false
     ~n_steps:5
     ~snake_d:2.
     ~snake_scale:3.
     ~snake_height:10.
     ~snake_steps:12
-    ~cubic_d:3.
-    ~cubic_scale:0.25
-    ~cubic_height:15.
+    ~west_link:(Connect.cubic ~d:3. ~scale:0.25 ~height:15. ~bow_out:false ())
 
 let build ?hotswap ~ports_cutter () =
   let keyhole = Mx.make_hole ?hotswap () in

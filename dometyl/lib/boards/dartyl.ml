@@ -34,8 +34,8 @@ let base_connector =
   Connect.skeleton
     ~height:4.
     ~thumb_height:9.5
-    ~east_link:(Connect.snake ~scale:1.25 ~d:5. ())
-    ~west_link:(Connect.cubic ~scale:0.001 ~d:2. ~bow_out:false ())
+    ~east_link:(Connect.snake ~height:11. ~scale:1.25 ~d:5. ())
+    ~west_link:(Connect.cubic ~height:11. ~scale:0.001 ~d:2. ~bow_out:false ())
     ~cubic_d:3.
     ~cubic_scale:1.
     ~thumb_join_steps:14
