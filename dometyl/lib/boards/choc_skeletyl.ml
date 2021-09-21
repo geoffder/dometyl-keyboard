@@ -79,7 +79,7 @@ let base_connector =
     ~fudge_factor:8.
     ~close_thumb:false
 
-let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~y_off:(-1.) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~y_off:(-1.5) (make ()))
 
 let build ?right_hand ?hotswap () =
   let keyhole = Choc.make_hole ~clearance:0. ?hotswap () in
