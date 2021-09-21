@@ -17,7 +17,8 @@ type config =
   }
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
+  ; cut : Scad.t option
   ; centre : Vec3.t
   ; config : config
   }
@@ -28,4 +29,4 @@ val default_config : config
 val m4_config : config
 val bumpon_config : config
 val make : ?n_steps:int -> placement:placement -> config -> Vec3.t -> Vec3.t -> t
-val to_scad : t -> Model.t
+val to_scad : t -> Scad.t

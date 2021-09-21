@@ -230,18 +230,28 @@ let poly_siding
   in
   let foot = Points.of_clockwise_list_exn (corners end_ps) in
   let screw =
-    Option.map
-      ~f:(fun config ->
-        Screw.(
-          make ~placement:(Normal (Vec3.negate xy)) config foot.bot_left foot.bot_right)
-        )
-      screw_config
+    let f config =
+      let open Screw in
+      let placement =
+        let n = Vec3.negate xy in
+        match config with
+        | { hole = Through; _ } -> Normal n
+        | { hole = Inset _; outer_rad; _ } ->
+          let offset = outer_rad +. Vec3.(norm (sub foot.top_left foot.bot_left) /. 4.) in
+          Point Vec3.(mean [ foot.top_left; foot.top_right ] <+> mul_scalar n offset)
+      in
+      make ~placement config foot.bot_left foot.bot_right
+    in
+    Option.map ~f screw_config
   in
   { scad =
       Model.hull [ start_face.scad; cleared_face.scad ]
       :: Bezier.prism_exn bezs steps
       :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Model.union
+      |> Fn.flip
+           Model.difference
+           (Option.value_map ~default:[] ~f:(fun s -> Option.to_list s.cut) screw)
   ; start = start_face.points
   ; foot
   ; edges = Edges.of_clockwise_list_exn (corners bezs)

@@ -77,7 +77,7 @@ let make
   let screws_filled =
     let hole_fills =
       List.map
-        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; scad } ->
+        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; scad; _ } ->
           Model.union
             [ Model.translate centre (Model.circle inner_rad); Model.projection scad ] )
         screws

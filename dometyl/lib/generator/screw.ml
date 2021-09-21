@@ -18,6 +18,7 @@ type config =
 
 type t =
   { scad : Model.t
+  ; cut : Model.t option
   ; centre : Vec3.t
   ; config : config
   }
@@ -47,13 +48,13 @@ let make
     p1
     p2
   =
-  let base_centre = Vec3.(map (( *. ) 0.5) (p2 <+> p1)) in
+  let base_centre = Vec3.(mul_scalar (p1 <+> p2) 0.5) in
   let hole_offset, foot_offset =
     match placement with
-    | Normal n -> Vec3.map (( *. ) outer_rad) n, Vec3.map (( *. ) (-0.1)) n
+    | Normal n -> Vec3.map (( *. ) outer_rad) n, Vec3.mul_scalar n (-0.1)
     | Point p  ->
       let diff = Vec3.(p <-> base_centre) in
-      diff, Vec3.map (( *. ) (-0.1)) (Vec3.normalize diff)
+      diff, Vec3.mul_scalar (Vec3.normalize diff) (-0.1)
   in
   let hole_centre = Vec3.(base_centre <+> hole_offset) in
   let outer = Model.circle ~fn:16 outer_rad |> Model.translate hole_centre
@@ -73,16 +74,15 @@ let make
     |> Model.polygon
   in
   let outline = Model.union [ outer; swoop p1; swoop p2 ] in
-  { scad =
-      ( match hole with
-      | Through     ->
-        Model.difference outline [ inner ] |> Model.linear_extrude ~height:thickness
-      | Inset depth ->
-        Model.difference
-          (Model.linear_extrude ~height:thickness outline)
-          [ Model.linear_extrude ~height:depth inner ] )
-  ; centre = hole_centre
-  ; config
-  }
+  let scad, cut =
+    match hole with
+    | Through     ->
+      Model.difference outline [ inner ] |> Model.linear_extrude ~height:thickness, None
+    | Inset depth ->
+      let inset = Model.linear_extrude ~height:depth inner
+      and foot = Model.linear_extrude ~height:thickness outline in
+      Model.difference foot [ inset ], Some inset
+  in
+  { scad; cut; centre = hole_centre; config }
 
 let to_scad t = t.scad
