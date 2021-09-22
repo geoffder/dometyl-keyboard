@@ -79,7 +79,7 @@ be filling in over time.
    write those to `.scad` as well.
 2. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
    modify and existing one to suit your preferences / fit your hand.
-3. Generate scads/stls by running `dune exec @dometyl` from the [dometyl](dometyl)
+3. Generate scads/stls by running `dune exec dometyl` from the [dometyl](dometyl)
    project folder. Files will be output to the [things](things) directory.
    Alteratively, if you have/install `fswatch` (cross-platform) or `inotify`
    (GNU/linux) on your system, you can use `dune build -w @run` to automatically
