@@ -79,7 +79,12 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
     let cap =
       let p =
-        Vec3.(add (mul_scalar (KeyHole.normal key) key.config.cap_height) key.origin)
+        Vec3.(
+          add
+            (mul_scalar
+               (KeyHole.normal key)
+               (key.config.cap_height +. (key.config.thickness /. 2.)) )
+            key.origin)
       in
       Option.some @@ Model.translate p (caps i)
     in

@@ -218,7 +218,7 @@ let make
   ; scad = clip hole
   ; origin = 0., 0., 0.
   ; faces = Faces.make outer_w outer_h thickness
-  ; cap = Option.map ~f:(Model.translate (0., 0., cap_height)) cap
+  ; cap = Option.map ~f:(Model.translate (0., 0., cap_height +. (thickness /. 2.))) cap
   ; cutout
   }
 

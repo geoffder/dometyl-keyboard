@@ -180,7 +180,11 @@ let example_assembly
     else None
   and choc = Option.some_if show_switch switch
   and socket = Option.some_if show_socket kailh_socket
-  and cap = Option.bind ~f:(Option.some_if show_cap) hole.cap in
+  and cap =
+    Option.bind
+      ~f:(fun c -> Option.some_if show_cap (Model.translate (0., 0., -2.) c))
+      hole.cap
+  in
   Util.prepend_opt cutout [ hole ]
   |> Util.prepend_opt choc
   |> Util.prepend_opt socket
