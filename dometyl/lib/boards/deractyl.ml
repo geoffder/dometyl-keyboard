@@ -5,11 +5,11 @@ open! Infix
 
 let lookups =
   let offset = function
-    | 0 -> -2.4, -6., 7. (* outer index *)
+    | 0 -> -3.5, -6., 7. (* outer index *)
     | 2 -> 0., 3., -5.5 (* middle *)
     | 3 -> 0., 0., 0. (* ring *)
     | 4 -> 0., -12., 9.5 (* pinky *)
-    | 5 -> 3.75, -13.5, 19. (* outer pinky *)
+    | 5 -> 5.2, -13.5, 19. (* outer pinky *)
     | _ -> 0., -5., 1.
   and curve = function
     | i when i = 0 ->
@@ -20,7 +20,7 @@ let lookups =
         | _ -> Fn.id
       in
       Curvature.(
-        post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:42. (Float.pi /. 5.4)) f)
+        post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
     | i when i = 5 ->
       let f = function
         | 0 -> KeyHole.translate (-1., 0., 3.)
@@ -30,8 +30,8 @@ let lookups =
         | _ -> Fn.id
       in
       Curvature.(
-        post_tweak ~well:(spec ~tilt:(Float.pi /. -4.7) ~radius:42. (Float.pi /. 5.4)) f)
-    | _ -> Curvature.(curve ~well:(spec ~radius:40. (Float.pi /. 5.2)) ())
+        post_tweak ~well:(spec ~tilt:(Float.pi /. -4.7) ~radius:44. (Float.pi /. 5.4)) f)
+    | _ -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 5.2)) ())
   and swing = function
     | _ -> 0.
   and splay = function
@@ -117,21 +117,21 @@ let derek_build reset_button =
          () )
 
 let compactyl =
-  Model.import "../things/others/dereknheiley_compactyl_5x6.stl"
-  |> Model.rotate (0., Float.pi /. -8., 0.)
-  |> Model.translate (70., -2., -10.)
-  |> Model.color ~alpha:0.25 Color.DarkSlateBlue
+  Scad.import "../things/others/dereknheiley_compactyl_5x6.stl"
+  |> Scad.rotate (0., Float.pi /. -8., 0.)
+  |> Scad.translate (70., -2., -10.)
+  |> Scad.color ~alpha:0.25 Color.DarkSlateBlue
 
 let compactyl_compare () =
-  Model.union
+  Scad.union
     [ compactyl
     ; Case.to_scad ~show_caps:false (build ~ports_cutter:(Ports.make ()) ())
-      |> Model.color ~alpha:0.5 Color.Yellow
+      |> Scad.color ~alpha:0.5 Color.Yellow
     ]
 
 let reversible_ex ?(reset_button = false) () =
   let case = derek_build reset_button () in
-  Model.union
+  Scad.union
     [ Case.to_scad ~show_caps:true case
     ; Ports.place_tray
         ~x_off:derek_x
