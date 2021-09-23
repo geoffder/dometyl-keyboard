@@ -9,7 +9,7 @@ let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let base_centre = Vec3.(map (( *. ) 0.5) (top_left <+> top_right) |> mul (1., 1., 0.))
   and hole_offset = Vec3.map (( *. ) outer_rad) normal in
   let centre = Vec3.(base_centre <+> hole_offset) in
-  let circ = Model.circle ~fn:32 outer_rad |> Model.translate centre
+  let circ = Scad.circle ~fn:32 outer_rad |> Scad.translate centre
   and swoop p =
     let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
     centre
@@ -22,16 +22,16 @@ let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
             ~p2:Vec3.(mean [ base_centre <+> rad_offset; p ])
             ~p3:Vec3.(centre <+> rad_offset) )
     |> List.map ~f:Vec3.to_vec2
-    |> Model.polygon
+    |> Scad.polygon
   in
   let bump =
-    Model.union
+    Scad.union
       [ circ
       ; swoop (Vec3.mul bot_left (1., 1., 0.))
       ; swoop (Vec3.mul bot_right (1., 1., 0.))
       ]
-    |> Model.linear_extrude ~height:thickness
-  and inset_cut = Model.cylinder ~fn:16 inner_rad inset |> Model.translate centre in
+    |> Scad.linear_extrude ~height:thickness
+  and inset_cut = Scad.cylinder ~fn:16 inner_rad inset |> Scad.translate centre in
   bump, inset_cut
 
 (* TODO:
@@ -68,46 +68,46 @@ let make
     else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
   and perimeter =
-    Model.difference
-      (Model.polygon (Connect.outline_2d case.connections))
-      [ Model.polygon (Connect.inline_2d case.connections) ]
+    Scad.difference
+      (Scad.polygon (Connect.outline_2d case.connections))
+      [ Scad.polygon (Connect.inline_2d case.connections) ]
   in
-  let rot = 0., degrees *. Float.pi /. 180. *. rot_sign, 0.
+  let rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
   and pivot_pt = -.bb_pinky, 0., 0. in
   let screws_filled =
     let hole_fills =
       List.map
         ~f:(fun Screw.{ centre; config = { inner_rad; _ }; scad; _ } ->
-          Model.union
-            [ Model.translate centre (Model.circle inner_rad); Model.projection scad ] )
+          Scad.union
+            [ Scad.translate centre (Scad.circle inner_rad); Scad.projection scad ] )
         screws
     in
-    Model.union (perimeter :: hole_fills)
-  and trans s = Model.rotate_about_pt rot pivot_pt s |> Model.translate (0., 0., z_offset)
+    Scad.union (perimeter :: hole_fills)
+  and trans s = Scad.rotate_about_pt rot pivot_pt s |> Scad.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
   let top =
     let screw_hole =
-      Model.circle outer_screw_rad
-      |> Model.linear_extrude
+      Scad.circle outer_screw_rad
+      |> Scad.linear_extrude
            ~height:screw_height
            ~scale:(inner_screw_rad /. outer_screw_rad)
     in
-    Model.difference
-      (Model.linear_extrude ~height:screw_height screws_filled)
-      (List.map ~f:(fun Screw.{ centre; _ } -> Model.translate centre screw_hole) screws)
+    Scad.difference
+      (Scad.linear_extrude ~height:screw_height screws_filled)
+      (List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre screw_hole) screws)
     |> trans
   and shell =
-    trans (Model.linear_extrude ~height:0.001 perimeter)
-    |> Model.projection
-    |> Model.linear_extrude ~height:base_height
+    trans (Scad.linear_extrude ~height:0.001 perimeter)
+    |> Scad.projection
+    |> Scad.linear_extrude ~height:base_height
   in
   let cut =
     let bulked_top =
-      Model.offset (`Delta 2.) screws_filled
-      |> Model.linear_extrude ~height:screw_height
+      Scad.offset (`Delta 2.) screws_filled
+      |> Scad.linear_extrude ~height:screw_height
       |> trans
     in
-    Model.hull [ bulked_top; Model.translate (0., 0., base_height) bulked_top ]
+    Scad.hull [ bulked_top; Scad.translate (0., 0., base_height) bulked_top ]
   in
   let feet, insets =
     let tilted =
@@ -143,18 +143,18 @@ let make
       |> List.filter_opt
       |> List.fold ~init:([], []) ~f
     in
-    Model.union feet, insets
+    Scad.union feet, insets
   in
-  Model.difference
-    (Model.union
-       [ Model.difference
+  Scad.difference
+    (Scad.union
+       [ Scad.difference
            top
-           [ Model.projection top
-             |> Model.offset (`Delta 2.)
-             |> Model.linear_extrude ~height:10.
-             |> Model.translate (0., 0., -10.)
+           [ Scad.projection top
+             |> Scad.offset (`Delta 2.)
+             |> Scad.linear_extrude ~height:10.
+             |> Scad.translate (0., 0., -10.)
            ]
-       ; Model.difference shell [ Model.translate (0., 0., -0.00001) cut ]
+       ; Scad.difference shell [ Scad.translate (0., 0., -0.00001) cut ]
        ; feet
        ] )
     insets

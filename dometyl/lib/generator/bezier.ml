@@ -2,11 +2,11 @@ open! Base
 open! Scad_ml
 
 module Rotator = struct
-  type t = float -> Model.t -> Model.t
+  type t = float -> Scad.t -> Scad.t
 
   let make ?(pivot = Vec3.zero) q1 q2 : t =
     let slerp = Quaternion.slerp q1 q2 in
-    fun t -> Model.quaternion_about_pt (slerp t) pivot
+    fun t -> Scad.quaternion_about_pt (slerp t) pivot
 end
 
 let quad_weights t =
@@ -77,17 +77,17 @@ let hull ?(rotator = fun _ s -> s) ?(translator = fun _ s -> s) n_steps scad =
     if Float.(t <= 1.)
     then (
       let next = transformer t scad in
-      loop next (Model.hull [ last; next ] :: acc) (t +. dt) )
+      loop next (Scad.hull [ last; next ] :: acc) (t +. dt) )
     else acc
   in
-  Model.union @@ loop scad [] 0.
+  Scad.union @@ loop scad [] 0.
 
 let quad_hull ?rotator ~t1 ~t2 ~t3 ~n_steps =
-  let translator t = Model.translate (quad_vec3 ~p1:t1 ~p2:t2 ~p3:t3 t) in
+  let translator t = Scad.translate (quad_vec3 ~p1:t1 ~p2:t2 ~p3:t3 t) in
   hull ?rotator ~translator n_steps
 
 let cubic_hull ?rotator ~t1 ~t2 ~t3 ~t4 ~n_steps =
-  let translator t = Model.translate (cubic_vec3 ~p1:t1 ~p2:t2 ~p3:t3 ~p4:t4 t) in
+  let translator t = Scad.translate (cubic_vec3 ~p1:t1 ~p2:t2 ~p3:t3 ~p4:t4 t) in
   hull ?rotator ~translator n_steps
 
 (* Provide beziers in clockwise order, from the perspective of looking at the
@@ -133,7 +133,7 @@ let prism_exn bezs n_steps =
       :: Array.foldi ~init:[] ~f:(fun i acc s -> (s + pts_per.(i) - 1) :: acc) starts
       :: sides
     in
-    Model.polyhedron pts faces )
+    Scad.polyhedron pts faces )
 
 let prism bezs dt =
   try Ok (prism_exn bezs dt) with

@@ -2,17 +2,17 @@ open! Base
 open! Scad_ml
 
 type t =
-  { plus : Model.t option
-  ; minus : Model.t option
+  { plus : Scad.t option
+  ; minus : Scad.t option
   }
 
 type cutter = walls:Walls.t -> connections:Connect.t -> t
 
 let apply t scad =
   let added =
-    Option.value_map ~default:scad ~f:(fun s -> Model.union [ s; scad ]) t.plus
+    Option.value_map ~default:scad ~f:(fun s -> Scad.union [ s; scad ]) t.plus
   in
-  Option.value_map ~default:added ~f:(fun s -> Model.difference added [ s ]) t.minus
+  Option.value_map ~default:added ~f:(fun s -> Scad.difference added [ s ]) t.minus
 
 let make
     ?(length = 2.)
@@ -36,18 +36,18 @@ let make
     Vec3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2.
   in
   let jack =
-    Model.cylinder ~center:true ~fn:16 jack_radius 20.
-    |> Model.rotate (Float.pi /. 2., 0., 0.)
+    Scad.cylinder ~center:true ~fn:16 jack_radius 20.
+    |> Scad.rotate (Float.pi /. 2., 0., 0.)
   and usb =
     let rad = usb_height /. 2. in
     let cyl =
-      Model.cylinder ~center:true ~fn:16 rad 20. |> Model.rotate (Float.pi /. 2., 0., 0.)
+      Scad.cylinder ~center:true ~fn:16 rad 20. |> Scad.rotate (Float.pi /. 2., 0., 0.)
     in
-    Model.hull
-      [ Model.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
-      ; Model.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
+    Scad.hull
+      [ Scad.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
+      ; Scad.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
       ]
-    |> Model.translate (dist, 0., usb_z_off)
+    |> Scad.translate (dist, 0., usb_z_off)
   and inset =
     let fudge = 5. (* extra y length back into case for inset *)
     and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
@@ -57,8 +57,8 @@ let make
     in
     let left =
       let l = len left_foot in
-      Model.cube ~center:true (jack_width, l +. fudge, h)
-      |> Model.translate
+      Scad.cube ~center:true (jack_width, l +. fudge, h)
+      |> Scad.translate
            ( 0.
            , Float.max 0. (l -. length) -. (l /. 2.) -. (fudge /. 2.)
            , (jack_radius -. below) /. 2. )
@@ -67,17 +67,17 @@ let make
       let l = len right_foot
       (* bring right into frame of reference of left inner_y *)
       and y_diff = inner_y right_foot -. inner_y left_foot in
-      Model.cube ~center:true (board_width, l +. fudge, h)
-      |> Model.translate
+      Scad.cube ~center:true (board_width, l +. fudge, h)
+      |> Scad.translate
            ( dist
            , Float.max 0. (l -. length) -. (l /. 2.) +. y_diff -. (fudge /. 2.)
            , (jack_radius -. below) /. 2. )
     in
-    Model.hull [ left; right ]
+    Scad.hull [ left; right ]
   in
   let cutout =
-    Model.union [ jack; usb; inset ]
-    |> Model.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
+    Scad.union [ jack; usb; inset ]
+    |> Scad.translate Vec3.(get_x left_foot.bot_left +. x_off, inner_y left_foot, z_off)
   in
   { plus = None; minus = Some cutout }
 
@@ -95,25 +95,25 @@ let place_tray
     let outer (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
     y_off +. ((outer left_foot +. outer right_foot) /. 2.)
   in
-  Model.rotate (0., 0., z_rot) scad |> Model.translate (x, y, 0.)
+  Scad.rotate (0., 0., z_rot) scad |> Scad.translate (x, y, 0.)
 
 let carbonfet_stl micro =
-  let import s = Model.import (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
-  Model.color Color.FireBrick
+  let import s = Scad.import (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
+  Scad.color Color.FireBrick
   @@
   if micro
-  then Model.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
-  else Model.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
+  then Scad.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
+  else Scad.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
 
 let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connections:_ =
   let slab =
-    Model.cube (28.266, 15., 12.)
-    |> Model.translate (1.325, -8., 0.)
-    |> Model.color ~alpha:0.5 Color.Salmon
+    Scad.cube (28.266, 15., 12.)
+    |> Scad.translate (1.325, -8., 0.)
+    |> Scad.color ~alpha:0.5 Color.Salmon
   and trrs_clearance =
-    Model.cube (8.4, 4., 5.)
-    |> Model.translate (2.62, -6., 12.)
-    |> Model.color ~alpha:0.5 Color.Salmon
+    Scad.cube (8.4, 4., 5.)
+    |> Scad.translate (2.62, -6., 12.)
+    |> Scad.color ~alpha:0.5 Color.Salmon
   in
   let tray =
     place_tray
@@ -121,16 +121,16 @@ let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connection
       ?y_off
       ?z_rot
       walls
-      (Model.union [ carbonfet_stl micro; slab; trrs_clearance ])
+      (Scad.union [ carbonfet_stl micro; slab; trrs_clearance ])
   in
   { plus = None; minus = Some tray }
 
 let derek_reversible_stl reset_button =
   (if reset_button then "elite-c_holder_w_reset" else "elite-c_holder")
   |> Printf.sprintf "../things/holders/dereknheiley/%s.stl"
-  |> Model.import
-  |> Model.translate (15.3, 0., 0.)
-  |> Model.color Color.FireBrick
+  |> Scad.import
+  |> Scad.translate (15.3, 0., 0.)
+  |> Scad.color Color.FireBrick
 
 let reversible_holder
     ?(reset_button = false)
@@ -145,21 +145,21 @@ let reversible_holder
   let w = 30.6
   and h = if reset_button then 15. else 8.4 in
   let tray =
-    Model.cube (27.6, 38.8, 7.7)
-    |> Model.translate (3., -38.8, 0.)
-    |> Model.color ~alpha:0.5 Color.Salmon
+    Scad.cube (27.6, 38.8, 7.7)
+    |> Scad.translate (3., -38.8, 0.)
+    |> Scad.color ~alpha:0.5 Color.Salmon
   and front =
-    Model.cube (w, 13., h)
-    |> Model.translate (0., -8., 0.)
-    |> Model.color ~alpha:0.5 Color.Salmon
+    Scad.cube (w, 13., h)
+    |> Scad.translate (0., -8., 0.)
+    |> Scad.color ~alpha:0.5 Color.Salmon
   and rails =
-    let rail = Model.cube (rail_w, rail_w, h) in
-    [ Model.translate (0., -.rail_w -. 1.5, 0.) rail
-    ; Model.translate (w -. rail_w, -.rail_w -. 1.5, 0.) rail
+    let rail = Scad.cube (rail_w, rail_w, h) in
+    [ Scad.translate (0., -.rail_w -. 1.5, 0.) rail
+    ; Scad.translate (w -. rail_w, -.rail_w -. 1.5, 0.) rail
     ]
   in
   let minus =
-    Model.difference (Model.union [ tray; front ]) rails
+    Scad.difference (Scad.union [ tray; front ]) rails
     |> place_tray ?x_off ?y_off ?z_rot walls
     |> Option.some
   in

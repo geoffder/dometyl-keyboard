@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }
@@ -211,4 +211,4 @@ val closed
   -> Walls.t
   -> t
 
-val to_scad : t -> Model.t
+val to_scad : t -> Scad.t

@@ -1,7 +1,9 @@
 open! Base
 open! Scad_ml
 
-val prism_exn : Vec3.t list -> Vec3.t list -> Model.t
+val rad_to_deg : float -> float
+val deg_to_rad : float -> float
+val prism_exn : Vec3.t list -> Vec3.t list -> Scad.t
 
 val bisection_exn
   :  ?max_iter:int

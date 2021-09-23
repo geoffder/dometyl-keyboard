@@ -42,7 +42,7 @@ let plate_builder =
     ~caps:Caps.MBK.uniform
 
 let plate_welder plate =
-  Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
+  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
 let wall_builder plate =
   Walls.

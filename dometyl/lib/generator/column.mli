@@ -4,19 +4,19 @@ open! Scad_ml
 module Join : sig
   module Faces : sig
     type t =
-      { west : Model.t
-      ; east : Model.t
+      { west : Scad.t
+      ; east : Scad.t
       }
 
-    val map : f:(Model.t -> Model.t) -> t -> t
+    val map : f:(Scad.t -> Scad.t) -> t -> t
     val translate : Vec3.t -> t -> t
     val rotate : Vec3.t -> t -> t
     val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
-    val face : t -> [< `East | `West ] -> Model.t
+    val face : t -> [< `East | `West ] -> Scad.t
   end
 
   type t =
-    { scad : Model.t
+    { scad : Scad.t
     ; faces : Faces.t
     }
 
@@ -31,7 +31,7 @@ type 'k config =
 
 type 'k t =
   { config : 'k config
-  ; scad : Model.t
+  ; scad : Scad.t
   ; keys : 'k KeyHole.t Map.M(Int).t
   ; joins : Join.t Map.M(Int).t
   }

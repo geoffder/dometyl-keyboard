@@ -3,7 +3,7 @@ open! Scad_ml
 
 module Face : sig
   type t =
-    { scad : Model.t
+    { scad : Scad.t
     ; points : Points.t
     }
 
@@ -55,18 +55,18 @@ type 'k config =
   ; inner_w : float
   ; inner_h : float
   ; thickness : float
-  ; clip : Model.t -> Model.t
+  ; clip : Scad.t -> Scad.t
   ; cap_height : float
   ; clearance : float
   }
 
 type 'k t =
   { config : 'k config
-  ; scad : Model.t
+  ; scad : Scad.t
   ; origin : Vec3.t
   ; faces : Faces.t
-  ; cap : Model.t option
-  ; cutout : Model.t option
+  ; cap : Scad.t option
+  ; cutout : Scad.t option
   }
 
 include Sigs.Transformable' with type 'k t := 'k t
@@ -78,6 +78,6 @@ val quaternion_about_origin : float -> 'k t -> 'k t
 val cycle_faces : 'k t -> 'k t
 val orthogonal : 'k t -> [< `East | `North | `South | `West ] -> Vec3.t
 val normal : 'k t -> Vec3.t
-val make : ?cap:Model.t -> ?cutout:Model.t -> 'k config -> 'k t
+val make : ?cap:Scad.t -> ?cutout:Scad.t -> 'k config -> 'k t
 val mirror_internals : 'k t -> 'k t
-val cutout_scad : 'k t -> Model.t
+val cutout_scad : 'k t -> Scad.t

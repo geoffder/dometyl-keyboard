@@ -5,9 +5,9 @@ open! Scad_ml
    For rough visualization. It does not seem to line up with the holes, even
    when holes are positioned more exactly according to specifications. *)
 let kailh_socket =
-  Model.import "../things/switches/mx_hotswap_socket.stl"
-  |> Model.translate (0.65, -4.8, -5.15)
-  |> Model.color ~alpha:0.4 Color.Silver
+  Scad.import "../things/switches/mx_hotswap_socket.stl"
+  |> Scad.translate (0.65, -4.8, -5.15)
+  |> Scad.color ~alpha:0.4 Color.Silver
 
 module Hotswap = struct
   let make ~inner_w ~inner_h ~plate_thickness facing =
@@ -28,78 +28,77 @@ module Hotswap = struct
     in
     let cutout =
       let big =
-        Model.square ~center:true (w +. 0.01, 4.3)
-        |> Model.translate (0., 4.95 *. sign, 0.)
+        Scad.square ~center:true (w +. 0.01, 4.3) |> Scad.translate (0., 4.95 *. sign, 0.)
       and small =
-        Model.square ~center:true (w /. 3. *. 1.95, 6.2)
-        |> Model.translate (w /. -4.5 *. sign, 4. *. sign, 0.)
+        Scad.square ~center:true (w /. 3. *. 1.95, 6.2)
+        |> Scad.translate (w /. -4.5 *. sign, 4. *. sign, 0.)
       in
-      Model.union [ big; small ]
-      |> Model.linear_extrude ~center:true ~height:socket_thickness
-      |> Model.translate (0., 0., socket_z)
+      Scad.union [ big; small ]
+      |> Scad.linear_extrude ~center:true ~height:socket_thickness
+      |> Scad.translate (0., 0., socket_z)
     in
     let hotswap =
       let access_cuts =
         let x = (w /. 2.) -. (w /. 8.04)
         and y = 7.4 in
-        let cut = Model.square ~center:true (w /. 4., 2.01) in
-        Model.union
-          [ Model.translate (x, y *. sign, 0.) cut
-          ; Model.translate (-.x, y *. sign, 0.) cut
+        let cut = Scad.square ~center:true (w /. 4., 2.01) in
+        Scad.union
+          [ Scad.translate (x, y *. sign, 0.) cut
+          ; Scad.translate (-.x, y *. sign, 0.) cut
           ]
-        |> Model.linear_extrude ~center:true ~height:socket_thickness
-        |> Model.translate (0., 0., socket_z)
+        |> Scad.linear_extrude ~center:true ~height:socket_thickness
+        |> Scad.translate (0., 0., socket_z)
       and led_cut =
-        Model.square ~center:true (6., 6.) |> Model.translate (0., -6. *. sign, 0.)
+        Scad.square ~center:true (6., 6.) |> Scad.translate (0., -6. *. sign, 0.)
       and holes =
-        let main = Model.circle ~fn:30 2.05
-        and pin = Model.circle ~fn:30 1.65
-        and friction = Model.circle ~fn:30 0.975 in
-        let plus = Model.translate (-3.81 *. sign, 2.54 *. sign, 0.) pin
-        and minus = Model.translate (2.54 *. sign, 5.08 *. sign, 0.) pin
-        and fric_left = Model.translate (-5., 0., 0.) friction
-        and fric_right = Model.translate (5., 0., 0.) friction in
-        Model.union [ main; plus; minus; fric_left; fric_right ]
+        let main = Scad.circle ~fn:30 2.05
+        and pin = Scad.circle ~fn:30 1.65
+        and friction = Scad.circle ~fn:30 0.975 in
+        let plus = Scad.translate (-3.81 *. sign, 2.54 *. sign, 0.) pin
+        and minus = Scad.translate (2.54 *. sign, 5.08 *. sign, 0.) pin
+        and fric_left = Scad.translate (-5., 0., 0.) friction
+        and fric_right = Scad.translate (5., 0., 0.) friction in
+        Scad.union [ main; plus; minus; fric_left; fric_right ]
       and holder =
-        let slab = Model.square ~center:true (w, h)
+        let slab = Scad.square ~center:true (w, h)
         and tab =
-          Model.square ~center:true (w /. 2., 1.)
-          |> Model.translate (0., h /. 2. *. sign, 0.)
+          Scad.square ~center:true (w /. 2., 1.)
+          |> Scad.translate (0., h /. 2. *. sign, 0.)
         in
-        Model.union [ slab; tab ]
+        Scad.union [ slab; tab ]
       in
-      Model.difference holder [ led_cut; holes ]
-      |> Model.linear_extrude ~center:true ~height:holder_thickness
-      |> Model.translate (0., 0., z)
-      |> Fn.flip Model.difference [ access_cuts; cutout ]
+      Scad.difference holder [ led_cut; holes ]
+      |> Scad.linear_extrude ~center:true ~height:holder_thickness
+      |> Scad.translate (0., 0., z)
+      |> Fn.flip Scad.difference [ access_cuts; cutout ]
     in
     ( ( if Float.(shallowness > 0.)
       then (
         let spacer =
-          Model.difference
-            (Model.square ~center:true (w, h))
-            [ Model.square ~center:true (inner_w, inner_h) ]
-          |> Model.linear_extrude ~height:shallowness
-          |> Model.translate (0., 0., (plate_thickness /. -2.) -. shallowness)
+          Scad.difference
+            (Scad.square ~center:true (w, h))
+            [ Scad.square ~center:true (inner_w, inner_h) ]
+          |> Scad.linear_extrude ~height:shallowness
+          |> Scad.translate (0., 0., (plate_thickness /. -2.) -. shallowness)
         in
-        Model.union [ hotswap; spacer ] )
+        Scad.union [ hotswap; spacer ] )
       else hotswap )
     , cutout )
 
   let example ?alpha ?(show_cutout = false) facing =
     let swap, cut = make ~inner_w:13.9 ~inner_h:13.8 ~plate_thickness:5. facing in
-    let swap = Model.color ?alpha Color.FireBrick swap in
+    let swap = Scad.color ?alpha Color.FireBrick swap in
     if show_cutout
-    then Model.union [ swap; Model.color ?alpha Color.DarkMagenta cut ]
+    then Scad.union [ swap; Scad.color ?alpha Color.DarkMagenta cut ]
     else swap
 end
 
 let teeth ~inner_h ~thickness hole =
-  let block = Model.cube ~center:true (5., 0.51, thickness -. 1.3)
+  let block = Scad.cube ~center:true (5., 0.51, thickness -. 1.3)
   and y = (inner_h /. 2.) +. 0.25 in
-  let north = Model.translate (0., y, -1.3) block
-  and south = Model.translate (0., -.y, -1.3) block in
-  Model.difference hole [ north; south ]
+  let north = Scad.translate (0., y, -1.3) block
+  and south = Scad.translate (0., -.y, -1.3) block in
+  Scad.difference hole [ north; south ]
 
 let make_hole
     ?cap
@@ -120,21 +119,21 @@ let make_hole
       let swap, cutout =
         Hotswap.make ~inner_w ~inner_h ~plate_thickness:thickness facing
       in
-      let clip hole = Model.union [ teeth ~inner_h ~thickness hole; swap ] in
+      let clip hole = Scad.union [ teeth ~inner_h ~thickness hole; swap ] in
       clearance +. 3., clip, Some cutout
     | None        -> clearance, teeth ~inner_h ~thickness, None
   and cap_cutout =
     Option.map
       ~f:(fun h ->
-        Model.translate
+        Scad.translate
           (0., 0., 2.5 +. h +. (thickness /. 2.))
-          (Model.cube ~center:true (20., 20., 5.)) )
+          (Scad.cube ~center:true (20., 20., 5.)) )
       cap_cutout_height
   in
   KeyHole.(
     make
       ?cap
-      ?cutout:(Option.merge ~f:(fun a b -> Model.union [ a; b ]) cutout cap_cutout)
+      ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
       { spec = Kind.Mx ()
       ; outer_w
       ; outer_h

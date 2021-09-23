@@ -65,7 +65,7 @@ module Edges = struct
 end
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; start : Points.t
   ; foot : Points.t
   ; edges : Edges.t
@@ -73,7 +73,7 @@ type t =
   }
 
 let translate p t =
-  { scad = Model.translate p t.scad
+  { scad = Scad.translate p t.scad
   ; start = Points.translate p t.start
   ; foot = Points.translate p t.foot
   ; edges = Edges.translate p t.edges
@@ -81,7 +81,7 @@ let translate p t =
   }
 
 let mirror ax t =
-  { scad = Model.mirror ax t.scad
+  { scad = Scad.mirror ax t.scad
   ; start = Points.mirror ax t.start
   ; foot = Points.mirror ax t.foot
   ; edges = Edges.mirror ax t.edges
@@ -89,7 +89,7 @@ let mirror ax t =
   }
 
 let rotate r t =
-  { scad = Model.rotate r t.scad
+  { scad = Scad.rotate r t.scad
   ; start = Points.rotate r t.start
   ; foot = Points.rotate r t.foot
   ; edges = Edges.rotate r t.edges
@@ -97,7 +97,7 @@ let rotate r t =
   }
 
 let rotate_about_pt r p t =
-  { scad = Model.rotate_about_pt r p t.scad
+  { scad = Scad.rotate_about_pt r p t.scad
   ; start = Points.rotate_about_pt r p t.start
   ; foot = Points.rotate_about_pt r p t.foot
   ; edges = Edges.rotate_about_pt r p t.edges
@@ -245,12 +245,12 @@ let poly_siding
     Option.map ~f screw_config
   in
   { scad =
-      Model.hull [ start_face.scad; cleared_face.scad ]
+      Scad.hull [ start_face.scad; cleared_face.scad ]
       :: Bezier.prism_exn bezs steps
       :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
-      |> Model.union
+      |> Scad.union
       |> Fn.flip
-           Model.difference
+           Scad.difference
            (Option.value_map ~default:[] ~f:(fun s -> Option.to_list s.cut) screw)
   ; start = start_face.points
   ; foot

@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; thickness : float
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
@@ -10,57 +10,57 @@ type t =
 
 let translate p t =
   { t with
-    scad = Model.translate p t.scad
+    scad = Scad.translate p t.scad
   ; screw_l = Vec3.add p t.screw_l
   ; screw_r = Vec3.add p t.screw_r
   }
 
 let mirror ax t =
   { t with
-    scad = Model.mirror ax t.scad
+    scad = Scad.mirror ax t.scad
   ; screw_l = Vec3.mirror ax t.screw_l
   ; screw_r = Vec3.mirror ax t.screw_r
   }
 
 let rotate r t =
   { t with
-    scad = Model.rotate r t.scad
+    scad = Scad.rotate r t.scad
   ; screw_l = Vec3.rotate r t.screw_l
   ; screw_r = Vec3.rotate r t.screw_r
   }
 
 let rotate_about_pt r p t =
   { t with
-    scad = Model.rotate_about_pt r p t.scad
+    scad = Scad.rotate_about_pt r p t.scad
   ; screw_l = Vec3.rotate_about_pt r p t.screw_l
   ; screw_r = Vec3.rotate_about_pt r p t.screw_r
   }
 
 let screws t =
   let cyl =
-    Model.cylinder ~fn:32 2.25 8.
-    |> Model.translate (0., 0., -.t.thickness -. 1.)
-    |> Model.color ~alpha:0.5 Color.Black
+    Scad.cylinder ~fn:32 2.25 8.
+    |> Scad.translate (0., 0., -.t.thickness -. 1.)
+    |> Scad.color ~alpha:0.5 Color.Black
   in
-  Model.union [ Model.translate t.screw_l cyl; Model.translate t.screw_r cyl ]
+  Scad.union [ Scad.translate t.screw_l cyl; Scad.translate t.screw_r cyl ]
 
 let to_scad ?(show_screws = false) t =
-  if show_screws then Model.union [ t.scad; screws t ] else t.scad
+  if show_screws then Scad.union [ t.scad; screws t ] else t.scad
 
 let print_pcb thickness =
-  let import n = Model.import (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
-  Model.difference
+  let import n = Scad.import (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
+  Scad.difference
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]
-  |> Model.linear_extrude ~height:thickness
-  |> Model.color ~alpha:0.5 Color.Crimson
+  |> Scad.linear_extrude ~height:thickness
+  |> Scad.color ~alpha:0.5 Color.Crimson
 
 let screw_l_start = -0.45, -31.25, 0.
 let screw_r_start = 34.13, -3.375, 0.
 
 let pcb thickness =
   let poly =
-    Model.polygon
+    Scad.polygon
       [ 0., 0.
       ; 0.8, 1.
       ; 9.5, 1.
@@ -82,15 +82,15 @@ let pcb thickness =
       ; 0., -24.
       ]
   in
-  let hole = Model.circle ~fn:36 2.45 in
-  Model.difference
+  let hole = Scad.circle ~fn:36 2.45 in
+  Scad.difference
     poly
-    [ Model.translate screw_l_start hole
-    ; Model.translate screw_r_start hole
-    ; Model.translate (11.5, -31.3, 0.) (Model.square (17.65, 15.9))
+    [ Scad.translate screw_l_start hole
+    ; Scad.translate screw_r_start hole
+    ; Scad.translate (11.5, -31.3, 0.) (Scad.square (17.65, 15.9))
     ]
-  |> Model.linear_extrude ~height:thickness
-  |> Model.color ~alpha:0.5 Color.Crimson
+  |> Scad.linear_extrude ~height:thickness
+  |> Scad.color ~alpha:0.5 Color.Crimson
 
 let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
   let jack_radius = 2.49
@@ -102,32 +102,32 @@ let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
   and dist = 15.925 in
   let jack_x_off = (jack_width /. 2.) +. 1.5 in
   let jack =
-    Model.cylinder ~center:true ~fn:16 jack_radius 20.
-    |> Model.rotate (Float.pi /. 2., 0., 0.)
-    |> Model.translate (jack_x_off, 0., 4.5)
-    |> Model.color ~alpha:0.5 Color.Silver
+    Scad.cylinder ~center:true ~fn:16 jack_radius 20.
+    |> Scad.rotate (Float.pi /. 2., 0., 0.)
+    |> Scad.translate (jack_x_off, 0., 4.5)
+    |> Scad.color ~alpha:0.5 Color.Silver
   and usb =
     let rad = usb_height /. 2. in
     let cyl =
-      Model.cylinder ~center:true ~fn:16 rad 20. |> Model.rotate (Float.pi /. 2., 0., 0.)
+      Scad.cylinder ~center:true ~fn:16 rad 20. |> Scad.rotate (Float.pi /. 2., 0., 0.)
     in
-    Model.hull
-      [ Model.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
-      ; Model.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
+    Scad.hull
+      [ Scad.translate ((usb_width /. 2.) -. rad, 0., 0.) cyl
+      ; Scad.translate ((usb_width /. -2.) +. rad, 0., 0.) cyl
       ]
-    |> Model.translate (jack_x_off +. dist, 0., 4.85)
-    |> Model.color ~alpha:0.5 Color.Silver
+    |> Scad.translate (jack_x_off +. dist, 0., 4.85)
+    |> Scad.color ~alpha:0.5 Color.Silver
   and inset =
     let h = jack_radius +. (usb_height /. 2.) +. mcu_thickness
     and w = ((jack_width +. board_width) /. 2.) +. dist in
-    Model.cube (w, 16., h)
-    |> Model.translate (0., inset_depth -. 16., 1.)
-    |> Model.color ~alpha:0.5 Color.Silver
+    Scad.cube (w, 16., h)
+    |> Scad.translate (0., inset_depth -. 16., 1.)
+    |> Scad.color ~alpha:0.5 Color.Silver
   in
   let t =
     { scad = pcb thickness; thickness; screw_l = screw_l_start; screw_r = screw_r_start }
   in
-  { t with scad = Model.union [ t.scad; jack; usb; inset ] }
+  { t with scad = Scad.union [ t.scad; jack; usb; inset ] }
 
 let place
     ?(x_off = 0.2)
@@ -206,14 +206,14 @@ let eyelets
       then Vec3.(add centre (mul_scalar (Vec3.normalize drift) half_width))
       else loop 0. centre (step idx)
     in
-    Model.union
+    Scad.union
       [ Screw.(
           make ~placement:(Point loc) screw_config (side_point false) (side_point true)
           |> to_scad)
-        |> Model.translate (0., 0., Vec3.get_z screw_l +. thickness +. z_off)
+        |> Scad.translate (0., 0., Vec3.get_z screw_l +. thickness +. z_off)
       ]
   in
-  Model.union [ build screw_l; build screw_r ]
+  Scad.union [ build screw_l; build screw_r ]
 
 let cutter
     ?eye_width

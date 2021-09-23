@@ -93,7 +93,7 @@ let build ?right_hand ?hotswap () =
     keyhole
 
 let bastard_compare () =
-  Model.union
+  Scad.union
     [ Skeletyl.bastard_skelly
-    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    ; Case.to_scad ~show_caps:false (build ()) |> Scad.color ~alpha:0.5 Color.Yellow
     ]

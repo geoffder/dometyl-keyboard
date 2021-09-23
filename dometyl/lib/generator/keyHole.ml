@@ -3,7 +3,7 @@ open Scad_ml
 
 module Face = struct
   type t =
-    { scad : Model.t
+    { scad : Scad.t
     ; points : Points.t
     }
 
@@ -17,24 +17,24 @@ module Face = struct
         ; centre = 0., 0., 0.
         }
     in
-    { scad = Model.cube ~center:true size; points }
+    { scad = Scad.cube ~center:true size; points }
 
   let translate p t =
-    { scad = Model.translate p t.scad; points = Points.translate p t.points }
+    { scad = Scad.translate p t.scad; points = Points.translate p t.points }
 
-  let mirror ax t = { scad = Model.mirror ax t.scad; points = Points.mirror ax t.points }
-  let rotate r t = { scad = Model.rotate r t.scad; points = Points.rotate r t.points }
+  let mirror ax t = { scad = Scad.mirror ax t.scad; points = Points.mirror ax t.points }
+  let rotate r t = { scad = Scad.rotate r t.scad; points = Points.rotate r t.points }
 
   let rotate_about_pt r p t =
-    { scad = Model.rotate_about_pt r p t.scad
+    { scad = Scad.rotate_about_pt r p t.scad
     ; points = Points.rotate_about_pt r p t.points
     }
 
   let quaternion q t =
-    { scad = Model.quaternion q t.scad; points = Points.quaternion q t.points }
+    { scad = Scad.quaternion q t.scad; points = Points.quaternion q t.points }
 
   let quaternion_about_pt q p t =
-    { scad = Model.quaternion_about_pt q p t.scad
+    { scad = Scad.quaternion_about_pt q p t.scad
     ; points = Points.quaternion_about_pt q p t.points
     }
 
@@ -107,18 +107,18 @@ type 'k config =
   ; inner_w : float
   ; inner_h : float
   ; thickness : float
-  ; clip : Model.t -> Model.t
+  ; clip : Scad.t -> Scad.t
   ; cap_height : float
   ; clearance : float
   }
 
 type 'k t =
   { config : 'k config
-  ; scad : Model.t
+  ; scad : Scad.t
   ; origin : Vec3.t
   ; faces : Faces.t
-  ; cap : Model.t option
-  ; cutout : Model.t option
+  ; cap : Scad.t option
+  ; cutout : Scad.t option
   }
 
 let orthogonal t side =
@@ -130,75 +130,75 @@ let normal t =
 
 let translate p t =
   { t with
-    scad = Model.translate p t.scad
+    scad = Scad.translate p t.scad
   ; origin = Vec3.add p t.origin
   ; faces = Faces.translate p t.faces
-  ; cap = Option.map ~f:(Model.translate p) t.cap
-  ; cutout = Option.map ~f:(Model.translate p) t.cutout
+  ; cap = Option.map ~f:(Scad.translate p) t.cap
+  ; cutout = Option.map ~f:(Scad.translate p) t.cutout
   }
 
 let mirror ax t =
   { t with
-    scad = Model.mirror ax t.scad
+    scad = Scad.mirror ax t.scad
   ; origin = Vec3.mirror ax t.origin
   ; faces = Faces.mirror ax t.faces
-  ; cap = Option.map ~f:(Model.mirror ax) t.cap
-  ; cutout = Option.map ~f:(Model.mirror ax) t.cutout
+  ; cap = Option.map ~f:(Scad.mirror ax) t.cap
+  ; cutout = Option.map ~f:(Scad.mirror ax) t.cutout
   }
 
 let rotate r t =
   { t with
-    scad = Model.rotate r t.scad
+    scad = Scad.rotate r t.scad
   ; origin = Vec3.rotate r t.origin
   ; faces = Faces.rotate r t.faces
-  ; cap = Option.map ~f:(Model.rotate r) t.cap
-  ; cutout = Option.map ~f:(Model.rotate r) t.cutout
+  ; cap = Option.map ~f:(Scad.rotate r) t.cap
+  ; cutout = Option.map ~f:(Scad.rotate r) t.cutout
   }
 
 let rotate_about_pt r p t =
   { t with
-    scad = Model.rotate_about_pt r p t.scad
+    scad = Scad.rotate_about_pt r p t.scad
   ; origin = Vec3.rotate_about_pt r p t.origin
   ; faces = Faces.rotate_about_pt r p t.faces
-  ; cap = Option.map ~f:(Model.rotate_about_pt r p) t.cap
-  ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
+  ; cap = Option.map ~f:(Scad.rotate_about_pt r p) t.cap
+  ; cutout = Option.map ~f:(Scad.rotate_about_pt r p) t.cutout
   }
 
 let quaternion q t =
   { t with
-    scad = Model.quaternion q t.scad
+    scad = Scad.quaternion q t.scad
   ; origin = Quaternion.rotate_vec3 q t.origin
   ; faces = Faces.quaternion q t.faces
-  ; cap = Option.map ~f:(Model.quaternion q) t.cap
-  ; cutout = Option.map ~f:(Model.quaternion q) t.cutout
+  ; cap = Option.map ~f:(Scad.quaternion q) t.cap
+  ; cutout = Option.map ~f:(Scad.quaternion q) t.cutout
   }
 
 let quaternion_about_pt q p t =
   { t with
-    scad = Model.quaternion_about_pt q p t.scad
+    scad = Scad.quaternion_about_pt q p t.scad
   ; origin = Quaternion.rotate_vec3_about_pt q p t.origin
   ; faces = Faces.quaternion_about_pt q p t.faces
-  ; cap = Option.map ~f:(Model.quaternion_about_pt q p) t.cap
-  ; cutout = Option.map ~f:(Model.quaternion_about_pt q p) t.cutout
+  ; cap = Option.map ~f:(Scad.quaternion_about_pt q p) t.cap
+  ; cutout = Option.map ~f:(Scad.quaternion_about_pt q p) t.cutout
   }
 
 let rotate_about_origin r t =
   let p = Vec3.negate t.origin in
   { t with
-    scad = Model.rotate_about_pt r p t.scad
+    scad = Scad.rotate_about_pt r p t.scad
   ; faces = Faces.rotate_about_pt r p t.faces
-  ; cap = Option.map ~f:(Model.rotate_about_pt r p) t.cap
-  ; cutout = Option.map ~f:(Model.rotate_about_pt r p) t.cutout
+  ; cap = Option.map ~f:(Scad.rotate_about_pt r p) t.cap
+  ; cutout = Option.map ~f:(Scad.rotate_about_pt r p) t.cutout
   }
 
 let quaternion_about_origin angle t =
   let p = Vec3.negate t.origin
   and q = Quaternion.make (normal t) angle in
   { t with
-    scad = Model.quaternion_about_pt q p t.scad
+    scad = Scad.quaternion_about_pt q p t.scad
   ; faces = Faces.quaternion_about_pt q p t.faces
-  ; cap = Option.map ~f:(Model.quaternion_about_pt q p) t.cap
-  ; cutout = Option.map ~f:(Model.quaternion_about_pt q p) t.cutout
+  ; cap = Option.map ~f:(Scad.quaternion_about_pt q p) t.cap
+  ; cutout = Option.map ~f:(Scad.quaternion_about_pt q p) t.cutout
   }
 
 let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
@@ -210,24 +210,24 @@ let make
     ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
   =
   let hole =
-    let outer = Model.cube ~center:true (outer_w, outer_h, thickness) in
-    let inner = Model.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
-    Model.difference outer [ inner ]
+    let outer = Scad.cube ~center:true (outer_w, outer_h, thickness) in
+    let inner = Scad.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
+    Scad.difference outer [ inner ]
   in
   { config
   ; scad = clip hole
   ; origin = 0., 0., 0.
   ; faces = Faces.make outer_w outer_h thickness
-  ; cap = Option.map ~f:(Model.translate (0., 0., cap_height +. (thickness /. 2.))) cap
+  ; cap = Option.map ~f:(Scad.translate (0., 0., cap_height +. (thickness /. 2.))) cap
   ; cutout
   }
 
 let mirror_internals t =
   { t with
-    scad = Model.mirror (1., 0., 0.) t.scad
-  ; cutout = Option.map ~f:(Model.mirror (1., 0., 0.)) t.cutout
+    scad = Scad.mirror (1., 0., 0.) t.scad
+  ; cutout = Option.map ~f:(Scad.mirror (1., 0., 0.)) t.cutout
   }
 
 let cutout_scad = function
-  | { scad; cutout = Some cut; _ } -> Model.difference scad [ cut ]
+  | { scad; cutout = Some cut; _ } -> Scad.difference scad [ cut ]
   | { scad; _ } -> scad

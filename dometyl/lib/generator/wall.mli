@@ -69,12 +69,12 @@ end
 
 (** Record representing a wall extending from a {!KeyHole.Face.t} to the ground. *)
 type t =
-  { scad : Model.t (** Aggregate scad, including screw outshoot if included *)
+  { scad : Scad.t (** Aggregate scad, including screw outshoot if included *)
   ; start : Points.t (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
   ; foot : Points.t (** Terminal points where the wall meets the XY plane. *)
   ; edges : Edges.t (** Bezier curves that specify the edge vertices. *)
   ; screw : Screw.t option
-        (** Model, coordinates, and config of screw offshoot if included. *)
+        (** Scad, coordinates, and config of screw offshoot if included. *)
   }
 
 (** Basic transformation functions *)
@@ -165,4 +165,4 @@ val start_direction : t -> Vec3.t
     Direction vector from right to left of the wall foot points. *)
 val foot_direction : t -> Vec3.t
 
-val to_scad : t -> Model.t
+val to_scad : t -> Scad.t

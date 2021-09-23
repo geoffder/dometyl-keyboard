@@ -59,10 +59,10 @@ type 'k config =
 
 (** The plate is constructed from a main body of {!Columns.t} and a thumb cluster,
     modelled as a separate {!Column.t}. As with lower types, the config as well as the
-    aggregate {!Model.t} are carried around for convenient access. *)
+    aggregate {!Scad.t} are carried around for convenient access. *)
 type 'k t =
   { config : 'k config
-  ; scad : Model.t
+  ; scad : Scad.t
   ; columns : 'k Columns.t
   ; thumb : 'k Column.t
   }
@@ -116,7 +116,7 @@ other examples with divergent parameters are provided in the modules within the
   used to provide caps to {!KeyHole.t}s before they are distributed in {!Column.make}.
 - [thumb_caps] same as [caps], but for the thumb. If not provided, this default to [caps].
 - [keyhole] is the {!KeyHole.t} that will be distributed to make up the main plate and
-  thumb cluster, carring all contained coordinate information and accesory {!Model.t}s
+  thumb cluster, carring all contained coordinate information and accesory {!Scad.t}s
   along with them to their new homes.
 *)
 val make
@@ -139,7 +139,7 @@ val make
 
 (** [column_joins ?d1 ?d2 t]
 
-    Returns a {!Model.t} scad which joins together all columns of the main plate by
+    Returns a {!Scad.t} scad which joins together all columns of the main plate by
     hulling the {!KeyHole.Face.scad}s of the {!KeyHole.t}s together, for a closed
     switch-plate look (and sturdiness). Typically, a function such as this or
     {!val:skeleton_bridges} below will be used as as the [plate_welder] parameter
@@ -147,11 +147,11 @@ val make
     to {!Bridges.cols} to control how far the lower key's face is moved out, and
     the upper keys face is moved in before being hulled with its neighbours
     across the gap. This can be used to thicken the generated supports. *)
-val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Model.t
+val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.t
 
 (** [skeleton_bridges ?d1 ?d2 t]
 
-    Returns a {!Model.t} scad with "bridges" between the bottom row keys from
+    Returns a {!Scad.t} scad with "bridges" between the bottom row keys from
     index to middle, and the top keys for the remaining columns. Similar to the
     BastardKB skeletyl. This function, as well as {!val:column_joins} make use of
     functions found in the {!module:Bridges} module, if you are wanting to do
@@ -160,34 +160,34 @@ val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Mode
     control how far the lower key's face is moved out, and the upper keys face
     is moved in before being hulled with its neighbours across the gap. This can
     be used to thicken the generated supports. *)
-val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Model.t
+val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.t
 
 (** [to_scad t]
 
-    Extracts the {!Model.t} from [t]. *)
-val to_scad : 'k t -> Model.t
+    Extracts the {!Scad.t} from [t]. *)
+val to_scad : 'k t -> Scad.t
 
 (** [collect ~f t]
 
-    Fold over all {!KeyHole.t}s contained within [t], extracting {!Model.t}s with [f],
+    Fold over all {!KeyHole.t}s contained within [t], extracting {!Scad.t}s with [f],
     and unioning them. Used for {!val:collect_caps} and {!val:collect_cutouts}. *)
 val collect
-  :  f:(key:int -> data:'k KeyHole.t -> Model.t list -> Model.t list)
+  :  f:(key:int -> data:'k KeyHole.t -> Scad.t list -> Scad.t list)
   -> 'k t
-  -> Model.t
+  -> Scad.t
 
 (** [collect_caps t]
 
-    Return a {!Model.t} representing the union between all caps carried by the
+    Return a {!Scad.t} representing the union between all caps carried by the
     {!KeyHole.t}s that make up the plate [t]. Used to design around keycap closeness,
     and lookout for collisions etc. *)
-val collect_caps : 'k t -> Model.t
+val collect_caps : 'k t -> Scad.t
 
 (** [collect_cutout t]
 
-    Return a {!Model.t} representing the union between all {!KeyHole.cutout}s found
+    Return a {!Scad.t} representing the union between all {!KeyHole.cutout}s found
     in the plate [t]. This is used by {!Case.make} to perform the clearance cut from the
     {!Case.scad} model to make room for whatever the {!KeyHole.cutout} is modelling
     (e.g. hotswap sockets). Like {!val:collect_caps}, this could also be useful for
     visualization. *)
-val collect_cutouts : 'k t -> Model.t
+val collect_cutouts : 'k t -> Scad.t

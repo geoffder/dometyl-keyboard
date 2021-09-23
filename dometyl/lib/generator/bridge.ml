@@ -1,12 +1,12 @@
 open Base
 open Scad_ml
 
-type t = Model.t
+type t = Scad.t
 
 let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
-  let a = Model.translate (Vec3.map (( *. ) d1) ortho) scad
-  and b = Model.translate (Vec3.map (( *. ) d2) ortho) scad in
-  Model.hull [ scad; a ], Model.hull [ a; b ]
+  let a = Scad.translate (Vec3.map (( *. ) d1) ortho) scad
+  and b = Scad.translate (Vec3.map (( *. ) d2) ortho) scad in
+  Scad.hull [ scad; a ], Scad.hull [ a; b ]
 
 (* NOTE: changed to in_d and out_d params (out from lower, and in to upper). Need to
    be configurable based on users clearance concerns. Need to explain well in the
@@ -29,7 +29,7 @@ let keys ?(in_d = 0.25) ?out_d1 ?out_d2 (k1 : _ KeyHole.t) (k2 : _ KeyHole.t) =
         ~ortho:(KeyHole.orthogonal inney in_side)
         (KeyHole.Faces.face inney.faces in_side).scad
     in
-    Model.union [ Model.hull [ in_b; out_b ]; out_a ]
+    Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
   in
   if Float.(
        Vec3.get_z k1.faces.east.points.centre > Vec3.get_z k2.faces.west.points.centre)
@@ -55,7 +55,7 @@ let cols ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
       and in_ortho = mean_ortho in_side in_last in_next in
       let out_a, out_b = slide ?d1:out_d1 ?d2:out_d2 ~ortho:out_ortho out_join
       and _, in_b = slide ~d1:0. ~d2:(Float.neg in_d) ~ortho:in_ortho in_join in
-      Model.union [ Model.hull [ in_b; out_b ]; out_a ]
+      Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
     in
     match data with
     | `Both ((w_join : Column.Join.t), (e_join : Column.Join.t)) ->
@@ -77,7 +77,7 @@ let cols ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
       else huller ~low_west:true w_set e_set :: hulls
     | _ -> hulls
   in
-  Model.union
+  Scad.union
     (Map.fold2
        ~f:key_folder
        ~init:(Map.fold2 ~f:join_folder ~init:[] a.joins b.joins)

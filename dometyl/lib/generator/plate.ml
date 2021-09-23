@@ -61,35 +61,35 @@ type 'k config =
 
 type 'k t =
   { config : 'k config
-  ; scad : Model.t
+  ; scad : Scad.t
   ; columns : 'k Column.t Map.M(Int).t
   ; thumb : 'k Column.t
   }
 
 let translate p t =
   { t with
-    scad = Model.translate p t.scad
+    scad = Scad.translate p t.scad
   ; columns = Columns.translate p t.columns
   ; thumb = Column.translate p t.thumb
   }
 
 let mirror ax t =
   { t with
-    scad = Model.mirror ax t.scad
+    scad = Scad.mirror ax t.scad
   ; columns = Columns.mirror ax t.columns
   ; thumb = Column.mirror ax t.thumb
   }
 
 let rotate r t =
   { t with
-    scad = Model.rotate r t.scad
+    scad = Scad.rotate r t.scad
   ; columns = Columns.rotate r t.columns
   ; thumb = Column.rotate r t.thumb
   }
 
 let rotate_about_pt r p t =
   { t with
-    scad = Model.rotate_about_pt r p t.scad
+    scad = Scad.rotate_about_pt r p t.scad
   ; columns = Columns.rotate_about_pt r p t.columns
   ; thumb = Column.rotate_about_pt r p t.thumb
   }
@@ -206,7 +206,7 @@ let make
       ; thumb_angle
       }
   ; scad =
-      Model.union
+      Scad.union
         (Map.fold ~f:(fun ~key:_ ~data l -> data.scad :: l) ~init:[ thumb.scad ] columns)
   ; columns
   ; thumb
@@ -214,7 +214,7 @@ let make
 
 let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_cols; _ }; columns; _ } =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns in
-  Model.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
+  Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
 let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; columns; _ } =
   let bridge c k =
@@ -225,7 +225,7 @@ let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; col
       (Columns.key_exn columns c k)
       (Columns.key_exn columns (c + 1) k)
   in
-  Model.union
+  Scad.union
   @@ List.init
        ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows i - 1))
        (n_cols - 1)
@@ -239,7 +239,7 @@ let collect ~f t =
       ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
       t.columns
   in
-  Model.union @@ Map.fold ~init:body ~f t.thumb.keys
+  Scad.union @@ Map.fold ~init:body ~f t.thumb.keys
 
 let collect_caps t =
   collect

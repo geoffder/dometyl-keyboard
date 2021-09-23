@@ -2,13 +2,13 @@ open! Base
 open! Scad_ml
 
 type t =
-  { plus : Model.t option
-  ; minus : Model.t option
+  { plus : Scad.t option
+  ; minus : Scad.t option
   }
 
 type cutter = walls:Walls.t -> connections:Connect.t -> t
 
-val apply : t -> Model.t -> Model.t
+val apply : t -> Scad.t -> Scad.t
 
 val make
   :  ?length:float
@@ -30,10 +30,10 @@ val place_tray
   -> ?y_off:float
   -> ?z_rot:float
   -> Walls.t
-  -> Model.t
-  -> Model.t
+  -> Scad.t
+  -> Scad.t
 
-val carbonfet_stl : bool -> Model.t
+val carbonfet_stl : bool -> Scad.t
 
 val carbonfet_holder
   :  ?micro:bool
@@ -43,7 +43,7 @@ val carbonfet_holder
   -> unit
   -> cutter
 
-val derek_reversible_stl : bool -> Model.t
+val derek_reversible_stl : bool -> Scad.t
 
 val reversible_holder
   :  ?reset_button:bool

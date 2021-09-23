@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 module Rotator : sig
-  type t = float -> Model.t -> Model.t
+  type t = float -> Scad.t -> Scad.t
 
   val make : ?pivot:Vec3.t -> Quaternion.t -> Quaternion.t -> t
 end
@@ -34,37 +34,37 @@ val curve : n_steps:int -> (float -> 'a) -> 'a list
 val quats : Quaternion.t -> Quaternion.t -> float -> Quaternion.t list
 
 val hull
-  :  ?rotator:(float -> Model.t -> Model.t)
-  -> ?translator:(float -> Model.t -> Model.t)
+  :  ?rotator:(float -> Scad.t -> Scad.t)
+  -> ?translator:(float -> Scad.t -> Scad.t)
   -> int
-  -> Model.t
-  -> Model.t
+  -> Scad.t
+  -> Scad.t
 
 val quad_hull
-  :  ?rotator:(float -> Model.t -> Model.t)
+  :  ?rotator:(float -> Scad.t -> Scad.t)
   -> t1:Vec3.t
   -> t2:Vec3.t
   -> t3:Vec3.t
   -> n_steps:int
-  -> Model.t
-  -> Model.t
+  -> Scad.t
+  -> Scad.t
 
 val cubic_hull
-  :  ?rotator:(float -> Model.t -> Model.t)
+  :  ?rotator:(float -> Scad.t -> Scad.t)
   -> t1:Vec3.t
   -> t2:Vec3.t
   -> t3:Vec3.t
   -> t4:Vec3.t
   -> n_steps:int
-  -> Model.t
-  -> Model.t
+  -> Scad.t
+  -> Scad.t
 
 val prism_exn
   :  (float -> Vec3.t) list
   -> [< `Ragged of Int.t list | `Uniform of Int.t ]
-  -> Model.t
+  -> Scad.t
 
 val prism
   :  (float -> Vec3.t) list
   -> [< `Ragged of Int.t list | `Uniform of Int.t ]
-  -> (Model.t, string) Result.t
+  -> (Scad.t, string) Result.t

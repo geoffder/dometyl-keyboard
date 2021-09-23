@@ -33,8 +33,8 @@ let translate p = map ~f:(Vec3.add p)
 let mirror ax = map ~f:(Vec3.mirror ax)
 let rotate r = map ~f:(Vec3.rotate r)
 let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
-let quaternion q = map ~f:(Quaternion.rotate_vec3 q)
-let quaternion_about_pt q p = map ~f:(Quaternion.rotate_vec3_about_pt q p)
+let quaternion q = map ~f:(Vec3.quaternion q)
+let quaternion_about_pt q p = map ~f:(Vec3.quaternion_about_pt q p)
 let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
 
 let of_clockwise_list_exn = function
@@ -76,5 +76,5 @@ let get t = function
   | `CN -> t.centre
 
 let mark t =
-  let f p = Model.cube ~center:true (1., 1., 1.) |> Model.translate p in
-  Model.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]
+  let f p = Scad.cube ~center:true (1., 1., 1.) |> Scad.translate p in
+  Scad.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]

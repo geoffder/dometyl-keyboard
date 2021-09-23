@@ -17,23 +17,23 @@ type config =
   }
 
 type t =
-  { scad : Model.t
-  ; cut : Model.t option
+  { scad : Scad.t
+  ; cut : Scad.t option
   ; centre : Vec3.t
   ; config : config
   }
 
 let translate p t =
-  { t with scad = Model.translate p t.scad; centre = Vec3.add p t.centre }
+  { t with scad = Scad.translate p t.scad; centre = Vec3.add p t.centre }
 
 let mirror ax t =
-  { t with scad = Model.mirror ax t.scad; centre = Vec3.mirror ax t.centre }
+  { t with scad = Scad.mirror ax t.scad; centre = Vec3.mirror ax t.centre }
 
-let rotate r t = { t with scad = Model.rotate r t.scad; centre = Vec3.rotate r t.centre }
+let rotate r t = { t with scad = Scad.rotate r t.scad; centre = Vec3.rotate r t.centre }
 
 let rotate_about_pt r p t =
   { t with
-    scad = Model.rotate_about_pt r p t.scad
+    scad = Scad.rotate_about_pt r p t.scad
   ; centre = Vec3.rotate_about_pt r p t.centre
   }
 
@@ -57,8 +57,8 @@ let make
       diff, Vec3.mul_scalar (Vec3.normalize diff) (-0.1)
   in
   let hole_centre = Vec3.(base_centre <+> hole_offset) in
-  let outer = Model.circle ~fn:16 outer_rad |> Model.translate hole_centre
-  and inner = Model.circle ~fn:16 inner_rad |> Model.translate hole_centre
+  let outer = Scad.circle ~fn:16 outer_rad |> Scad.translate hole_centre
+  and inner = Scad.circle ~fn:16 inner_rad |> Scad.translate hole_centre
   and swoop p =
     let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
     hole_centre
@@ -71,17 +71,17 @@ let make
             ~p2:Vec3.(mean [ base_centre <+> rad_offset; p ])
             ~p3:Vec3.(hole_centre <+> rad_offset) )
     |> List.map ~f:Vec3.to_vec2
-    |> Model.polygon
+    |> Scad.polygon
   in
-  let outline = Model.union [ outer; swoop p1; swoop p2 ] in
+  let outline = Scad.union [ outer; swoop p1; swoop p2 ] in
   let scad, cut =
     match hole with
     | Through     ->
-      Model.difference outline [ inner ] |> Model.linear_extrude ~height:thickness, None
+      Scad.difference outline [ inner ] |> Scad.linear_extrude ~height:thickness, None
     | Inset depth ->
-      let inset = Model.linear_extrude ~height:depth inner
-      and foot = Model.linear_extrude ~height:thickness outline in
-      Model.difference foot [ inset ], Some inset
+      let inset = Scad.linear_extrude ~height:depth inner
+      and foot = Scad.linear_extrude ~height:thickness outline in
+      Scad.difference foot [ inset ], Some inset
   in
   { scad; cut; centre = hole_centre; config }
 

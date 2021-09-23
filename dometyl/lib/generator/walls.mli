@@ -41,8 +41,8 @@ module Body : sig
       -> t
 
     val get : col -> [< `N | `S ] -> Wall.t option
-    val col_to_scad : col -> Model.t
-    val to_scad : t -> Model.t
+    val col_to_scad : col -> Scad.t
+    val to_scad : t -> Scad.t
     val collect_screws : ?init:Screw.t list -> t -> Screw.t list
   end
 
@@ -71,7 +71,7 @@ module Body : sig
       -> 'a Plate.t
       -> t
 
-    val to_scad : t -> Model.t
+    val to_scad : t -> Scad.t
     val collect_screws : ?init:Screw.t list -> t -> Screw.t list
   end
 
@@ -102,7 +102,7 @@ module Body : sig
     -> 'a Plate.t
     -> t
 
-  val to_scad : t -> Model.t
+  val to_scad : t -> Scad.t
   val collect_screws : ?init:Screw.t list -> t -> Screw.t list
 end
 
@@ -147,7 +147,7 @@ module Thumb : sig
     -> 'a Plate.t
     -> t
 
-  val to_scad : t -> Model.t
+  val to_scad : t -> Scad.t
   val collect_screws : ?init:Screw.t list -> t -> Screw.t list
 end
 
@@ -159,5 +159,5 @@ type t =
 (** Basic transformation functions *)
 include Sigs.Transformable with type t := t
 
-val to_scad : t -> Model.t
+val to_scad : t -> Scad.t
 val collect_screws : t -> Screw.t list

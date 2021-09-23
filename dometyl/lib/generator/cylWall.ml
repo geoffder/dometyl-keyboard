@@ -2,20 +2,19 @@ open Base
 open Scad_ml
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; points : Points.t
   }
 
 let start_chunk side (k : _ KeyHole.t) =
   let rad = k.config.thickness /. 2. in
   let cyl =
-    Model.cylinder ~center:true rad k.config.outer_w
-    |> Model.rotate (0., Float.pi /. 2., 0.)
+    Scad.cylinder ~center:true rad k.config.outer_w |> Scad.rotate (0., Float.pi /. 2., 0.)
   and face = KeyHole.Faces.face k.faces side in
   let r = RotMatrix.(align_exn (KeyHole.Face.direction face) (1., 0., 0.) |> to_euler)
   and t = Vec3.(KeyHole.orthogonal k side <*> (rad, rad, rad)) in
   let centre = Vec3.(face.points.centre <+> t) in
-  Model.rotate r cyl |> Model.translate centre, centre
+  Scad.rotate r cyl |> Scad.translate centre, centre
 
 let cyl_base_points ~thickness ~width ~direction ~ortho (x, y, _) =
   let centre = x, y, 0.
@@ -71,16 +70,16 @@ let cyl_siding
       (Vec3.add t3 start)
   in
   let scad =
-    Model.union
-      [ Model.hull [ chunk; face.scad ]
+    Scad.union
+      [ Scad.hull [ chunk; face.scad ]
       ; wall
-      ; Model.hull
-          [ Model.translate t3 chunk
-          ; Model.polygon
+      ; Scad.hull
+          [ Scad.translate t3 chunk
+          ; Scad.polygon
               (List.map
                  ~f:Vec3.to_vec2
                  [ points.top_left; points.top_right; points.bot_right; points.bot_left ] )
-            |> Model.linear_extrude ~height:0.001
+            |> Scad.linear_extrude ~height:0.001
           ]
       ]
   in

@@ -44,7 +44,7 @@ end
 
 type t =
   { config : Config.t
-  ; scad : Model.t
+  ; scad : Scad.t
   }
 
 let make
@@ -63,34 +63,32 @@ let make
   =
   let bent_leg =
     let start =
-      Model.cube ~center:true (leg_w, leg_bend, leg_thickness)
-      |> Model.translate (0., (leg_bend +. body_l) /. 2., 0.)
+      Scad.cube ~center:true (leg_w, leg_bend, leg_thickness)
+      |> Scad.translate (0., (leg_bend +. body_l) /. 2., 0.)
     and rest =
-      Model.cube ~center:true (leg_w, leg_thickness, leg_l -. leg_bend)
-      |> Model.translate
+      Scad.cube ~center:true (leg_w, leg_thickness, leg_l -. leg_bend)
+      |> Scad.translate
            ( 0.
            , leg_bend +. ((body_l -. leg_w) /. 2.)
            , (leg_l -. leg_bend -. leg_thickness) /. -2. )
     in
-    Model.union [ start; rest ] |> Model.translate (0., 0., leg_z_offset)
+    Scad.union [ start; rest ] |> Scad.translate (0., 0., leg_z_offset)
   in
   let legs =
     let side_offset = leg_spacing +. (leg_w /. 2.) in
     if not merge_legs
     then
-      Model.union
+      Scad.union
         [ bent_leg
-        ; Model.translate (-.side_offset, 0., 0.) bent_leg
-        ; Model.translate (side_offset, 0., 0.) bent_leg
+        ; Scad.translate (-.side_offset, 0., 0.) bent_leg
+        ; Scad.translate (side_offset, 0., 0.) bent_leg
         ]
-    else Model.scale ((2. *. side_offset /. leg_w) +. 1., 1., 1.) bent_leg
-  and body = Model.cube ~center:true (body_w, body_l, body_thickness) in
+    else Scad.scale ((2. *. side_offset /. leg_w) +. 1., 1., 1.) bent_leg
+  and body = Scad.cube ~center:true (body_w, body_l, body_thickness) in
   { config
-  ; scad = Model.union [ body; legs ] |> Model.translate (0., 0., body_thickness /. 2.)
+  ; scad = Scad.union [ body; legs ] |> Scad.translate (0., 0., body_thickness /. 2.)
   }
 
 let sink { config; scad } depth =
-  let f i =
-    Model.translate (0., 0., Float.of_int i *. config.leg_thickness /. -2.) scad
-  in
-  Model.union @@ List.init (Int.of_float (depth /. config.leg_w *. 2.) + 1) ~f
+  let f i = Scad.translate (0., 0., Float.of_int i *. config.leg_thickness /. -2.) scad in
+  Scad.union @@ List.init (Int.of_float (depth /. config.leg_w *. 2.) + 1) ~f

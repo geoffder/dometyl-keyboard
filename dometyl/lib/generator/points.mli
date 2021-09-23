@@ -29,4 +29,4 @@ val of_clockwise_list_exn : Vec3.t list -> t
 val of_clockwise_list : Vec3.t list -> (t, string) Result.t
 val overlapping_bounds : t -> t -> float
 val get : t -> [< `BL | `BR | `CN | `TL | `TR ] -> Vec3.t
-val mark : t -> Model.t
+val mark : t -> Scad.t

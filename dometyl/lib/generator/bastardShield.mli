@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; thickness : float
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
@@ -10,10 +10,10 @@ type t =
 
 include Sigs.Transformable with type t := t
 
-val print_pcb : float -> Model.t
-val pcb : float -> Model.t
+val print_pcb : float -> Scad.t
+val pcb : float -> Scad.t
 val make : ?inset_depth:float -> ?thickness:float -> unit -> t
-val screws : t -> Model.t
+val screws : t -> Scad.t
 
 val place
   :  ?x_off:float
@@ -30,7 +30,7 @@ val eyelets
   -> ?screw_config:Screw.config
   -> Connect.t
   -> t
-  -> Model.t
+  -> Scad.t
 
 val cutter
   :  ?eye_width:float
@@ -45,4 +45,4 @@ val cutter
   -> connections:Connect.t
   -> Ports.t
 
-val to_scad : ?show_screws:bool -> t -> Model.t
+val to_scad : ?show_screws:bool -> t -> Scad.t

@@ -80,7 +80,7 @@ let base_connector =
     ~overlap_factor:1.
 
 let plate_welder plate =
-  Model.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
+  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
 let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
 
@@ -95,7 +95,7 @@ let build ?right_hand ?hotswap () =
     (Mx.make_hole ?hotswap ~clearance:2. ())
 
 let bastard_compare () =
-  Model.union
+  Scad.union
     [ Skeletyl.bastard_skelly
-    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    ; Case.to_scad ~show_caps:false (build ()) |> Scad.color ~alpha:0.5 Color.Yellow
     ]

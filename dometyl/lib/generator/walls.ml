@@ -77,11 +77,11 @@ module Body = struct
       | `S -> t.south
 
     let col_to_scad col =
-      Model.union
+      Scad.union
         (List.filter_map ~f:(Option.map ~f:Wall.to_scad) [ col.north; col.south ])
 
     let to_scad t =
-      Model.union (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
+      Scad.union (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
 
     let collect_screws ?(init = []) (t : t) =
       let prepend wall =
@@ -140,7 +140,7 @@ module Body = struct
 
     let to_scad t =
       let f ~key:_ ~data l = Wall.to_scad data :: l in
-      Model.union (Map.fold ~init:(Map.fold ~init:[] ~f t.west) ~f t.east)
+      Scad.union (Map.fold ~init:(Map.fold ~init:[] ~f t.west) ~f t.east)
 
     let collect_screws ?(init = []) (t : t) =
       let f ~key:_ ~data l =
@@ -213,7 +213,7 @@ module Body = struct
           plate
     }
 
-  let to_scad t = Model.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
+  let to_scad t = Scad.union [ Cols.to_scad t.cols; Sides.to_scad t.sides ]
 
   let collect_screws ?(init = []) (t : t) =
     Cols.collect_screws ~init:(Sides.collect_screws ~init t.sides) t.cols
@@ -283,7 +283,7 @@ module Thumb = struct
 
   let to_scad { keys; sides = { west; east } } =
     let prepend wall = Util.prepend_opt_map ~f:(fun w -> Wall.to_scad w) wall in
-    Model.union
+    Scad.union
     @@ Map.fold
          ~init:(prepend west [] |> prepend east)
          ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
@@ -309,7 +309,7 @@ let rotate_about_pt r p t =
   { body = Body.rotate_about_pt r p t.body; thumb = Thumb.rotate_about_pt r p t.thumb }
 
 let mirror ax t = { body = Body.mirror ax t.body; thumb = Thumb.mirror ax t.thumb }
-let to_scad { body; thumb } = Model.union [ Body.to_scad body; Thumb.to_scad thumb ]
+let to_scad { body; thumb } = Scad.union [ Body.to_scad body; Thumb.to_scad thumb ]
 
 let collect_screws { body; thumb } =
   Body.collect_screws ~init:(Thumb.collect_screws thumb) body

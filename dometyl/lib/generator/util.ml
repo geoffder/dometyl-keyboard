@@ -1,6 +1,9 @@
 open! Base
 open! Scad_ml
 
+let deg_to_rad d = d *. Float.pi /. 180.
+let rad_to_deg r = r *. 180. /. Float.pi
+
 (* TODO: move this somewhere, possibly Scad_ml. *)
 (* Expects `a` to be clockwise from the perspective of looking at the face the vertices
  * form from the outside (see OpenScad polyhedron), and b to be in the same ordering
@@ -20,7 +23,7 @@ let prism_exn a b =
     let faces =
       List.range 0 n :: List.range ~stride:(-1) ((n * 2) - 1) (n - 1) :: sides
     in
-    Model.polyhedron pts faces )
+    Scad.polyhedron pts faces )
   else failwith "Faces must have equal number of vertices."
 
 let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =

@@ -93,21 +93,21 @@ let build ?right_hand ?hotswap () =
     keyhole
 
 let bastard_skelly =
-  Model.import "../things/others/bastardkb_skeletyl_v3_v5.stl"
-  |> Model.translate (87., 0., 25.)
-  |> Model.rotate (Float.pi /. 2., 0., 0.)
-  |> Model.translate (0., -2., 8.)
-  |> Model.color ~alpha:0.5 Color.DarkSlateBlue
+  Scad.import "../things/others/bastardkb_skeletyl_v3_v5.stl"
+  |> Scad.translate (87., 0., 25.)
+  |> Scad.rotate (Float.pi /. 2., 0., 0.)
+  |> Scad.translate (0., -2., 8.)
+  |> Scad.color ~alpha:0.5 Color.DarkSlateBlue
 
 let bastard_compare () =
-  Model.union
+  Scad.union
     [ bastard_skelly
-    ; Case.to_scad ~show_caps:false (build ()) |> Model.color ~alpha:0.5 Color.Yellow
+    ; Case.to_scad ~show_caps:false (build ()) |> Scad.color ~alpha:0.5 Color.Yellow
     ]
 
 let bk_skeletyl_w_shield () =
   let shield = BastardShield.(make ()) in
-  Model.union
+  Scad.union
     [ bastard_skelly
-    ; BastardShield.to_scad ~show_screws:true shield |> Model.translate (-6.71, 35.2, 2.)
+    ; BastardShield.to_scad ~show_screws:true shield |> Scad.translate (-6.71, 35.2, 2.)
     ]

@@ -8,7 +8,7 @@ val bumpon
   -> thickness:float
   -> inset:float
   -> Points.t
-  -> Model.t * Model.t
+  -> Scad.t * Scad.t
 
 val make
   :  ?degrees:float
@@ -21,4 +21,4 @@ val make
   -> ?bumpon_rad:float
   -> ?bumpon_inset:float
   -> 'k Case.t
-  -> Model.t
+  -> Scad.t

@@ -13,7 +13,7 @@ open! Infix
     of which are ignored.)
  *)
 type t =
-  { scad : Model.t
+  { scad : Scad.t
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }
@@ -21,25 +21,25 @@ type t =
 let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
 
 let translate p t =
-  { scad = Model.translate p t.scad
+  { scad = Scad.translate p t.scad
   ; outline = List.map ~f:(Vec3.add p) t.outline
   ; inline = List.map ~f:(Vec3.add p) t.inline
   }
 
 let mirror ax t =
-  { scad = Model.mirror ax t.scad
+  { scad = Scad.mirror ax t.scad
   ; outline = List.map ~f:(Vec3.mirror ax) t.outline
   ; inline = List.map ~f:(Vec3.mirror ax) t.inline
   }
 
 let rotate r t =
-  { scad = Model.rotate r t.scad
+  { scad = Scad.rotate r t.scad
   ; outline = List.map ~f:(Vec3.rotate r) t.outline
   ; inline = List.map ~f:(Vec3.rotate r) t.inline
   }
 
 let rotate_about_pt r p t =
-  { scad = Model.rotate_about_pt r p t.scad
+  { scad = Scad.rotate_about_pt r p t.scad
   ; outline = List.map ~f:(Vec3.rotate_about_pt r p) t.outline
   ; inline = List.map ~f:(Vec3.rotate_about_pt r p) t.inline
   }
@@ -62,7 +62,7 @@ let clockwise_union ts =
     scad :: scads, collect ~init:out_pts outline, collect ~init:in_pts inline
   in
   let scads, out_pts, in_pts = List.fold ~init:([], [], []) ~f ts in
-  { scad = Model.union scads; outline = List.rev out_pts; inline = List.rev in_pts }
+  { scad = Scad.union scads; outline = List.rev out_pts; inline = List.rev in_pts }
 
 let outline_2d t = List.map ~f:Vec3.to_vec2 t.outline
 let inline_2d t = List.map ~f:Vec3.to_vec2 t.inline
@@ -343,7 +343,7 @@ let straight_base
   let extra_starts = starts false
   and extra_dests = dests false in
   { scad =
-      Model.union
+      Scad.union
         [ Util.prism_exn extra_starts extra_dests
         ; ( if outward
           then Util.prism_exn (starts true) extra_starts
@@ -436,7 +436,7 @@ let join_walls
          ; (if outward then Fn.id else fudge) @@ w2.edges.top_left 0.0001
          ] )
   in
-  { scad = Model.union [ Util.prism_exn starts dests; wedge ]
+  { scad = Scad.union [ Util.prism_exn starts dests; wedge ]
   ; outline =
       [ (if outward then fudge else Fn.id) w1.foot.top_right
       ; (if outward then Fn.id else fudge) w2.foot.top_left
