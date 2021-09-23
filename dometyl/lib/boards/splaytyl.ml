@@ -2,6 +2,11 @@ open! Base
 open! Scad_ml
 open! Generator
 
+(* NOTE: The curvature of this configuration is made with MT3 caps in mind.
+   As SA caps are taller, they will likely be in collision with one another, as
+   can be seen if you set `Plate.make ~caps:Caps.SA.row`. The inner index Matty3
+   key models appear to collide here, but cases printed with this config do make
+   room for real MT3 caps. *)
 let lookups =
   let offset = function
     | 2 -> 0., 3.5, -5. (* middle *)
