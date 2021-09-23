@@ -167,7 +167,7 @@ let rotate_about_pt r p t =
 let quaternion q t =
   { t with
     scad = Scad.quaternion q t.scad
-  ; origin = Quaternion.rotate_vec3 q t.origin
+  ; origin = Vec3.quaternion q t.origin
   ; faces = Faces.quaternion q t.faces
   ; cap = Option.map ~f:(Scad.quaternion q) t.cap
   ; cutout = Option.map ~f:(Scad.quaternion q) t.cutout
@@ -176,7 +176,7 @@ let quaternion q t =
 let quaternion_about_pt q p t =
   { t with
     scad = Scad.quaternion_about_pt q p t.scad
-  ; origin = Quaternion.rotate_vec3_about_pt q p t.origin
+  ; origin = Vec3.quaternion_about_pt q p t.origin
   ; faces = Faces.quaternion_about_pt q p t.faces
   ; cap = Option.map ~f:(Scad.quaternion_about_pt q p) t.cap
   ; cutout = Option.map ~f:(Scad.quaternion_about_pt q p) t.cutout

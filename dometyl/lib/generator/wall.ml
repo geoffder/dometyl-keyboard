@@ -121,8 +121,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
       , -1. )
   in
   let diff a =
-    Vec3.(
-      get_z Quaternion.(rotate_vec3_about_pt (quat (a *. z_sign)) pivot free) -. rock_z)
+    Vec3.(get_z (Vec3.quaternion_about_pt (quat (a *. z_sign)) pivot free) -. rock_z)
     *. z_sign
   in
   let rec find_angle a last_diff =
@@ -135,7 +134,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
   let q = quat @@ (find_angle step (Vec3.get_z free -. rock_z) *. z_sign) in
   let face' = KeyHole.Face.quaternion_about_pt q pivot face in
   let ortho' =
-    Quaternion.rotate_vec3_about_pt q pivot key_origin
+    Vec3.quaternion_about_pt q pivot key_origin
     |> Vec3.sub face'.points.centre
     |> Vec3.normalize
   in
