@@ -11,13 +11,13 @@ let lookups =
     | _ -> 0., 0., 0.
   and curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:28.8 (Float.pi /. 4.25)) ()) (* ring  *)
+      Curvature.(curve ~well:(spec ~radius:30.8 (Float.pi /. 4.25)) ()) (* ring  *)
     | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:24.9 (Float.pi /. 3.55)) ()) (* pinky  *)
+      Curvature.(curve ~well:(spec ~radius:26.9 (Float.pi /. 3.55)) ()) (* pinky  *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 5.6) ~radius:31.2 (Float.pi /. 4.4)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:33.9 (Float.pi /. 5.18)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 5.6) ~radius:33.2 (Float.pi /. 4.4)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:35.9 (Float.pi /. 5.18)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
@@ -33,7 +33,7 @@ let plate_builder =
     ~thumb_curve:
       Curvature.(
         curve
-          ~fan:{ angle = Float.pi /. 10.5; radius = 70.; tilt = Float.pi /. 48. }
+          ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 48. }
           ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
           ())
     ~thumb_offset:(-16., -36., 16.)

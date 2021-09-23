@@ -10,13 +10,13 @@ let lookups =
     | 2 -> 0., 3.5, -8. (* middle *)
     | 3 -> 0., -1., -1.5 (* ring *)
     | i when i >= 4 -> 0., -12., 7. (* pinky *)
-    | 0 -> 0.5, 0., 0.
+    | 0 -> -0.75, 0., 0.
     | _ -> 0., 0., -3.
   and curve = function
     | 0 ->
       Curvature.(
-        curve ~well:(spec ~radius:60.5 (Float.pi /. 10.) ~tilt:(Float.pi /. 11.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:60.5 (Float.pi /. 10.1)) ())
+        curve ~well:(spec ~radius:57. (Float.pi /. 9.) ~tilt:(Float.pi /. 11.)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:56.5 (Float.pi /. 9.)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -19.
@@ -29,7 +29,7 @@ let lookups =
 let plate_builder =
   Plate.make
     ~n_cols:5
-    ~spacing:1.
+    ~spacing:0.5
     ~tent:(Float.pi /. 10.)
     ~lookups
     ~thumb_offset:(-1., -49., -6.)
