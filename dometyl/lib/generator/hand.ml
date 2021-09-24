@@ -425,7 +425,7 @@ let home_curl t =
       ; pinky = Finger.flex ~mult:(-0.5, 1., -0.2) (Float.pi /. 30.) t'.fingers.pinky
       }
   }
-  |> flex_thumb ~mult:(-0.5, 1.0, 0.2) (Float.pi /. 8.)
+  |> flex_thumb ~mult:(-0.4, 1.0, 0.2) (Float.pi /. 8.)
 
 let default_config =
   { index = Finger.config ~offset:(21., 60., 0.) (47.5, 27., 21.)
