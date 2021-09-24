@@ -23,6 +23,10 @@ module Lookups : sig
               will always have to go hand in hand with adjustments to {!offset} to end up
               with something sensible. *)
     ; rows : int -> int (** Number of keys to distribute for the given column. *)
+    ; centres : int -> int
+          (** Centre key index for the given column. Used by key distribution
+              functions, namely {!Curvature.place}. Relevant to [thumb_curve]
+              and {!Lookups.curve}. *)
     }
 
   val default_offset : int -> Vec3.t
@@ -30,6 +34,7 @@ module Lookups : sig
   val default_swing : int -> float
   val default_splay : int -> float
   val default_rows : int -> int
+  val default_centres : int -> int
 
   (** [make ?offset ?curve ?swing ?splay ()]
 
@@ -41,6 +46,7 @@ module Lookups : sig
     -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> ?rows:(int -> int)
+    -> ?centres:(int -> int)
     -> unit
     -> 'k t
 end
@@ -48,7 +54,7 @@ end
 (** Non-function parameters used for the construction of the plate. *)
 type 'k config =
   { n_rows : int -> int
-  ; centre_row : int
+  ; row_centres : int -> int
   ; n_cols : int
   ; centre_col : int
   ; spacing : float
@@ -97,8 +103,6 @@ parameters are used by the {!module:Splaytyl} and {!module:Closed} configuration
 and may or may not be suitable as a jumping off point for your own design. To that end,
 other examples with divergent parameters are provided in the modules within the
 [boards] sub-directory.
-- [centre_row] is used by key distribution functions, namely {!Curvature.place}.
-  Relevant to [thumb_curve] and {!Lookups.curve}.
 - [n_cols] specifies number of columns on the main body of the switch plate
 - [centre_col] specifies the column around which the others are positioned
   (typically 2, the middle finger) on the main body of the switch plate
@@ -120,8 +124,7 @@ other examples with divergent parameters are provided in the modules within the
   along with them to their new homes.
 *)
 val make
-  :  ?centre_row:int
-  -> ?n_cols:int
+  :  ?n_cols:int
   -> ?centre_col:int
   -> ?spacing:float
   -> ?tent:float

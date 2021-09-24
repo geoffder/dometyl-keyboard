@@ -55,11 +55,8 @@ let make
   let bb_index, bb_pinky, rot_sign =
     let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
     and pinky_home =
-      (Columns.key_exn
-         case.plate.columns
-         (case.plate.config.n_cols - 1)
-         case.plate.config.centre_row )
-        .origin
+      let n = case.plate.config.n_cols - 1 in
+      (Columns.key_exn case.plate.columns n (case.plate.config.row_centres n)).origin
     in
     if Float.(
          Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))

@@ -8,6 +8,7 @@ module Lookups = struct
     ; swing : int -> float
     ; splay : int -> float
     ; rows : int -> int
+    ; centres : int -> int
     }
 
   let default_offset = function
@@ -36,6 +37,7 @@ module Lookups = struct
     | _ -> 0.
 
   let default_rows _ = 3
+  let default_centres _ = 1
 
   let make
       ?(offset = default_offset)
@@ -43,14 +45,15 @@ module Lookups = struct
       ?(swing = default_swing)
       ?(splay = default_splay)
       ?(rows = default_rows)
+      ?(centres = default_centres)
       ()
     =
-    { offset; curve; swing; splay; rows }
+    { offset; curve; swing; splay; rows; centres }
 end
 
 type 'k config =
   { n_rows : int -> int
-  ; centre_row : int
+  ; row_centres : int -> int
   ; n_cols : int
   ; centre_col : int
   ; spacing : float
@@ -108,7 +111,6 @@ let make_thumb ~n_keys ~centre_idx ~curve ~caps ~rotate_clips keyhole =
     |> rotate (0., 0., Float.pi /. -2.))
 
 let make
-    ?(centre_row = 1)
     ?(n_cols = 5)
     ?(centre_col = 2)
     ?(spacing = 1.)
@@ -129,8 +131,12 @@ let make
     ?thumb_caps
     (keyhole : _ KeyHole.t)
   =
-  let curve_column n_keys curv =
-    Column.make ~n_keys ~curve:(Curvature.apply ~centre_idx:centre_row curv) ~caps keyhole
+  let curve_column i =
+    Column.make
+      ~n_keys:(lookups.rows i)
+      ~curve:(Curvature.apply ~centre_idx:(lookups.centres i) (lookups.curve i))
+      ~caps
+      keyhole
   in
   let col_offsets =
     let space = keyhole.config.outer_w +. spacing in
@@ -145,10 +151,10 @@ let make
     Column.(rotate_about_pt (0., tent, 0.) Vec3.(off <-> centre_offset) col)
   in
   let place_col ~key:i ~data:off =
-    let tented = apply_tent off (curve_column (lookups.rows i) (lookups.curve i)) in
+    let tented = apply_tent off (curve_column i) in
     Column.rotate_about_pt
       (0., lookups.swing i, lookups.splay i)
-      (Vec3.negate (Map.find_exn tented.keys centre_row).origin)
+      (Vec3.negate (Map.find_exn tented.keys (lookups.centres i)).origin)
       tented
     |> Column.translate off
   in
@@ -197,7 +203,7 @@ let make
   in
   { config =
       { n_rows = lookups.rows
-      ; centre_row
+      ; row_centres = lookups.centres
       ; n_cols
       ; centre_col
       ; spacing
@@ -217,18 +223,14 @@ let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_cols; _ }; columns; _ } =
   Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
 let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; columns; _ } =
-  let bridge c k =
-    Bridge.keys
-      ?in_d
-      ?out_d1
-      ?out_d2
-      (Columns.key_exn columns c k)
-      (Columns.key_exn columns (c + 1) k)
+  let bridge c first =
+    let r = if first then fun _ -> 0 else fun i -> n_rows i - 1 in
+    Option.map2
+      ~f:(Bridge.keys ?in_d ?out_d1 ?out_d2)
+      (Columns.key columns c (r c))
+      (Columns.key columns (c + 1) (r (c + 1)))
   in
-  Scad.union
-  @@ List.init
-       ~f:(fun i -> if i < 2 then bridge i 0 else bridge i (n_rows i - 1))
-       (n_cols - 1)
+  List.init ~f:(fun i -> bridge i (i < 2)) (n_cols - 1) |> List.filter_opt |> Scad.union
 
 let to_scad t = t.scad
 
