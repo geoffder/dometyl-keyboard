@@ -12,16 +12,16 @@ let lookups =
     | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
     | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2., 0., 5.5
+    | 0 -> -2.5, 0., 5.
     | _ -> 0., 0., 0.
   and curve = function
     | i when i >= 3 ->
-      Curvature.(curve ~well:(spec ~radius:36. (Float.pi /. 4.25)) ())
+      Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.25)) ())
       (* ring and pinky *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:45. (Float.pi /. 5.95)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:45.5 (Float.pi /. 6.1)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:46. (Float.pi /. 5.95)) ())
+    | _ -> Curvature.(curve ~well:(spec ~radius:46.5 (Float.pi /. 6.1)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
@@ -39,8 +39,8 @@ let plate_builder =
           ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
           ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
           ())
-    ~thumb_offset:(-18., -40., 12.)
-    ~thumb_angle:Float.(pi /. 30., pi /. -9., pi /. 12.)
+    ~thumb_offset:(-13., -41., 12.)
+    ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.thumb_1u
 
@@ -58,7 +58,7 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Screw
-          ~clearance:2.0
+          ~clearance:3.0
           ~n_steps:(`Flat 3)
           plate
     }
@@ -67,9 +67,10 @@ let base_connector =
   Connect.skeleton
     ~n_facets:1
     ~height:9.
-    ~thumb_height:11.
-    ~east_link:(Connect.snake ~height:11. ~scale:1.5 ~d:1.2 ())
-    ~west_link:(Connect.straight ~height:11. ())
+    ~index_height:12.
+    ~thumb_height:12.
+    ~east_link:(Connect.snake ~height:12. ~scale:1.5 ~d:1.2 ())
+    ~west_link:(Connect.straight ~height:12. ())
     ~cubic_d:2.
     ~cubic_scale:1.5
     ~body_join_steps:3
@@ -82,7 +83,7 @@ let base_connector =
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
-let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 
 let build ?right_hand ?hotswap () =
   Case.make
