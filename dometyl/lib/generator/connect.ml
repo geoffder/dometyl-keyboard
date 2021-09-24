@@ -382,9 +382,10 @@ let join_walls
       > Vec3.distance w1.foot.top_right w2.foot.bot_left)
   and overhang =
     (* Obtuse angle between wall top difference and direction of first wall
-       indicates an overhang. *)
+       indicates an overhang. Ignore corners where fudge_factor is set to 0. *)
     Float.(
-      Vec3.(dot dir1 @@ mul (w1.start.top_right <-> w2.start.top_left) (1., 1., 0.)) < 0.)
+      Vec3.(dot dir1 @@ mul (w1.start.top_right <-> w2.start.top_left) (1., 1., 0.)) < 0.
+      && fudge_factor > 0.)
   in
   (* Move the start or destination points along the outer face of the wall to improve angle. *)
   let fudge start =
