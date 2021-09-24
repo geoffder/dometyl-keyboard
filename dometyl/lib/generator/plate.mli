@@ -23,7 +23,7 @@ module Lookups : sig
               will always have to go hand in hand with adjustments to {!offset} to end up
               with something sensible. *)
     ; rows : int -> int (** Number of keys to distribute for the given column. *)
-    ; centres : int -> int
+    ; centre : int -> int
           (** Centre key index for the given column. Used by key distribution
               functions, namely {!Curvature.place}. Relevant to [thumb_curve]
               and {!Lookups.curve}. *)
@@ -34,7 +34,7 @@ module Lookups : sig
   val default_swing : int -> float
   val default_splay : int -> float
   val default_rows : int -> int
-  val default_centres : int -> int
+  val default_centre : int -> int
 
   (** [make ?offset ?curve ?swing ?splay ()]
 
@@ -46,7 +46,7 @@ module Lookups : sig
     -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> ?rows:(int -> int)
-    -> ?centres:(int -> int)
+    -> ?centre:(int -> int)
     -> unit
     -> 'k t
 end
