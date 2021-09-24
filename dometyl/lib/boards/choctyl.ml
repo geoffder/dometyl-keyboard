@@ -86,7 +86,7 @@ let base_connector =
     ~overlap_factor:1.2
     ~close_thumb:false
 
-let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0.5 ~y_off:(-1.2) (make ()))
 
 let build ?right_hand ?hotswap () =
   Case.make
