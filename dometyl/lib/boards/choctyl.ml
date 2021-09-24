@@ -36,8 +36,8 @@ let plate_builder =
           ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 48. }
           ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
           ())
-    ~thumb_offset:(-16., -36., 16.)
-    ~thumb_angle:Float.(pi /. 30., pi /. -9., pi /. 12.)
+    ~thumb_offset:(-13., -41., 14.)
+    ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~lookups
     ~caps:Caps.MBK.uniform
 
@@ -64,7 +64,7 @@ let wall_builder plate =
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east:No
           ~west:Screw
-          ~clearance:2.5
+          ~clearance:3.
           ~n_facets:3
           ~n_steps:(`Flat 4)
           plate
@@ -86,7 +86,7 @@ let base_connector =
     ~overlap_factor:1.2
     ~close_thumb:false
 
-let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 
 let build ?right_hand ?hotswap () =
   Case.make
