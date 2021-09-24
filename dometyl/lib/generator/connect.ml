@@ -420,10 +420,6 @@ let join_walls
   let top_start, starts =
     let shove = Vec3.(add (mul dir1 (overlap, overlap, 0.))) in
     let top =
-      (* w1.edge_drawer.top
-       * @@ (if overhang then Fn.id else shove)
-       * @@ fudge true
-       * @@ w1.edges.top_right 0. *)
       w1.edges.top_right 0.
       |> fudge true
       |> (if overhang then Fn.id else shove)
