@@ -380,6 +380,11 @@ let join_walls
     Float.(
       Vec3.distance w1.foot.top_right w2.foot.top_left
       > Vec3.distance w1.foot.top_right w2.foot.bot_left)
+  and overhang =
+    (* Obtuse angle between wall top difference and direction of first wall
+       indicates an overhang. *)
+    Float.(
+      Vec3.(dot dir1 @@ mul (w1.start.top_right <-> w2.start.top_left) (1., 1., 0.)) < 0.)
   in
   (* Move the start or destination points along the outer face of the wall to improve angle. *)
   let fudge start =
@@ -398,7 +403,8 @@ let join_walls
     if Float.(
          ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
          && abs major_diff > abs minor_diff )
-         || intersect > 0.)
+         || intersect > 0.
+         || overhang)
     then (
       let rough_area =
         Vec3.(
@@ -409,9 +415,20 @@ let join_walls
     else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
+  (* HACK: The way I am using the overhang flag here seemed to partially rescue one case,
+     but I am not confident that it is a solid fix. *)
   let top_start, starts =
     let shove = Vec3.(add (mul dir1 (overlap, overlap, 0.))) in
-    let top = w1.edge_drawer.top @@ shove @@ fudge true @@ w1.edges.top_right 0. in
+    let top =
+      (* w1.edge_drawer.top
+       * @@ (if overhang then Fn.id else shove)
+       * @@ fudge true
+       * @@ w1.edges.top_right 0. *)
+      w1.edges.top_right 0.
+      |> fudge true
+      |> (if overhang then Fn.id else shove)
+      |> w1.edge_drawer.top
+    in
     ( top
     , Bezier.curve_rev
         ~n_steps
@@ -420,7 +437,12 @@ let join_walls
         top )
   and top_dest, dests =
     let shove = Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.))) in
-    let top = w2.edge_drawer.top @@ shove @@ fudge false @@ w2.edges.top_left 0. in
+    let top =
+      w2.edges.top_left 0.
+      |> fudge false
+      |> (if overhang then Fn.id else shove)
+      |> w2.edge_drawer.top
+    in
     ( top
     , Bezier.curve_rev
         ~n_steps
