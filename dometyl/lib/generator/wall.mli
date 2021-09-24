@@ -36,6 +36,30 @@ module Edge : sig
   val point_at_z : ?max_iter:int -> ?tolerance:float -> t -> float -> Vec3.t
 end
 
+(** Functions that find the point along the top and bottom edges of the start
+    position of the wall closest to the given xy position, and provides a
+    bezier edge to the ground starting from there. *)
+module EdgeDrawer : sig
+  type drawer = Vec3.t -> Edge.t
+
+  type t =
+    { top : drawer
+    ; bot : drawer
+    }
+
+  val make
+    :  ?max_iter:int
+    -> ?tolerance:float
+    -> get_bez:(bool -> Vec3.t -> Edge.t)
+    -> Points.t
+    -> t
+
+  val map : f:(drawer -> drawer) -> t -> t
+
+  (** Basic transformation functions *)
+  include Sigs.Transformable with type t := t
+end
+
 (** Bezier curves representing the four edges running from the start to the foot
     of each {!Wall.t} *)
 module Edges : sig
@@ -72,6 +96,10 @@ type t =
   { scad : Scad.t (** Aggregate scad, including screw outshoot if included *)
   ; start : Points.t (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
   ; foot : Points.t (** Terminal points where the wall meets the XY plane. *)
+  ; edge_drawer : EdgeDrawer.t
+        (** Generate {!Edge.t}'s emerging from point along top and bottom
+        starting edges of the wall closest to the provided {!Vec3.t} on the XY
+        plane. *)
   ; edges : Edges.t (** Bezier curves that specify the edge vertices. *)
   ; screw : Screw.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)

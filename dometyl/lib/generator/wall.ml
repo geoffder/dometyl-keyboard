@@ -1,5 +1,6 @@
 open Base
 open Scad_ml
+open Infix
 
 module Steps = struct
   type t =
@@ -26,6 +27,54 @@ module Edge = struct
       Util.bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
     in
     t bez_frac
+end
+
+module EdgeDrawer = struct
+  type drawer = Vec3.t -> Edge.t
+
+  type t =
+    { top : drawer
+    ; bot : drawer
+    }
+
+  let make
+      ?(max_iter = 100)
+      ?(tolerance = 0.001)
+      ~(get_bez : bool -> Vec3.t -> Edge.t)
+      Points.{ top_left; top_right; bot_left; bot_right; _ }
+    =
+    let find_between lp rp (x, y, _) =
+      let ((dx, dy, _) as diff) = Vec3.sub rp lp in
+      let get_major, target =
+        if Float.(abs dx > abs dy) then Vec3.get_x, x else Vec3.get_y, y
+      in
+      let ml = get_major lp
+      and mr = get_major rp in
+      if Float.(target > ml && target < mr) || Float.(target < ml && target > mr)
+      then (
+        let get s = Vec3.(add lp (mul_scalar diff s)) in
+        let pos =
+          Util.bisection_exn
+            ~max_iter
+            ~tolerance
+            ~f:(fun s -> get_major (get s) -. target)
+            0.
+            1.
+        in
+        get pos )
+      else if Float.(abs (target -. ml) < abs (target -. mr))
+      then lp
+      else rp
+    in
+    { top = find_between top_left top_right >> get_bez true
+    ; bot = find_between bot_left bot_right >> get_bez false
+    }
+
+  let map ~f t = { top = f t.top; bot = f t.bot }
+  let translate p = map ~f:(fun d start -> d start >> Vec3.add p)
+  let mirror ax = map ~f:(fun d start -> d start >> Vec3.mirror ax)
+  let rotate r = map ~f:(fun d start -> d start >> Vec3.rotate r)
+  let rotate_about_pt r p = map ~f:(fun d start -> d start >> Vec3.rotate_about_pt r p)
 end
 
 module Edges = struct
@@ -68,6 +117,7 @@ type t =
   { scad : Scad.t
   ; start : Points.t
   ; foot : Points.t
+  ; edge_drawer : EdgeDrawer.t
   ; edges : Edges.t
   ; screw : Screw.t option
   }
@@ -76,6 +126,7 @@ let translate p t =
   { scad = Scad.translate p t.scad
   ; start = Points.translate p t.start
   ; foot = Points.translate p t.foot
+  ; edge_drawer = EdgeDrawer.translate p t.edge_drawer
   ; edges = Edges.translate p t.edges
   ; screw = Option.map ~f:(Screw.translate p) t.screw
   }
@@ -84,6 +135,7 @@ let mirror ax t =
   { scad = Scad.mirror ax t.scad
   ; start = Points.mirror ax t.start
   ; foot = Points.mirror ax t.foot
+  ; edge_drawer = EdgeDrawer.mirror ax t.edge_drawer
   ; edges = Edges.mirror ax t.edges
   ; screw = Option.map ~f:(Screw.mirror ax) t.screw
   }
@@ -92,6 +144,7 @@ let rotate r t =
   { scad = Scad.rotate r t.scad
   ; start = Points.rotate r t.start
   ; foot = Points.rotate r t.foot
+  ; edge_drawer = EdgeDrawer.rotate r t.edge_drawer
   ; edges = Edges.rotate r t.edges
   ; screw = Option.map ~f:(Screw.rotate r) t.screw
   }
@@ -100,6 +153,7 @@ let rotate_about_pt r p t =
   { scad = Scad.rotate_about_pt r p t.scad
   ; start = Points.rotate_about_pt r p t.start
   ; foot = Points.rotate_about_pt r p t.foot
+  ; edge_drawer = EdgeDrawer.rotate_about_pt r p t.edge_drawer
   ; edges = Edges.rotate_about_pt r p t.edges
   ; screw = Option.map ~f:(Screw.rotate_about_pt r p) t.screw
   }
@@ -253,6 +307,10 @@ let poly_siding
            (Option.value_map ~default:[] ~f:(fun s -> Option.to_list s.cut) screw)
   ; start = start_face.points
   ; foot
+  ; edge_drawer =
+      EdgeDrawer.make
+        ~get_bez:(fun top start -> snd (get_bez top start))
+        cleared_face.points
   ; edges = Edges.of_clockwise_list_exn (corners bezs)
   ; screw
   }

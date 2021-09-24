@@ -375,21 +375,23 @@ let join_walls
     in
     if Float.(abs dx > abs dy) then x, y else y, x
   in
-  (* Move the start or destination points along the outer face of the wall to improve angle. *)
   let outward =
     (* away from the centre of mass, or not? *)
     Float.(
       Vec3.distance w1.foot.top_right w2.foot.top_left
       > Vec3.distance w1.foot.top_right w2.foot.bot_left)
   in
-  let fudge =
-    let dir = if outward then Vec3.zero else dir2 in
-    let extra =
-      if Float.(Vec3.(get_z w1.start.top_right > get_z w2.start.top_left))
-      then Float.(abs (max (fudge_factor -. major_diff) 0.))
-      else 0.
-    in
-    Vec3.(add (mul dir (-.extra, -.extra, 0.)))
+  (* Move the start or destination points along the outer face of the wall to improve angle. *)
+  let fudge start =
+    if (not outward) && not start
+    then (
+      let extra =
+        if Float.(Vec3.(get_z w1.start.top_right > get_z w2.start.top_left))
+        then Float.(abs (max (fudge_factor -. major_diff) 0.))
+        else 0.
+      in
+      Vec3.(add (mul dir2 (-.extra, -.extra, 0.))) )
+    else Fn.id
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy
     and intersect = Points.overlapping_bounds w1.foot w2.foot in
@@ -407,17 +409,25 @@ let join_walls
     else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
-  let starts =
-    Bezier.curve_rev
-      ~n_steps
-      ~init:(Bezier.curve ~n_steps w1.edges.bot_right)
-      (fun step -> (if outward then fudge else Fn.id) @@ w1.edges.top_right step)
-    |> List.map ~f:Vec3.(add (mul dir1 (overlap, overlap, 0.)))
-  and dests =
-    Bezier.curve_rev ~n_steps ~init:(Bezier.curve ~n_steps w2.edges.bot_left) (fun step ->
-        (if outward then Fn.id else fudge) @@ w2.edges.top_left step )
-    |> List.map ~f:Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.)))
-  and wedge =
+  let top_start, starts =
+    let shove = Vec3.(add (mul dir1 (overlap, overlap, 0.))) in
+    let top = w1.edge_drawer.top @@ shove @@ fudge true @@ w1.edges.top_right 0. in
+    ( top
+    , Bezier.curve_rev
+        ~n_steps
+        ~init:
+          (Bezier.curve ~n_steps (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)))
+        top )
+  and top_dest, dests =
+    let shove = Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.))) in
+    let top = w2.edge_drawer.top @@ shove @@ fudge false @@ w2.edges.top_left 0. in
+    ( top
+    , Bezier.curve_rev
+        ~n_steps
+        ~init:(Bezier.curve ~n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.)))
+        top )
+  in
+  let wedge =
     (* Fill in the volume between the "wedge" hulls that are formed by swinging the
      * key face and moving it out for clearance prior to drawing the walls. *)
     Util.prism_exn
@@ -426,21 +436,14 @@ let join_walls
          [ w1.start.top_right
          ; w1.start.bot_right
          ; w1.edges.bot_right 0.
-         ; (if outward then fudge else Fn.id) @@ w1.edges.top_right 0.0001
+         ; top_start 0.0001
          ] )
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, 0.)))
-         [ w2.start.top_left
-         ; w2.start.bot_left
-         ; w2.edges.bot_left 0.
-         ; (if outward then Fn.id else fudge) @@ w2.edges.top_left 0.0001
-         ] )
+         [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.0001 ] )
   in
   { scad = Scad.union [ Util.prism_exn starts dests; wedge ]
-  ; outline =
-      [ (if outward then fudge else Fn.id) w1.foot.top_right
-      ; (if outward then Fn.id else fudge) w2.foot.top_left
-      ]
+  ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ]
   ; inline =
       [ Vec3.(add (mul dir1 (overlap, overlap, 0.)) w1.foot.bot_right)
       ; Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.)) w2.foot.bot_left)
