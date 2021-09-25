@@ -612,40 +612,38 @@ let manual
         | Some (i, w) -> i, Some w
         | None        -> 0, None
       in
-      Option.map2 ~f:(connect (east last_idx)) last southeast |> Option.to_list
+      Option.map2 ~f:(connect (east last_idx)) last southeast
     in
     let _, _, side =
       let f = manual_joiner ~get:Option.some ~join:east in
-      Map.fold_right ~init:(0, None, south_corner) ~f body.sides.east
+      Map.fold_right ~init:(0, None, []) ~f body.sides.east
     in
-    side
+    Util.prepend_opt south_corner side |> List.rev
   in
   let last_south, south =
     let _, last, side =
       let f = manual_joiner ~get:(fun c -> c.Walls.Body.Cols.south) ~join:south in
       Map.fold_right ~init:(0, None, []) ~f body.cols
     in
-    last, side
+    last, List.rev side
   in
   let thumb_swoop =
-    let last_idx, last_south, swoop =
-      let eastern =
-        let southeast =
-          Option.bind ~f:(fun e -> (snd e).Walls.Thumb.south) (Map.max_elt thumb.keys)
-        in
-        [ Option.map2
-            ~f:(connect east_link)
-            last_south
-            (Option.first_some thumb.sides.east southeast)
-        ; Option.map2 ~f:(connect (thumb_east 0)) thumb.sides.east southeast
-        ]
-        |> List.filter_opt
+    let last_idx, last_thumb_south, swoop =
+      let southeast =
+        Option.bind ~f:(fun e -> (snd e).Walls.Thumb.south) (Map.max_elt thumb.keys)
       in
+      let e_link =
+        Option.map2
+          ~f:(connect east_link)
+          last_south
+          (Option.first_some thumb.sides.east southeast)
+      and se = Option.map2 ~f:(connect (thumb_east 0)) thumb.sides.east southeast in
       let f = manual_joiner ~get:(fun d -> d.Walls.Thumb.south) ~join:thumb_south in
-      Map.fold_right ~init:(0, None, eastern) ~f thumb.keys
+      Map.fold_right ~init:(0, None, List.filter_opt [ se; e_link ]) ~f thumb.keys
     in
     let swoop =
-      let sw = Option.map2 ~f:(connect (thumb_south last_idx)) last_south thumb.sides.west
+      let sw =
+        Option.map2 ~f:(connect (thumb_south last_idx)) last_thumb_south thumb.sides.west
       and nw =
         Option.map2
           ~f:(connect (thumb_west 0))
@@ -661,9 +659,10 @@ let manual
     Util.prepend_opt
       (Option.map2
          ~f:(connect west_link)
-         (Option.first_some last (Option.first_some thumb.sides.west last_south))
+         (Option.first_some last (Option.first_some thumb.sides.west last_thumb_south))
          (Option.map ~f:snd @@ Map.min_elt body.sides.west) )
       swoop
+    |> List.rev
   in
   (* TODO: Do unions of each of these separately, then clockwise union them.
      Test whether breakage leads to just part of the connection "disappearing" on
