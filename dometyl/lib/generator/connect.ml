@@ -577,29 +577,27 @@ let manual
     ?(west_link = cubic ~bow_out:false ())
     Walls.{ body; thumb }
   =
-  let n_cols = Map.length body.cols
-  and col side i =
-    let c = Map.find_exn body.cols i in
-    match side with
-    | `N -> c.north
-    | `S -> c.south
+  let southeast =
+    let%bind.Option _, c = Map.max_elt body.cols in
+    c.south
   in
-  let southeast = col `S (n_cols - 1) in
   let west =
-    let last_idx, last, side =
+    let northwest =
+      let%bind.Option c = Map.find body.cols 0 in
+      c.north
+    and last_idx, last, side =
       let f = manual_joiner ~get:Option.some ~join:west in
       Map.fold ~init:(0, None, []) ~f body.sides.west
     in
     List.rev
-    @@ Util.prepend_opt (Option.map2 ~f:(connect (west last_idx)) last (col `N 0)) side
+    @@ Util.prepend_opt (Option.map2 ~f:(connect (west last_idx)) last northwest) side
   in
   let north =
     let last_idx, last, side =
       let f = manual_joiner ~get:(fun c -> c.Walls.Body.Cols.north) ~join:north in
       Map.fold ~init:(0, None, []) ~f body.cols
-    in
-    (* if there is nothing in the east, connect to the southern corner *)
-    let next =
+    and next =
+      (* if there is nothing in the east, connect to the southern corner *)
       Option.first_some (Option.map ~f:snd @@ Map.max_elt body.sides.east) southeast
     in
     List.rev
@@ -613,14 +611,12 @@ let manual
         | None        -> 0, None
       in
       Option.map2 ~f:(connect (east last_idx)) last southeast
-    in
-    let _, _, side =
+    and _, _, side =
       let f = manual_joiner ~get:Option.some ~join:east in
       Map.fold_right ~init:(0, None, []) ~f body.sides.east
     in
     Util.prepend_opt south_corner side |> List.rev
-  in
-  let last_south, south =
+  and last_south, south =
     let _, last, side =
       let f = manual_joiner ~get:(fun c -> c.Walls.Body.Cols.south) ~join:south in
       Map.fold_right ~init:(0, None, []) ~f body.cols
