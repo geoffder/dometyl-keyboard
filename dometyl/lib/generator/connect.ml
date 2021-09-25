@@ -126,7 +126,7 @@ let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : 
 
 let cubic_base
     ?(n_facets = 1)
-    ?(height = 4.)
+    ?(height = 10.)
     ?(scale = 1.1)
     ?(d = 2.)
     ?(n_steps = 10)
@@ -750,15 +750,11 @@ let skeleton
   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
 
 let closed
-    ?(n_facets = 1)
     ?n_steps
     ?fudge_factor
     ?overlap_factor
-    ?snake_d
-    ?snake_scale
-    ?snake_height
-    ?snake_steps
     ?(west_link = full_join ~fudge_factor:0. ())
+    ?(east_link = snake ())
     Walls.{ body; thumb }
   =
   let corner = Option.map2 ~f:(join_walls ?n_steps ~fudge_factor:0. ?overlap_factor) in
@@ -807,17 +803,7 @@ let closed
     and southeast =
       Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south) (Map.max_elt thumb.keys)
     and west_body = Option.map ~f:snd @@ Map.min_elt body.sides.west in
-    let e_link =
-      (Option.map2
-         ~f:
-           (snake_base
-              ~n_facets
-              ?height:snake_height
-              ?scale:snake_scale
-              ?d:snake_d
-              ?n_steps:snake_steps ) )
-        (col `S 2)
-        southeast
+    let e_link = (Option.map2 ~f:(connect east_link)) (col `S 2) southeast
     and w_link =
       let link = Option.map2 ~f:(connect west_link) in
       link (Option.first_some northwest thumb.sides.west) west_body
@@ -830,5 +816,169 @@ let closed
     |> Util.prepend_opt e_link
   in
   List.join [ west; north; east; south; thumb ] |> clockwise_union
+
+let manual_joiner ~get ~join ~key ~data (i, last, scads) =
+  let next = get data in
+  let scads' =
+    match Option.map2 ~f:(connect @@ join i) last next with
+    | Some j -> j :: scads
+    | None   -> scads
+  in
+  match next, last with
+  | Some _, _    -> key, next, scads'
+  | None, Some _ -> i, last, scads'
+  | _            -> i, last, scads'
+
+(* let manual
+ *     ?(west = fun _ -> bez ())
+ *     ?(north =
+ *       function
+ *       | i when i < 2 -> full_join ()
+ *       | i when i = 4 -> cubic ()
+ *       | _ -> straight ())
+ *     ?(south = fun _ -> straight ())
+ *     ?(east = fun _ -> bez ())
+ *     ?(thumb_east = fun _ -> full_join ())
+ *     ?(thumb_south = fun _ -> full_join ())
+ *     ?(thumb_west = fun _ -> full_join ())
+ *     ?(thumb_north = fun _ -> straight ())
+ *     ?(east_link = snake ())
+ *     ?(west_link = cubic ~bow_out:false ())
+ *     Walls.{ body; thumb }
+ *   =
+ *   (\* TODO:
+ *      - bez_base is not great on the northeast corner when there is actually a wall
+ *        on that side that needs to be connected, because it was designed for cornering
+ *        like it is used on the west side.
+ *      - should still do some clean-up on this, especially now that I ripped through here
+ *        adjusting to the new type t. *\)
+ *   let n_cols = Map.length body.cols
+ *   and col side i =
+ *     let c = Map.find_exn body.cols i in
+ *     match side with
+ *     | `N -> c.north
+ *     | `S -> c.south
+ *   in
+ *   let southeast = col `S (n_cols - 1) in
+ *   let west =
+ *     let last_idx, last, side =
+ *       let f = manual_joiner ~get:Option.some ~join:west in
+ *       Map.fold ~init:(0, None, []) ~f body.sides.west
+ *     in
+ *     List.rev
+ *     @@ Util.prepend_opt (Option.map2 ~f:(connect (west last_idx)) last (col `N 0)) side
+ *   in
+ *   let north =
+ *     let last_idx, last, side =
+ *       let f = manual_joiner ~get:(fun c -> c.Walls.Body.Cols.north) ~join:north in
+ *       Map.fold ~init:(0, None, []) ~f body.cols
+ *     in
+ *     (\* if there is nothing in the east, connect to the southern corner *\)
+ *     let next =
+ *       Option.first_some (Option.map ~f:snd @@ Map.max_elt body.sides.east) southeast
+ *     in
+ *     List.rev
+ *     @@ Util.prepend_opt (Option.map2 ~f:(connect (north last_idx)) last next) side
+ *   in
+ *   let east =
+ *     let south_corner =
+ *       let last_idx, last =
+ *         match Map.min_elt body.sides.east with
+ *         | Some (i, w) -> i, Some w
+ *         | None        -> 0, None
+ *       in
+ *       Option.map2 ~f:(connect (east last_idx)) last southeast |> Option.to_list
+ *     in
+ *     let _, _, side =
+ *       let f = manual_joiner ~get:Option.some ~join:east in
+ *       Map.fold_right ~init:(0, None, south_corner) ~f body.sides.east
+ *     in
+ *     side
+ *   in
+ *   let south =
+ *     let base i =
+ *       if south_joins i
+ *       then join_walls ?n_steps:body_join_steps ?fudge_factor ?overlap_factor
+ *       else if i = pinky_idx && pinky_elbow
+ *       then inward_elbow_base ~n_facets ~d:1.5 ?height ?n_steps
+ *       else
+ *         straight_base
+ *           ~n_facets
+ *           ?height
+ *           ?fudge_factor
+ *           ?overlap_factor
+ *           ?min_width:min_straight_width
+ *     in
+ *     List.init
+ *       ~f:(fun i ->
+ *         let idx = n_cols - 1 - i in
+ *         Option.map2 ~f:(base idx) (col `S idx) (col `S (idx - 1)) )
+ *       (n_cols - 1)
+ *     |> List.filter_opt
+ *   in
+ *   let east_swoop, west_swoop =
+ *     let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0
+ *     and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys
+ *     and corner =
+ *       Option.map2
+ *         ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor)
+ *     and link = Option.map2 ~f:(connect east_link) in
+ *     (\* TODO: es and sw are pretty repetitive, can probably clean up, and also take
+ *        lessons from using closest key into other places. *\)
+ *     let es =
+ *       match corner thumb.sides.east e_s with
+ *       | Some _ as es -> es
+ *       | None         ->
+ *         Map.closest_key thumb.keys `Less_than (Map.length thumb.keys)
+ *         |> Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south)
+ *         |> Option.map2 ~f:(bez_base ?n_steps ?height:thumb_height) thumb.sides.east
+ *     and e_link =
+ *       if Option.is_some thumb.sides.east
+ *       then Option.map2 ~f:(bez_base ?n_steps ?height) (col `S 2) thumb.sides.east
+ *       else link (col `S 2) e_s
+ *     and sw =
+ *       match corner w_s thumb.sides.west with
+ *       | Some _ as es -> es
+ *       | None         ->
+ *         let next =
+ *           Map.closest_key thumb.keys `Greater_or_equal_to 1
+ *           |> Option.bind ~f:(fun (_, k) -> k.Walls.Thumb.south)
+ *         in
+ *         Option.map2
+ *           ~f:
+ *             (straight_base
+ *                ~n_facets
+ *                ?height:thumb_height
+ *                ?fudge_factor
+ *                ?overlap_factor
+ *                ?min_width:min_straight_width )
+ *           next
+ *           thumb.sides.west
+ *     and nw = corner thumb.sides.west w_n
+ *     and w_link =
+ *       let f = connect west_link in
+ *       Option.map2 ~f (Option.first_some w_n thumb.sides.west) (Map.find body.sides.west 0)
+ *     in
+ *     let east_swoop =
+ *       Util.prepend_opt e_link
+ *       @@
+ *       if close_thumb
+ *       then (
+ *         let _, scads =
+ *           let join = join_walls ?n_steps:thumb_join_steps ?fudge_factor ?overlap_factor
+ *           and get d = d.Walls.Thumb.south in
+ *           Map.fold_right ~init:(None, Option.to_list es) ~f:(joiner ~get ~join) thumb.keys
+ *         in
+ *         List.rev scads )
+ *       else
+ *         Option.map2 ~f:(bez_base ?height:thumb_height ?n_steps) e_s w_s |> Option.to_list
+ *     in
+ *     east_swoop, List.filter_opt [ sw; nw; w_link ]
+ *   in
+ *   (\* TODO: Do unions of each of these separately, then clockwise union them.
+ *      Test whether breakage leads to just part of the connection "disappearing" on
+ *      CGAL failure, rather than the whole thing. (make it easier to pin point what
+ *      is actually failing.) *\)
+ *   List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union *)
 
 let to_scad t = t.scad

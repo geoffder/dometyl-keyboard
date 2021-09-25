@@ -85,10 +85,7 @@ let plate_welder = Plate.column_joins
 let base_connector =
   Connect.closed
     ~n_steps:5
-    ~snake_d:2.
-    ~snake_scale:3.
-    ~snake_height:10.
-    ~snake_steps:12
+    ~east_link:(Connect.snake ~d:2. ~scale:3. ~height:10. ~n_steps:12 ())
     ~west_link:(Connect.cubic ~d:3. ~scale:0.25 ~height:15. ~bow_out:false ())
 
 let build ?hotswap ~ports_cutter () =
