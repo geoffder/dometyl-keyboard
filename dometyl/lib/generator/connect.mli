@@ -174,6 +174,20 @@ val full_join
 val elbow : ?n_facets:int -> ?height:float -> ?n_steps:int -> ?d:float -> unit -> config
 val connect : config -> Wall.t -> Wall.t -> t
 
+val manual
+  :  ?west:(int -> config)
+  -> ?north:(int -> config)
+  -> ?south:(int -> config)
+  -> ?east:(int -> config)
+  -> ?east_link:config
+  -> ?thumb_east:(int -> config)
+  -> ?thumb_south:(int -> config)
+  -> ?thumb_west:(int -> config)
+  -> ?thumb_north:(int -> config)
+  -> ?west_link:config
+  -> Walls.t
+  -> t
+
 val skeleton
   :  ?n_facets:int
   -> ?index_height:float
