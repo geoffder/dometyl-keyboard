@@ -660,11 +660,9 @@ let manual
       swoop
     |> List.rev
   in
-  (* TODO: Do unions of each of these separately, then clockwise union them.
-     Test whether breakage leads to just part of the connection "disappearing" on
-     CGAL failure, rather than the whole thing. (make it easier to pin point what
-     is actually failing.) *)
-  List.join [ west; north; east; south; thumb_swoop ] |> clockwise_union
+  (* unions separately, followed by final union so failures in CGAL can be narrowed
+     down more easily (a section disappears, rather than the whole thing) *)
+  List.map ~f:clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
 
 (* TODO: re-write skeleton to use manual (as with closed). *)
 let skeleton
@@ -862,11 +860,10 @@ let skeleton
     in
     east_swoop, List.filter_opt [ sw; nw; w_link ]
   in
-  (* TODO: Do unions of each of these separately, then clockwise union them.
-     Test whether breakage leads to just part of the connection "disappearing" on
-     CGAL failure, rather than the whole thing. (make it easier to pin point what
-     is actually failing.) *)
-  List.join [ west; north; east; south; east_swoop; west_swoop ] |> clockwise_union
+  (* unions separately, followed by final union so failures in CGAL can be narrowed
+     down more easily (a section disappears, rather than the whole thing) *)
+  List.map ~f:clockwise_union [ west; north; east; south; east_swoop; west_swoop ]
+  |> clockwise_union
 
 let closed
     ?n_steps
