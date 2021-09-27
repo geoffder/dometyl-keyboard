@@ -92,11 +92,13 @@ module OEM = struct
 end
 
 module DSA = struct
+  (* Generated with https://github.com/rsheldiii/KeyV2 *)
   let r3 = Scad.import (path "KeyV2_DSA/DSA-R3.stl") |> color
   let uniform _ = r3
 end
 
 module DSS = struct
+  (* Generated with https://github.com/rsheldiii/KeyV2 *)
   let path n = path (Printf.sprintf "KeyV2_DSS/DSS-%s.stl" n)
   let r1 = Scad.import (path "R1") |> color
   let r2 = Scad.import (path "R2") |> color
@@ -110,4 +112,46 @@ module DSS = struct
     | 2 -> r2
     | 3 -> r1
     | _ -> r5
+end
+
+module DES = struct
+  (* Generated with https://github.com/pseudoku/PseudoMakeMeKeyCapProfiles *)
+  let path n = path (Printf.sprintf "Pseudoku_DES/%s.stl" n)
+  let r1 = Scad.import (path "standard/DES-R1") |> color
+  let r2 = Scad.import (path "standard/DES-R2") |> color
+  let r3 = Scad.import (path "standard/DES-R3") |> color
+  let r3_deep = Scad.import (path "standard/DES-R3-deep") |> color
+  let r4 = Scad.import (path "standard/DES-R4") |> color
+
+  let keyria_thumb_r1t0 =
+    Scad.import (path "thumb/DES-keyria-R1T0")
+    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> color
+
+  let keyria_thumb_r1t1 =
+    Scad.import (path "thumb/DES-keyria-R1T1")
+    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> color
+
+  let keyria_thumb_r1t2 =
+    Scad.import (path "thumb/DES-keyria-R1T2")
+    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> color
+
+  let keyria_thumb_r1t3 =
+    Scad.import (path "thumb/DES-keyria-R1T3")
+    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> color
+
+  let row = function
+    | 0 -> r4
+    | 1 -> r3
+    | 2 -> r2
+    | _ -> r1
+
+  let thumb = function
+    | 0 -> keyria_thumb_r1t1
+    | 1 -> keyria_thumb_r1t0
+    | 2 -> keyria_thumb_r1t2
+    | _ -> keyria_thumb_r1t3
 end
