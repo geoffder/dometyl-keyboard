@@ -122,6 +122,7 @@ module DES = struct
   let r3 = Scad.import (path "standard/DES-R3") |> color
   let r3_deep = Scad.import (path "standard/DES-R3-deep") |> color
   let r4 = Scad.import (path "standard/DES-R4") |> color
+  let r5 = Scad.import (path "standard/DES-R5") |> color
 
   let keyria_thumb_r1t0 =
     Scad.import (path "thumb/DES-keyria-R1T0")
@@ -149,9 +150,35 @@ module DES = struct
     | 2 -> r2
     | _ -> r1
 
+  let pseudo_scooped = function
+    | 0 -> r1
+    | 1 -> r5
+    | 2 -> Scad.rotate (0., 0., Float.pi) r2
+    | _ -> r2
+
   let thumb = function
     | 0 -> keyria_thumb_r1t1
     | 1 -> keyria_thumb_r1t0
     | 2 -> keyria_thumb_r1t2
     | _ -> keyria_thumb_r1t3
+end
+
+module Chicago = struct
+  (* Generated with https://github.com/pseudoku/PseudoMakeMeKeyCapProfiles *)
+  let path n = path (Printf.sprintf "Pseudoku_Chicago/Chicago-%s.stl" n)
+  let r2 = Scad.import (path "R2-R4") |> color
+  let r4 = Scad.rotate (0., 0., Float.pi) r2
+  let r3_flat = Scad.import (path "R3-flat") |> color
+  let r3_chord = Scad.import (path "R3-chord") |> color
+  let thumb_1u = Scad.import (path "thumb-1u") |> color
+  let thumb_1_5u = Scad.import (path "thumb-1_5u") |> color
+
+  let row = function
+    | 0 -> r2
+    | 1 -> r3_flat
+    | _ -> r4
+
+  let thumb = function
+    | 0 -> Scad.rotate (0., 0., Float.pi) thumb_1u
+    | _ -> thumb_1u
 end
