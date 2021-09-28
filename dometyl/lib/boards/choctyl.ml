@@ -33,11 +33,12 @@ let plate_builder =
     ~thumb_curve:
       Curvature.(
         curve
-          ~fan:{ angle = Float.pi /. 10.; radius = 70.; tilt = Float.pi /. 48. }
+          ~fan:{ angle = Float.pi /. 9.5; radius = 70.; tilt = Float.pi /. 48. }
           ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
           ())
-    ~thumb_offset:(-13., -41., 14.)
+    ~thumb_offset:(-12., -39., 14.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
+    ~rotate_thumb_clips:true
     ~lookups
     ~caps:Caps.MBK.uniform
 
@@ -60,8 +61,8 @@ let wall_builder plate =
             | _ -> No )
           plate
     ; thumb =
-        Thumb.make
-          ~south_lookup:(fun i -> if i = 1 then No else Yes)
+        Thumb.make (* ~south_lookup:(fun i -> if i = 1 then No else Yes) *)
+          ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Screw
           ~clearance:3.
@@ -84,7 +85,8 @@ let base_connector =
     ~thumb_join_steps:4
     ~fudge_factor:8.
     ~overlap_factor:1.2
-    ~close_thumb:false
+    ~close_thumb:true
+    ~pinky_elbow:false
 
 let ports_cutter = BastardShield.(cutter ~x_off:0.5 ~y_off:(-1.2) (make ()))
 
