@@ -35,7 +35,8 @@ let plate_builder =
     ~thumb_offset:(-1., -49., -6.)
     ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
     ~thumb_curve:
-      Curvature.(curve ~fan:{ angle = Float.pi /. 14.5; radius = 85.; tilt = 0. } ())
+      Curvature.(curve ~fan:{ angle = Float.pi /. 13.8; radius = 85.; tilt = 0. } ())
+    ~rotate_thumb_clips:true
     ~caps:Caps.MBK.uniform
 
 let plate_welder = Plate.skeleton_bridges
@@ -70,7 +71,7 @@ let base_connector =
   Connect.skeleton
     ~height:5.
     ~thumb_height:9.
-    ~east_link:(Connect.snake ~height:9. ~n_facets:3 ~scale:1.5 ~d:1. ())
+    ~east_link:(Connect.snake ~height:9. ~n_facets:3 ~scale:1.4 ~d:1. ())
     ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
     ~cubic_d:2.
     ~cubic_scale:1.
