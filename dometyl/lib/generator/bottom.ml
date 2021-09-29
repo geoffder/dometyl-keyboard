@@ -3,12 +3,14 @@ open! Scad_ml
 
 (* TODO:
    - remaining basic foot positions
-   - configuration of foot inset positions? *)
+   - configuration of foot inset positions?
+      -> sum type with manual coordinates or key position lookup
+         (big improvement over the current situation at least) *)
 let make
     ?(thickness = 1.65)
-    ?(outer_screw_rad = 4.1)
+    ?(outer_screw_rad = 4.5)
     ?(inner_screw_rad = 2.0)
-    ?(bumpon_rad = 5.)
+    ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.5)
     case
   =
