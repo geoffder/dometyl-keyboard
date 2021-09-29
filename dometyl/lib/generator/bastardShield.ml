@@ -131,8 +131,8 @@ let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
 
 let place
     ?(x_off = 0.2)
-    ?(y_off = -0.25)
-    ?(z_off = 1.9)
+    ?(y_off = -0.5)
+    ?(z_off = 2.5)
     ?(z_rot = 0.)
     Walls.{ body = { cols; _ }; _ }
     t
