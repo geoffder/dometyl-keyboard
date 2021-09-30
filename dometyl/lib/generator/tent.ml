@@ -39,6 +39,11 @@ let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
      positions, as with screw placement on the case.
    - paramaterizable / smarter bumpon placement, right now the important pinky
      position is obscuring the screw hole above.
+   - handle the different types of screws (Through and Inset). The current scheme with
+     holes, countersinks and clearance cuts is only relevant to screws. But, insets
+     could be used for magnets instead of bumpons. For magnets, will want to have an
+     appropriate inset on top of a thicker "screw_height". Some renaming to go along
+     with this would be appropriate
 *)
 let make
     ?(degrees = 30.)
