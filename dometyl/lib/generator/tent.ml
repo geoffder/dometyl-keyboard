@@ -46,6 +46,7 @@ let make
     ?(screw_height = 2.)
     ?(outer_screw_rad = 4.5)
     ?(inner_screw_rad = 2.0)
+    ?(screw_clearance = 0.)
     ?(foot_thickness = 2.)
     ?(foot_rad = 6.)
     ?(bumpon_rad = 5.5)
@@ -82,12 +83,13 @@ let make
     Scad.union (perimeter :: hole_fills)
   and trans s = Scad.rotate_about_pt rot pivot_pt s |> Scad.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
+  let outer_disc = Scad.circle outer_screw_rad in
   let top =
     let screw_hole =
-      Scad.circle outer_screw_rad
-      |> Scad.linear_extrude
-           ~height:screw_height
-           ~scale:(inner_screw_rad /. outer_screw_rad)
+      Scad.linear_extrude
+        ~height:screw_height
+        ~scale:(inner_screw_rad /. outer_screw_rad)
+        outer_disc
     in
     Scad.difference
       (Scad.linear_extrude ~height:screw_height screws_filled)
@@ -97,6 +99,14 @@ let make
     trans (Scad.linear_extrude ~height:0.001 perimeter)
     |> Scad.projection
     |> Scad.linear_extrude ~height:base_height
+  and clearances =
+    let cyl =
+      Scad.linear_extrude ~height:screw_clearance outer_disc
+      |> Scad.translate (0., 0., -.screw_clearance)
+    in
+    List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre cyl) screws
+    |> Scad.union
+    |> trans
   in
   let cut =
     let bulked_top =
@@ -154,4 +164,4 @@ let make
        ; Scad.difference shell [ Scad.translate (0., 0., -0.00001) cut ]
        ; feet
        ] )
-    insets
+    (clearances :: insets)

@@ -16,6 +16,7 @@ val make
   -> ?screw_height:float
   -> ?outer_screw_rad:float
   -> ?inner_screw_rad:float
+  -> ?screw_clearance:float
   -> ?foot_thickness:float
   -> ?foot_rad:float
   -> ?bumpon_rad:float
