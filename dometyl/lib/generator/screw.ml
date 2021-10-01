@@ -41,6 +41,9 @@ let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole =
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
 let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.; hole = Inset 0.5 }
 
+let magnet_6x3_config =
+  { outer_rad = 4.; inner_rad = 3.2; thickness = 4.; hole = Inset 3. }
+
 let make
     ?(n_steps = 7)
     ~placement

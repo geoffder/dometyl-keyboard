@@ -28,5 +28,6 @@ include Sigs.Transformable with type t := t
 val default_config : config
 val m4_config : config
 val bumpon_config : config
+val magnet_6x3_config : config
 val make : ?n_steps:int -> placement:placement -> config -> Vec3.t -> Vec3.t -> t
 val to_scad : t -> Scad.t
