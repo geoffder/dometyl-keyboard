@@ -234,6 +234,10 @@ module Thumb = struct
 
   let map_sides ~f s = { west = Option.map ~f s.west; east = Option.map ~f s.east }
 
+  let get_side sides = function
+    | `W -> sides.west
+    | `E -> sides.east
+
   type t =
     { keys : key Map.M(Int).t
     ; sides : sides

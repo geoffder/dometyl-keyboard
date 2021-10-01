@@ -120,6 +120,7 @@ module Thumb : sig
     }
 
   val map_sides : f:(Wall.t -> Wall.t) -> sides -> sides
+  val get_side : sides -> [ `W | `E ] -> Wall.t option
 
   type t =
     { keys : key Map.M(Int).t
