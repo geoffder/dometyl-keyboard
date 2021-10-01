@@ -40,8 +40,8 @@ module Hotswap = struct
     let hotswap =
       let access_cuts =
         let x = (w /. 2.) -. (w /. 8.04)
-        and y = 7.4 in
-        let cut = Scad.square ~center:true (w /. 4., 2.01) in
+        and y = h /. 2. in
+        let cut = Scad.square ~center:true (w /. 4., 5.) in
         Scad.union
           [ Scad.translate (x, y *. sign, 0.) cut
           ; Scad.translate (-.x, y *. sign, 0.) cut
