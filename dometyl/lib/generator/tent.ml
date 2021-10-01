@@ -1,6 +1,49 @@
 open! Base
 open! Scad_ml
 
+type sink =
+  | Pan of float
+  | Counter
+
+type fastener =
+  | Magnet
+  | Screw of
+      { head_rad : float
+      ; shaft_rad : float
+      ; sink : sink
+      ; height : float
+      ; clearance : float
+      }
+
+let screw
+    ?(head_rad = 4.5)
+    ?(shaft_rad = 2.)
+    ?(sink = Counter)
+    ?(height = 2.)
+    ?(clearance = 0.)
+    ()
+  =
+  Screw { head_rad; shaft_rad; sink; height; clearance }
+
+type bump_loc =
+  | Col of int * [ `N | `S ]
+  | Thumb of [ `N of int | `E | `S of int | `W ]
+
+let default_bumps =
+  [ Thumb `W; Col (0, `N); Col (3, `N); Col (4, `N); Col (4, `S); Col (2, `S) ]
+
+let find_bump_wall (walls : Walls.t) = function
+  | Col (i, side)             ->
+    let%bind.Option c = Map.find walls.body.cols i in
+    Walls.Body.Cols.get c side
+  | Thumb ((`W | `E) as side) -> Walls.Thumb.get_side walls.thumb.sides side
+  | Thumb (`N i)              ->
+    let%bind.Option k = Map.find walls.thumb.keys i in
+    k.north
+  | Thumb (`S i)              ->
+    let%bind.Option k = Map.find walls.thumb.keys i in
+    k.south
+
 let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =
     Points.map ~f:(Vec3.mul (1., 1., 0.)) foot
@@ -34,28 +77,15 @@ let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   and inset_cut = Scad.cylinder ~fn:16 inner_rad inset |> Scad.translate centre in
   bump, inset_cut
 
-(* TODO:
-   - make the positioning of bumpons more flexible, right now just using wall
-     positions, as with screw placement on the case.
-   - paramaterizable / smarter bumpon placement, right now the important pinky
-     position is obscuring the screw hole above.
-   - handle the different types of screws (Through and Inset). The current scheme with
-     holes, countersinks and clearance cuts is only relevant to screws. But, insets
-     could be used for magnets instead of bumpons. For magnets, will want to have an
-     appropriate inset on top of a thicker "screw_height". Some renaming to go along
-     with this would be appropriate
-*)
 let make
     ?(degrees = 30.)
     ?(z_offset = 0.)
-    ?(screw_height = 2.)
-    ?(outer_screw_rad = 4.5)
-    ?(inner_screw_rad = 2.0)
-    ?(screw_clearance = 0.)
+    ?fastener
     ?(foot_thickness = 2.)
     ?(foot_rad = 6.)
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.5)
+    ?(bump_locs = default_bumps)
     (case : _ Case.t)
   =
   let bb_index, bb_pinky, rot_sign =
@@ -75,98 +105,105 @@ let make
       (Scad.polygon (Connect.outline_2d case.connections))
       [ Scad.polygon (Connect.inline_2d case.connections) ]
   in
-  let rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
+  let screw_config = (List.hd_exn screws).config in
+  let fastener =
+    match fastener with
+    | None          ->
+      ( match screw_config with
+      | { hole = Through; _ } -> screw ()
+      | _                     -> Magnet )
+    | Some fastener -> fastener
+  and rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
   and pivot_pt = -.bb_pinky, 0., 0. in
-  let screws_filled =
-    let hole_fills =
+  let filled_top =
+    let eyelets =
       List.map
-        ~f:(fun Screw.{ centre; config = { inner_rad; _ }; scad; _ } ->
-          Scad.union
-            [ Scad.translate centre (Scad.circle inner_rad); Scad.projection scad ] )
+        ~f:(fun Screw.{ centre; config = { inner_rad; hole; _ }; scad; _ } ->
+          let proj = Scad.projection scad in
+          match hole with
+          | Inset _ -> proj
+          | Through -> Scad.union [ Scad.translate centre (Scad.circle inner_rad); proj ]
+          )
         screws
     in
-    Scad.union (perimeter :: hole_fills)
+    Scad.union (perimeter :: eyelets)
   and trans s = Scad.rotate_about_pt rot pivot_pt s |> Scad.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
-  let outer_disc = Scad.circle outer_screw_rad in
+  let hole, top_height, clearances =
+    match fastener with
+    | Screw { head_rad; shaft_rad; sink; height; clearance } ->
+      let head_disc = Scad.circle head_rad in
+      let hole =
+        match sink with
+        | Counter   -> Scad.linear_extrude ~height ~scale:(shaft_rad /. head_rad) head_disc
+        | Pan inset -> Scad.linear_extrude ~height:inset head_disc
+      and clearances =
+        let cyl =
+          Scad.linear_extrude ~height:clearance head_disc
+          |> Scad.translate (0., 0., -.clearance)
+        in
+        List.map ~f:(fun Screw.{ centre; _ } -> trans @@ Scad.translate centre cyl) screws
+      in
+      hole, height, clearances
+    | Magnet ->
+      let Screw.{ inner_rad; thickness; hole; _ } = screw_config in
+      let h =
+        match hole with
+        | Screw.Inset inset -> inset
+        | _                 -> 0.
+      in
+      let hole =
+        Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
+      in
+      hole, thickness, []
+  in
   let top =
-    let screw_hole =
-      Scad.linear_extrude
-        ~height:screw_height
-        ~scale:(inner_screw_rad /. outer_screw_rad)
-        outer_disc
-    in
     Scad.difference
-      (Scad.linear_extrude ~height:screw_height screws_filled)
-      (List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre screw_hole) screws)
+      (Scad.linear_extrude ~height:top_height filled_top)
+      (List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre hole) screws)
     |> trans
   and shell =
     trans (Scad.linear_extrude ~height:0.001 perimeter)
     |> Scad.projection
     |> Scad.linear_extrude ~height:base_height
-  and clearances =
-    let cyl =
-      Scad.linear_extrude ~height:screw_clearance outer_disc
-      |> Scad.translate (0., 0., -.screw_clearance)
-    in
-    List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre cyl) screws
-    |> Scad.union
-    |> trans
   in
   let cut =
     let bulked_top =
-      Scad.offset (`Delta 2.) screws_filled
-      |> Scad.linear_extrude ~height:screw_height
+      Scad.offset (`Delta 2.) filled_top
+      |> Scad.linear_extrude ~height:top_height
       |> trans
     in
     Scad.hull [ bulked_top; Scad.translate (0., 0., base_height) bulked_top ]
   in
-  let feet, insets =
+  let feet, final_cuts =
     let tilted =
       Case.rotate_about_pt rot pivot_pt case |> Case.translate (0., 0., z_offset)
     in
-    let top_left =
-      let%bind.Option c = Map.find tilted.walls.body.cols 0 in
-      c.north
-    and top_ring =
-      let%bind.Option c = Map.find tilted.walls.body.cols 3 in
-      c.north
-    and bot_mid =
-      let%bind.Option c = Map.find tilted.walls.body.cols 2 in
-      c.south
-    and bot_left = tilted.walls.thumb.sides.west
-    and right =
-      match Map.max_elt tilted.walls.body.cols with
-      | Some (_, c) -> [ c.north; c.south ]
-      | None        -> []
-    and f (bumps, insets) Wall.{ foot; _ } =
-      let bump, inset =
-        bumpon
-          ~outer_rad:foot_rad
-          ~inner_rad:bumpon_rad
-          ~thickness:foot_thickness
-          ~inset:bumpon_inset
-          foot
-      in
-      bump :: bumps, inset :: insets
+    let f (bumps, insets) loc =
+      match find_bump_wall tilted.walls loc with
+      | Some Wall.{ foot; _ } ->
+        let bump, inset =
+          bumpon
+            ~outer_rad:foot_rad
+            ~inner_rad:bumpon_rad
+            ~thickness:foot_thickness
+            ~inset:bumpon_inset
+            foot
+        in
+        bump :: bumps, inset :: insets
+      | None                  -> bumps, insets
     in
-    let feet, insets =
-      bot_mid :: bot_left :: top_left :: top_ring :: right
-      |> List.filter_opt
-      |> List.fold ~init:([], []) ~f
-    in
-    Scad.union feet, insets
+    List.fold ~init:([], clearances) ~f bump_locs
   in
   Scad.difference
     (Scad.union
-       [ Scad.difference
+       ( Scad.difference
            top
            [ Scad.projection top
              |> Scad.offset (`Delta 2.)
              |> Scad.linear_extrude ~height:10.
              |> Scad.translate (0., 0., -10.)
            ]
-       ; Scad.difference shell [ Scad.translate (0., 0., -0.00001) cut ]
-       ; feet
-       ] )
-    (clearances :: insets)
+       :: Scad.difference shell [ Scad.translate (0., 0., -0.00001) cut ]
+       :: feet ) )
+    final_cuts
