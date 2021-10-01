@@ -46,6 +46,10 @@ let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
 
 let wall_builder plate =
+  (* 6x2 magnet *)
+  let screw_config =
+    Screw.{ outer_rad = 4.; inner_rad = 3.; thickness = 3.; hole = Inset 2. }
+  in
   Walls.
     { body =
         Body.make
@@ -59,15 +63,17 @@ let wall_builder plate =
             | 0 -> Screw
             | 1 -> Yes
             | _ -> No )
+          ~screw_config
           plate
     ; thumb =
-        Thumb.make (* ~south_lookup:(fun i -> if i = 1 then No else Yes) *)
+        Thumb.make
           ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Screw
           ~clearance:3.
           ~n_facets:3
           ~n_steps:(`Flat 4)
+          ~screw_config
           plate
     }
 

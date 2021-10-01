@@ -1,29 +1,6 @@
 open! Base
 open! Scad_ml
 
-type sink =
-  | Pan of float
-  | Counter
-
-type fastener =
-  | Magnet
-  | Screw of
-      { head_rad : float
-      ; shaft_rad : float
-      ; sink : sink
-      ; height : float
-      ; clearance : float
-      }
-
-val screw
-  :  ?head_rad:float
-  -> ?shaft_rad:float
-  -> ?sink:sink
-  -> ?height:float
-  -> ?clearance:float
-  -> unit
-  -> fastener
-
 type bump_loc =
   | Col of int * [ `N | `S ]
   | Thumb of [ `N of int | `E | `S of int | `W ]
@@ -43,7 +20,7 @@ val bumpon
 val make
   :  ?degrees:float
   -> ?z_offset:float
-  -> ?fastener:fastener
+  -> ?fastener:Screw.fastener
   -> ?foot_thickness:float
   -> ?foot_rad:float
   -> ?bumpon_rad:float

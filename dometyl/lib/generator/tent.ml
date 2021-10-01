@@ -1,30 +1,6 @@
 open! Base
 open! Scad_ml
 
-type sink =
-  | Pan of float
-  | Counter
-
-type fastener =
-  | Magnet
-  | Screw of
-      { head_rad : float
-      ; shaft_rad : float
-      ; sink : sink
-      ; height : float
-      ; clearance : float
-      }
-
-let screw
-    ?(head_rad = 4.5)
-    ?(shaft_rad = 2.)
-    ?(sink = Counter)
-    ?(height = 2.)
-    ?(clearance = 0.)
-    ()
-  =
-  Screw { head_rad; shaft_rad; sink; height; clearance }
-
 type bump_loc =
   | Col of int * [ `N | `S ]
   | Thumb of [ `N of int | `E | `S of int | `W ]
@@ -110,7 +86,7 @@ let make
     match fastener with
     | None          ->
       ( match screw_config with
-      | { hole = Through; _ } -> screw ()
+      | { hole = Through; _ } -> Screw.screw_fastener ()
       | _                     -> Magnet )
     | Some fastener -> fastener
   and rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
@@ -136,7 +112,11 @@ let make
       let hole =
         match sink with
         | Counter   -> Scad.linear_extrude ~height ~scale:(shaft_rad /. head_rad) head_disc
-        | Pan inset -> Scad.linear_extrude ~height:inset head_disc
+        | Pan inset ->
+          Scad.union
+            [ Scad.linear_extrude ~height:inset head_disc
+            ; Scad.cylinder ~fn:32 shaft_rad height
+            ]
       and clearances =
         let cyl =
           Scad.linear_extrude ~height:clearance head_disc
@@ -153,7 +133,10 @@ let make
         | _                 -> 0.
       in
       let hole =
-        Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
+        Scad.union
+          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
+          ; Scad.cylinder ~fn:32 (inner_rad /. 2.) (thickness -. h)
+          ]
       in
       hole, thickness, []
   in

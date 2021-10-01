@@ -5,6 +5,20 @@ type hole =
   | Through
   | Inset of float
 
+type sink =
+  | Pan of float
+  | Counter
+
+type fastener =
+  | Magnet
+  | Screw of
+      { head_rad : float
+      ; shaft_rad : float
+      ; sink : sink
+      ; height : float
+      ; clearance : float
+      }
+
 type placement =
   | Normal of Vec3.t
   | Point of Vec3.t
@@ -37,12 +51,24 @@ let rotate_about_pt r p t =
   ; centre = Vec3.rotate_about_pt r p t.centre
   }
 
+let screw_fastener
+    ?(head_rad = 4.5)
+    ?(shaft_rad = 2.)
+    ?(sink = Counter)
+    ?(height = 2.)
+    ?(clearance = 0.)
+    ()
+  =
+  Screw { head_rad; shaft_rad; sink; height; clearance }
+
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
 let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.; hole = Inset 0.5 }
 
 let magnet_6x3_config =
-  { outer_rad = 4.; inner_rad = 3.2; thickness = 4.; hole = Inset 3. }
+  { outer_rad = 4.; inner_rad = 3.1; thickness = 4.; hole = Inset 3. }
+
+let m4_countersunk_fastener = screw_fastener ()
 
 let make
     ?(n_steps = 7)
@@ -82,7 +108,12 @@ let make
     | Through     ->
       Scad.difference outline [ inner ] |> Scad.linear_extrude ~height:thickness, None
     | Inset depth ->
-      let inset = Scad.linear_extrude ~height:depth inner
+      let inset =
+        Scad.union
+          [ Scad.linear_extrude ~height:depth inner
+          ; Scad.cylinder ~fn:16 (inner_rad /. 2.) (thickness -. depth)
+            |> Scad.translate Vec3.(hole_centre <+> (0., 0., depth))
+          ]
       and foot = Scad.linear_extrude ~height:thickness outline in
       Scad.difference foot [ inset ], Some inset
   in
