@@ -1,5 +1,5 @@
 # Dometyl - Another Dactyl inspired keyboard (eventually supporting rubber domes)
-![splaytyl prototype](images/splaytyl_prototype.png)
+![Splaytyl Build](things/boards/splaytyl/splaytyl_both.jpeg)
 ## About
 This is a library (currently under construction) for generation of paramaterized
 split-hand, concave, columnar, ergonomic keyboards in the spirit of the
