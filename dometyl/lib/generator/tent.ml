@@ -1,24 +1,40 @@
 open! Base
 open! Scad_ml
 
-type bump_loc =
-  | Col of int * [ `N | `S ]
-  | Thumb of [ `N of int | `E | `S of int | `W ]
+type idx =
+  | First
+  | Last
+  | Idx of int
 
-let default_bumps =
-  [ Thumb `W; Col (0, `N); Col (3, `N); Col (4, `N); Col (4, `S); Col (2, `S) ]
+type bump_loc =
+  | Col of idx * [ `N | `S ]
+  | Thumb of [ `N of idx | `E | `S of idx | `W ]
+
+let idx_to_find = function
+  | First -> fun m -> Option.map ~f:snd @@ Map.min_elt m
+  | Last  -> fun m -> Option.map ~f:snd @@ Map.max_elt m
+  | Idx i -> fun m -> Map.find m i
 
 let find_bump_wall (walls : Walls.t) = function
   | Col (i, side)             ->
-    let%bind.Option c = Map.find walls.body.cols i in
+    let%bind.Option c = idx_to_find i @@ walls.body.cols in
     Walls.Body.Cols.get c side
   | Thumb ((`W | `E) as side) -> Walls.Thumb.get_side walls.thumb.sides side
   | Thumb (`N i)              ->
-    let%bind.Option k = Map.find walls.thumb.keys i in
+    let%bind.Option k = idx_to_find i @@ walls.thumb.keys in
     k.north
   | Thumb (`S i)              ->
-    let%bind.Option k = Map.find walls.thumb.keys i in
+    let%bind.Option k = idx_to_find i @@ walls.thumb.keys in
     k.south
+
+let default_bumps =
+  [ Thumb `W
+  ; Col (First, `N)
+  ; Col (Idx 3, `N)
+  ; Col (Last, `N)
+  ; Col (Last, `S)
+  ; Col (Idx 2, `S)
+  ]
 
 let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =

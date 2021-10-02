@@ -1,5 +1,6 @@
 open! Base
 open! Scad_ml
+open Infix
 
 (* TODO:
    - remaining basic foot positions
@@ -7,8 +8,47 @@ open! Scad_ml
       -> sum type with manual coordinates or key position lookup
          (big improvement over the current situation at least) *)
 
-let make ?(thickness = 1.65) ?fastener ?(bumpon_rad = 5.5) ?(bumpon_inset = 0.5) case =
-  let inset_loc KeyHole.{ origin = x, y, _; _ } = x, y, 0. in
+type idx =
+  | First
+  | Last
+  | Idx of int
+
+type bump_loc =
+  | Thumb of idx
+  | Col of idx * idx
+  | Point of Vec3.t
+
+let idx_to_find = function
+  | First -> fun m -> Option.map ~f:snd @@ Map.min_elt m
+  | Last  -> fun m -> Option.map ~f:snd @@ Map.max_elt m
+  | Idx i -> fun m -> Map.find m i
+
+let locate_bump (plate : _ Plate.t) = function
+  | Thumb k    ->
+    let%map.Option key = idx_to_find k plate.thumb.keys in
+    Vec3.mul (1., 1., 0.) key.origin
+  | Col (c, k) ->
+    let%bind.Option col = idx_to_find c plate.columns in
+    let%map.Option key = idx_to_find k col.keys in
+    Vec3.mul (1., 1., 0.) key.origin
+  | Point p    -> Some p
+
+let default_bumps =
+  [ Thumb First
+  ; Col (First, Last)
+  ; Col (Idx 3, Last)
+  ; Col (Last, Last)
+  ; Col (Last, First)
+  ]
+
+let make
+    ?(thickness = 1.65)
+    ?fastener
+    ?(bumpon_rad = 5.5)
+    ?(bumpon_inset = 0.5)
+    ?(bump_locs = default_bumps)
+    case
+  =
   let screws = Walls.collect_screws case.Case.walls in
   let screw_config = (List.hd_exn screws).config in
   let thickness, screw_hole =
@@ -45,24 +85,28 @@ let make ?(thickness = 1.65) ?fastener ?(bumpon_rad = 5.5) ?(bumpon_inset = 0.5)
           ] )
   and insets =
     let cut = Scad.cylinder bumpon_rad bumpon_inset in
-    let top_left =
-      let%bind.Option c = Map.find case.plate.columns 0 in
-      let%map.Option _, k = Map.max_elt c.keys in
-      k
-    and top_ring =
-      let%bind.Option c = Map.find case.plate.columns 3 in
-      let%map.Option _, k = Map.max_elt c.keys in
-      k
-    and bot_left = Map.find case.plate.thumb.keys 0
-    and right =
-      match Map.max_elt case.plate.columns with
-      | Some (_, c) -> [ Map.max_elt c.keys |> Option.map ~f:snd; Map.find c.keys 0 ]
-      | None        -> []
-    in
-    bot_left :: top_left :: top_ring :: right
-    |> List.filter_opt
-    |> List.map ~f:(fun k -> Scad.translate (inset_loc k) cut)
+    List.filter_map
+      ~f:(locate_bump case.plate >> Option.map ~f:(Fn.flip Scad.translate cut))
+      bump_locs
     |> Scad.union
+    (* let top_left =
+     *   let%bind.Option c = Map.find case.plate.columns 0 in
+     *   let%map.Option _, k = Map.max_elt c.keys in
+     *   k
+     * and top_ring =
+     *   let%bind.Option c = Map.find case.plate.columns 3 in
+     *   let%map.Option _, k = Map.max_elt c.keys in
+     *   k
+     * and bot_left = Map.find case.plate.thumb.keys 0
+     * and right =
+     *   match Map.max_elt case.plate.columns with
+     *   | Some (_, c) -> [ Map.max_elt c.keys |> Option.map ~f:snd; Map.find c.keys 0 ]
+     *   | None        -> []
+     * in
+     * bot_left :: top_left :: top_ring :: right
+     * |> List.filter_opt
+     * |> List.map ~f:(fun k -> Scad.translate (inset_loc k) cut)
+     * |> Scad.union *)
   in
   let plate =
     Scad.polygon (Connect.outline_2d case.connections)
