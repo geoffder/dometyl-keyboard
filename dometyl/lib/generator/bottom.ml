@@ -2,12 +2,6 @@ open! Base
 open! Scad_ml
 open Infix
 
-(* TODO:
-   - remaining basic foot positions
-   - configuration of foot inset positions?
-      -> sum type with manual coordinates or key position lookup
-         (big improvement over the current situation at least) *)
-
 type idx =
   | First
   | Last
