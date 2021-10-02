@@ -97,12 +97,12 @@ let make
       (Scad.polygon (Connect.outline_2d case.connections))
       [ Scad.polygon (Connect.inline_2d case.connections) ]
   in
-  let screw_config = (List.hd_exn screws).config in
+  let eyelet_config = (List.hd_exn screws).config in
   let fastener =
     match fastener with
     | None          ->
-      ( match screw_config with
-      | { hole = Through; _ } -> Screw.screw_fastener ()
+      ( match eyelet_config with
+      | { hole = Through; _ } -> Eyelet.screw_fastener ()
       | _                     -> Magnet )
     | Some fastener -> fastener
   and rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
@@ -110,7 +110,7 @@ let make
   let filled_top =
     let eyelets =
       List.map
-        ~f:(fun Screw.{ centre; config = { inner_rad; hole; _ }; scad; _ } ->
+        ~f:(fun Eyelet.{ centre; config = { inner_rad; hole; _ }; scad; _ } ->
           let proj = Scad.projection scad in
           match hole with
           | Inset _ -> proj
@@ -138,15 +138,17 @@ let make
           Scad.linear_extrude ~height:clearance head_disc
           |> Scad.translate (0., 0., -.clearance)
         in
-        List.map ~f:(fun Screw.{ centre; _ } -> trans @@ Scad.translate centre cyl) screws
+        List.map
+          ~f:(fun Eyelet.{ centre; _ } -> trans @@ Scad.translate centre cyl)
+          screws
       in
       hole, height, clearances
     | Magnet ->
-      let Screw.{ inner_rad; thickness; hole; _ } = screw_config in
+      let Eyelet.{ inner_rad; thickness; hole; _ } = eyelet_config in
       let h =
         match hole with
-        | Screw.Inset inset -> inset
-        | _                 -> 0.
+        | Eyelet.Inset inset -> inset
+        | _                  -> 0.
       in
       let hole =
         Scad.union
@@ -159,7 +161,7 @@ let make
   let top =
     Scad.difference
       (Scad.linear_extrude ~height:top_height filled_top)
-      (List.map ~f:(fun Screw.{ centre; _ } -> Scad.translate centre hole) screws)
+      (List.map ~f:(fun Eyelet.{ centre; _ } -> Scad.translate centre hole) screws)
     |> trans
   and shell =
     trans (Scad.linear_extrude ~height:0.001 perimeter)

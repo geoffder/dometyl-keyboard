@@ -149,13 +149,13 @@ let place
 let eyelets
     ?width
     ?(z_off = 1.)
-    ?(screw_config = Screw.m4_config)
+    ?(eyelet_config = Eyelet.m4_config)
     Connect.{ inline; _ }
     { screw_l; screw_r; thickness; _ }
   =
   let perim = Array.of_list inline
   and half_width =
-    Option.value_map ~default:(screw_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
+    Option.value_map ~default:(eyelet_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
   in
   let n_pts = Array.length perim in
   let dist a b = Vec3.(norm (a <-> b)) in
@@ -207,8 +207,8 @@ let eyelets
       else loop 0. centre (step idx)
     in
     Scad.union
-      [ Screw.(
-          make ~placement:(Point loc) screw_config (side_point false) (side_point true)
+      [ Eyelet.(
+          make ~placement:(Point loc) eyelet_config (side_point false) (side_point true)
           |> to_scad)
         |> Scad.translate (0., 0., Vec3.get_z screw_l +. thickness +. z_off)
       ]
@@ -218,7 +218,7 @@ let eyelets
 let cutter
     ?eye_width
     ?eye_z_off
-    ?screw_config
+    ?eyelet_config
     ?x_off
     ?y_off
     ?z_off
@@ -231,6 +231,6 @@ let cutter
   Ports.
     { plus =
         Option.some
-        @@ eyelets ?width:eye_width ?z_off:eye_z_off ?screw_config connections t'
+        @@ eyelets ?width:eye_width ?z_off:eye_z_off ?eyelet_config connections t'
     ; minus = Option.some @@ to_scad t'
     }

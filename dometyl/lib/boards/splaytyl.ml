@@ -57,7 +57,7 @@ let wall_builder plate =
         Thumb.make
           ~south_lookup:(fun _ -> Yes)
           ~east:No
-          ~west:Screw
+          ~west:Eye
           ~clearance:3.0
           ~n_steps:(`Flat 3)
           plate

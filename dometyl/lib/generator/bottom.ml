@@ -50,7 +50,7 @@ let make
       match fastener with
       | None          ->
         ( match screw_config with
-        | { hole = Through; _ } -> Screw.screw_fastener ()
+        | { hole = Through; _ } -> Eyelet.screw_fastener ()
         | _                     -> Magnet )
       | Some fastener -> fastener
     in
@@ -66,11 +66,11 @@ let make
           ; Scad.cylinder ~fn:32 shaft_rad thickness
           ] )
     | Magnet ->
-      let Screw.{ inner_rad; thickness = thick; hole; _ } = screw_config in
+      let Eyelet.{ inner_rad; thickness = thick; hole; _ } = screw_config in
       let h =
         match hole with
-        | Screw.Inset inset -> inset
-        | _                 -> 0.
+        | Eyelet.Inset inset -> inset
+        | _                  -> 0.
       and thickness = Float.max thickness thick in
       ( thickness
       , Scad.union

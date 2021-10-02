@@ -48,7 +48,7 @@ let wall_builder plate =
   Walls.
     { body =
         Body.make
-          ~west_lookup:(fun i -> if i = 0 then Screw else Yes)
+          ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
           ~east_lookup:(fun _ -> Yes)
           ~n_facets:1
           ~n_steps:(`PerZ 6.)
@@ -60,7 +60,7 @@ let wall_builder plate =
         Thumb.make
           ~south_lookup:(fun _ -> Yes)
           ~east:No
-          ~west:Screw
+          ~west:Eye
           ~n_steps:(`Flat 4)
           ~clearance:3.
           plate

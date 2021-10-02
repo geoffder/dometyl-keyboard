@@ -47,8 +47,8 @@ let plate_welder plate =
 
 let wall_builder plate =
   (* 6x2 magnet *)
-  let screw_config =
-    Screw.{ outer_rad = 4.; inner_rad = 3.; thickness = 3.; hole = Inset 2. }
+  let eyelet_config =
+    Eyelet.{ outer_rad = 4.; inner_rad = 3.; thickness = 3.; hole = Inset 2. }
   in
   Walls.
     { body =
@@ -60,20 +60,20 @@ let wall_builder plate =
           ~south_clearance:3.5
           ~side_clearance:2.5
           ~west_lookup:(function
-            | 0 -> Screw
+            | 0 -> Eye
             | 1 -> Yes
             | _ -> No )
-          ~screw_config
+          ~eyelet_config
           plate
     ; thumb =
         Thumb.make
           ~south_lookup:(fun _ -> Yes)
           ~east:No
-          ~west:Screw
+          ~west:Eye
           ~clearance:3.
           ~n_facets:3
           ~n_steps:(`Flat 4)
-          ~screw_config
+          ~eyelet_config
           plate
     }
 

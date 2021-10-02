@@ -27,7 +27,7 @@ val place
 val eyelets
   :  ?width:float
   -> ?z_off:float
-  -> ?screw_config:Screw.config
+  -> ?eyelet_config:Eyelet.config
   -> Connect.t
   -> t
   -> Scad.t
@@ -35,7 +35,7 @@ val eyelets
 val cutter
   :  ?eye_width:float
   -> ?eye_z_off:float
-  -> ?screw_config:Screw.config
+  -> ?eyelet_config:Eyelet.config
   -> ?x_off:float
   -> ?y_off:float
   -> ?z_off:float

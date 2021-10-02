@@ -57,7 +57,7 @@ let wall_builder plate =
         Thumb.make
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
           ~east:No
-          ~west:Screw
+          ~west:Eye
           ~clearance:0.5
           ~d1:4.
           ~d2:4.75

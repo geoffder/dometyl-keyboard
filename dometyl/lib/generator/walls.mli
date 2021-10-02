@@ -6,7 +6,7 @@ open! Scad_ml
 type presence =
   | No
   | Yes
-  | Screw
+  | Eye
 
 (** Generation and storage of {!Wall.t}s from the {!KeyHole.t}s of the main body
     of the plate (excluding the thumb cluster). *)
@@ -36,14 +36,14 @@ module Body : sig
       -> ?n_facets:int
       -> ?north_lookup:(int -> presence)
       -> ?south_lookup:(int -> presence)
-      -> ?screw_config:Screw.config
+      -> ?eyelet_config:Eyelet.config
       -> 'k Plate.t
       -> t
 
     val get : col -> [< `N | `S ] -> Wall.t option
     val col_to_scad : col -> Scad.t
     val to_scad : t -> Scad.t
-    val collect_screws : ?init:Screw.t list -> t -> Screw.t list
+    val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
   module Sides : sig
@@ -67,12 +67,12 @@ module Body : sig
       -> ?n_facets:int
       -> ?west_lookup:(int -> presence)
       -> ?east_lookup:(int -> presence)
-      -> ?screw_config:Screw.config
+      -> ?eyelet_config:Eyelet.config
       -> 'a Plate.t
       -> t
 
     val to_scad : t -> Scad.t
-    val collect_screws : ?init:Screw.t list -> t -> Screw.t list
+    val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
   type t =
@@ -98,12 +98,12 @@ module Body : sig
     -> ?south_lookup:(int -> presence)
     -> ?west_lookup:(int -> presence)
     -> ?east_lookup:(int -> presence)
-    -> ?screw_config:Screw.config
+    -> ?eyelet_config:Eyelet.config
     -> 'a Plate.t
     -> t
 
   val to_scad : t -> Scad.t
-  val collect_screws : ?init:Screw.t list -> t -> Screw.t list
+  val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
 module Thumb : sig
@@ -144,12 +144,12 @@ module Thumb : sig
     -> ?south_lookup:(int -> presence)
     -> ?west:presence
     -> ?east:presence
-    -> ?screw_config:Screw.config
+    -> ?eyelet_config:Eyelet.config
     -> 'a Plate.t
     -> t
 
   val to_scad : t -> Scad.t
-  val collect_screws : ?init:Screw.t list -> t -> Screw.t list
+  val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
 type t =
@@ -161,4 +161,4 @@ type t =
 include Sigs.Transformable with type t := t
 
 val to_scad : t -> Scad.t
-val collect_screws : t -> Screw.t list
+val collect_screws : t -> Eyelet.t list

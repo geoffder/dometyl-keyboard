@@ -16,7 +16,7 @@ val locate_bump : 'k Plate.t -> bump_loc -> Vec3.t option
 
 val make
   :  ?thickness:float
-  -> ?fastener:Screw.fastener
+  -> ?fastener:Eyelet.fastener
   -> ?bumpon_rad:float
   -> ?bumpon_inset:float
   -> ?bump_locs:bump_loc list

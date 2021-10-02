@@ -3,7 +3,7 @@ open! Scad_ml
 open Generator
 
 let bumpon =
-  { Screw.bumpon_config with outer_rad = (2. /. 2.) +. 1.; inner_rad = 2. /. 2. }
+  { Eyelet.bumpon_config with outer_rad = (2. /. 2.) +. 1.; inner_rad = 2. /. 2. }
 
 let wall_builder plate =
   Walls.
@@ -14,18 +14,18 @@ let wall_builder plate =
           ~south_clearance:2.19
           ~side_clearance:2.19
           ~thickness:5.0
-          ~screw_config:bumpon
+          ~eyelet_config:bumpon
           plate
     ; thumb =
         Thumb.make
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun _ -> Yes)
-          ~west:Screw
+          ~west:Eye
           ~clearance:0.5
           ~d1:3.
           ~d2:4.75
           ~n_facets:60
-          ~screw_config:bumpon
+          ~eyelet_config:bumpon
           ~n_steps:(`Flat 15)
           plate
     }

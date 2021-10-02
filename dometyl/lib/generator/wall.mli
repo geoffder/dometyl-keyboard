@@ -101,7 +101,7 @@ type t =
         starting edges of the wall closest to the provided {!Vec3.t} on the XY
         plane. *)
   ; edges : Edges.t (** Bezier curves that specify the edge vertices. *)
-  ; screw : Screw.t option
+  ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }
 
@@ -117,7 +117,7 @@ include Sigs.Transformable with type t := t
 val swing_face : ?step:float -> Vec3.t -> KeyHole.Face.t -> KeyHole.Face.t * Vec3.t
 
 (** [poly_siding ?x_off ?y_off ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
-      ?screw_config side keyhole]
+      ?eyelet_config side keyhole]
 
 Generate a {!type:t} using an OpenScad polyhedron, drawn from a set of bezier curves
 from the [side] facing edges of [keyhole]. Optional parameters influence the shape of the
@@ -142,7 +142,7 @@ generated wall:
   of the [keyhole] on the xy-plane used to for the second and third quadratic bezier
   control points respectively.
 - [thickness] influences the thickness of the wall (from inside to outside face)
-- If provided, [screw_config] describes the screw/bumpon eyelet that should be added
+- If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
   to the bottom of the generated wall. *)
 val poly_siding
   :  ?x_off:float
@@ -154,12 +154,12 @@ val poly_siding
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
-  -> ?screw_config:Screw.config
+  -> ?eyelet_config:Eyelet.config
   -> [< `East | `North | `South | `West ]
   -> 'a KeyHole.t
   -> t
 
-(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?screw_config
+(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
       ~spacing ~columns idx]
 
     Wrapper function for {!val:poly_siding} specifically for (north and south)
@@ -176,7 +176,7 @@ val column_drop
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
-  -> ?screw_config:Screw.config
+  -> ?eyelet_config:Eyelet.config
   -> spacing:float
   -> columns:'k Columns.t
   -> [< `North | `South ]

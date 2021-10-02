@@ -25,7 +25,7 @@ val bumpon
 val make
   :  ?degrees:float
   -> ?z_offset:float
-  -> ?fastener:Screw.fastener
+  -> ?fastener:Eyelet.fastener
   -> ?foot_thickness:float
   -> ?foot_rad:float
   -> ?bumpon_rad:float

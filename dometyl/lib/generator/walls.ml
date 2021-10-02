@@ -4,7 +4,7 @@ open! Scad_ml
 type presence =
   | No
   | Yes
-  | Screw
+  | Eye
 
 module Body = struct
   module Cols = struct
@@ -32,13 +32,13 @@ module Body = struct
         ?(south_clearance = 2.5)
         ?(n_steps = `Flat 4)
         ?(n_facets = 1)
-        ?(north_lookup = fun i -> if i = 2 || i = 4 then Screw else Yes)
+        ?(north_lookup = fun i -> if i = 2 || i = 4 then Eye else Yes)
         ?(south_lookup =
           function
-          | i when i = 3 -> Screw
+          | i when i = 3 -> Eye
           | i when i > 1 -> Yes
           | _ -> No)
-        ?(screw_config = Screw.m4_config)
+        ?(eyelet_config = Eyelet.m4_config)
         Plate.{ config = { spacing; _ }; columns; _ }
       =
       let drop = Wall.column_drop ~spacing ~columns ~z_off ~n_steps ~n_facets ~d1 ~d2
@@ -46,8 +46,8 @@ module Body = struct
       let bez_wall north presence =
         let clearance = if north then north_clearance else south_clearance in
         match presence with
-        | No    -> fun _ _ -> None
-        | Yes   ->
+        | No  -> fun _ _ -> None
+        | Yes ->
           fun side i ->
             Some
               (drop
@@ -55,13 +55,13 @@ module Body = struct
                  ~thickness:(if i < 2 then index_thickness' else thickness)
                  side
                  i )
-        | Screw ->
+        | Eye ->
           fun side i ->
             Some
               (drop
                  ~clearance
                  ~thickness:(if i < 2 then index_thickness' else thickness)
-                 ~screw_config
+                 ~eyelet_config
                  side
                  i )
       in
@@ -113,9 +113,9 @@ module Body = struct
         ?(clearance = 3.)
         ?(n_steps = `Flat 4)
         ?(n_facets = 1)
-        ?(west_lookup = fun i -> if i = 0 then Screw else No)
+        ?(west_lookup = fun i -> if i = 0 then Eye else No)
         ?(east_lookup = fun _ -> No)
-        ?(screw_config = Screw.m4_config)
+        ?(eyelet_config = Eyelet.m4_config)
         Plate.{ columns; _ }
       =
       let west_col = Map.find_exn columns 0
@@ -130,9 +130,9 @@ module Body = struct
           | `East -> east_lookup
         in
         match lookup key with
-        | Yes   -> Map.add_exn ~key ~data:(siding side data) m
-        | Screw -> Map.add_exn ~key ~data:(siding ~screw_config side data) m
-        | No    -> m
+        | Yes -> Map.add_exn ~key ~data:(siding side data) m
+        | Eye -> Map.add_exn ~key ~data:(siding ~eyelet_config side data) m
+        | No  -> m
       in
       { west = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
       ; east = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
@@ -180,7 +180,7 @@ module Body = struct
       ?south_lookup
       ?west_lookup
       ?east_lookup
-      ?screw_config
+      ?eyelet_config
       plate
     =
     { cols =
@@ -196,7 +196,7 @@ module Body = struct
           ?n_facets
           ?north_lookup
           ?south_lookup
-          ?screw_config
+          ?eyelet_config
           plate
     ; sides =
         Sides.make
@@ -209,7 +209,7 @@ module Body = struct
           ?n_facets
           ?west_lookup
           ?east_lookup
-          ?screw_config
+          ?eyelet_config
           plate
     }
 
@@ -258,19 +258,19 @@ module Thumb = struct
       ?(n_steps = `PerZ 4.)
       ?(n_facets = 1)
       ?(north_lookup = fun i -> if i = 0 then Yes else No)
-      ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Screw else No)
+      ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
       ?(west = Yes)
       ?(east = No)
-      ?(screw_config = Screw.m4_config)
+      ?(eyelet_config = Eyelet.m4_config)
       Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
     =
     let siding =
       Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps ~n_facets
     in
     let bez_wall = function
-      | No    -> fun _ _ -> None
-      | Yes   -> fun side i -> Some (siding side i)
-      | Screw -> fun side i -> Some (siding ~screw_config side i)
+      | No  -> fun _ _ -> None
+      | Yes -> fun side i -> Some (siding side i)
+      | Eye -> fun side i -> Some (siding ~eyelet_config side i)
     in
     { keys =
         Map.mapi

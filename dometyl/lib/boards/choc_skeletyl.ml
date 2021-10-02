@@ -40,7 +40,7 @@ let plate_builder =
     ~caps:Caps.MBK.uniform
 
 let plate_welder = Plate.skeleton_bridges
-let screw_config = Screw.{ bumpon_config with hole = Inset 0.8 }
+let eyelet_config = Eyelet.{ bumpon_config with hole = Inset 0.8 }
 
 let wall_builder plate =
   Walls.
@@ -51,19 +51,19 @@ let wall_builder plate =
           ~north_clearance:1.5
           ~south_clearance:1.5
           ~side_clearance:1.5
-          ~screw_config
+          ~eyelet_config
           plate
     ; thumb =
         Thumb.make
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
           ~east:No
-          ~west:Screw
+          ~west:Eye
           ~clearance:0.5
           ~d1:4.
           ~d2:4.75
           ~n_steps:(`PerZ 5.)
           ~n_facets:2
-          ~screw_config
+          ~eyelet_config
           plate
     }
 

@@ -119,7 +119,7 @@ type t =
   ; foot : Points.t
   ; edge_drawer : EdgeDrawer.t
   ; edges : Edges.t
-  ; screw : Screw.t option
+  ; screw : Eyelet.t option
   }
 
 let translate p t =
@@ -128,7 +128,7 @@ let translate p t =
   ; foot = Points.translate p t.foot
   ; edge_drawer = EdgeDrawer.translate p t.edge_drawer
   ; edges = Edges.translate p t.edges
-  ; screw = Option.map ~f:(Screw.translate p) t.screw
+  ; screw = Option.map ~f:(Eyelet.translate p) t.screw
   }
 
 let mirror ax t =
@@ -137,7 +137,7 @@ let mirror ax t =
   ; foot = Points.mirror ax t.foot
   ; edge_drawer = EdgeDrawer.mirror ax t.edge_drawer
   ; edges = Edges.mirror ax t.edges
-  ; screw = Option.map ~f:(Screw.mirror ax) t.screw
+  ; screw = Option.map ~f:(Eyelet.mirror ax) t.screw
   }
 
 let rotate r t =
@@ -146,7 +146,7 @@ let rotate r t =
   ; foot = Points.rotate r t.foot
   ; edge_drawer = EdgeDrawer.rotate r t.edge_drawer
   ; edges = Edges.rotate r t.edges
-  ; screw = Option.map ~f:(Screw.rotate r) t.screw
+  ; screw = Option.map ~f:(Eyelet.rotate r) t.screw
   }
 
 let rotate_about_pt r p t =
@@ -155,7 +155,7 @@ let rotate_about_pt r p t =
   ; foot = Points.rotate_about_pt r p t.foot
   ; edge_drawer = EdgeDrawer.rotate_about_pt r p t.edge_drawer
   ; edges = Edges.rotate_about_pt r p t.edges
-  ; screw = Option.map ~f:(Screw.rotate_about_pt r p) t.screw
+  ; screw = Option.map ~f:(Eyelet.rotate_about_pt r p) t.screw
   }
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
@@ -214,7 +214,7 @@ let poly_siding
     ?(d1 = 4.)
     ?(d2 = 7.)
     ?thickness
-    ?screw_config
+    ?eyelet_config
     side
     (key : _ KeyHole.t)
   =
@@ -284,7 +284,7 @@ let poly_siding
   let foot = Points.of_clockwise_list_exn (corners end_ps) in
   let screw =
     let f config =
-      let open Screw in
+      let open Eyelet in
       let placement =
         let n = Vec3.negate xy in
         match config with
@@ -295,7 +295,7 @@ let poly_siding
       in
       make ~placement config foot.bot_left foot.bot_right
     in
-    Option.map ~f screw_config
+    Option.map ~f eyelet_config
   in
   { scad =
       Scad.hull [ start_face.scad; cleared_face.scad ]
@@ -323,7 +323,7 @@ let column_drop
     ?d1
     ?d2
     ?thickness
-    ?screw_config
+    ?eyelet_config
     ~spacing
     ~columns
     side
@@ -365,7 +365,7 @@ let column_drop
     ?thickness
     ?n_steps
     ?n_facets
-    ?screw_config
+    ?eyelet_config
     side
     key
 
