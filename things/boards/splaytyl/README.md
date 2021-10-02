@@ -1,6 +1,6 @@
-![Splaytyl - Both Halves](splaytyl_both.jpeg)
-![Splaytyl - Front](splaytyl_front.jpeg)
-![Splaytyl - Side](splaytyl_side.jpeg)
+![Splaytyl - Both Halves](images/splaytyl_both.jpeg)
+![Splaytyl - Front](images/splaytyl_front.jpeg)
+![Splaytyl - Side](images/splaytyl_side.jpeg)
 
 ## Switches / Caps
 The column curvatures of this configuration are made with MX switches and MT3
