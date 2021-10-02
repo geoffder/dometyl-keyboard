@@ -2,28 +2,18 @@ open! Base
 open! Scad_ml
 open Infix
 
-type idx =
-  | First
-  | Last
-  | Idx of int
-
 type bump_loc =
-  | Thumb of idx
-  | Col of idx * idx
+  | Thumb of Util.idx
+  | Col of Util.idx * Util.idx
   | Point of Vec3.t
-
-let idx_to_find = function
-  | First -> fun m -> Option.map ~f:snd @@ Map.min_elt m
-  | Last  -> fun m -> Option.map ~f:snd @@ Map.max_elt m
-  | Idx i -> fun m -> Map.find m i
 
 let locate_bump (plate : _ Plate.t) = function
   | Thumb k    ->
-    let%map.Option key = idx_to_find k plate.thumb.keys in
+    let%map.Option key = Util.idx_to_find k plate.thumb.keys in
     Vec3.mul (1., 1., 0.) key.origin
   | Col (c, k) ->
-    let%bind.Option col = idx_to_find c plate.columns in
-    let%map.Option key = idx_to_find k col.keys in
+    let%bind.Option col = Util.idx_to_find c plate.columns in
+    let%map.Option key = Util.idx_to_find k col.keys in
     Vec3.mul (1., 1., 0.) key.origin
   | Point p    -> Some p
 
@@ -83,24 +73,6 @@ let make
       ~f:(locate_bump case.plate >> Option.map ~f:(Fn.flip Scad.translate cut))
       bump_locs
     |> Scad.union
-    (* let top_left =
-     *   let%bind.Option c = Map.find case.plate.columns 0 in
-     *   let%map.Option _, k = Map.max_elt c.keys in
-     *   k
-     * and top_ring =
-     *   let%bind.Option c = Map.find case.plate.columns 3 in
-     *   let%map.Option _, k = Map.max_elt c.keys in
-     *   k
-     * and bot_left = Map.find case.plate.thumb.keys 0
-     * and right =
-     *   match Map.max_elt case.plate.columns with
-     *   | Some (_, c) -> [ Map.max_elt c.keys |> Option.map ~f:snd; Map.find c.keys 0 ]
-     *   | None        -> []
-     * in
-     * bot_left :: top_left :: top_ring :: right
-     * |> List.filter_opt
-     * |> List.map ~f:(fun k -> Scad.translate (inset_loc k) cut)
-     * |> Scad.union *)
   in
   let plate =
     Scad.polygon (Connect.outline_2d case.connections)

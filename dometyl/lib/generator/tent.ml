@@ -1,30 +1,20 @@
 open! Base
 open! Scad_ml
 
-type idx =
-  | First
-  | Last
-  | Idx of int
-
 type bump_loc =
-  | Col of idx * [ `N | `S ]
-  | Thumb of [ `N of idx | `E | `S of idx | `W ]
-
-let idx_to_find = function
-  | First -> fun m -> Option.map ~f:snd @@ Map.min_elt m
-  | Last  -> fun m -> Option.map ~f:snd @@ Map.max_elt m
-  | Idx i -> fun m -> Map.find m i
+  | Col of Util.idx * [ `N | `S ]
+  | Thumb of [ `N of Util.idx | `E | `S of Util.idx | `W ]
 
 let find_bump_wall (walls : Walls.t) = function
   | Col (i, side)             ->
-    let%bind.Option c = idx_to_find i @@ walls.body.cols in
+    let%bind.Option c = Util.idx_to_find i @@ walls.body.cols in
     Walls.Body.Cols.get c side
   | Thumb ((`W | `E) as side) -> Walls.Thumb.get_side walls.thumb.sides side
   | Thumb (`N i)              ->
-    let%bind.Option k = idx_to_find i @@ walls.thumb.keys in
+    let%bind.Option k = Util.idx_to_find i @@ walls.thumb.keys in
     k.north
   | Thumb (`S i)              ->
-    let%bind.Option k = idx_to_find i @@ walls.thumb.keys in
+    let%bind.Option k = Util.idx_to_find i @@ walls.thumb.keys in
     k.south
 
 let default_bumps =

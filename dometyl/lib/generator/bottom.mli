@@ -1,14 +1,9 @@
 open! Base
 open! Scad_ml
 
-type idx =
-  | First
-  | Last
-  | Idx of int
-
 type bump_loc =
-  | Thumb of idx
-  | Col of idx * idx
+  | Thumb of Util.idx
+  | Col of Util.idx * Util.idx
   | Point of Vec3.t
 
 val default_bumps : bump_loc list

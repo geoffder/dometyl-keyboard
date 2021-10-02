@@ -1,5 +1,11 @@
 open! Base
 open! Scad_ml
+open Infix
+
+type idx =
+  | First
+  | Last
+  | Idx of int
 
 let deg_to_rad d = d *. Float.pi /. 180.
 let rad_to_deg r = r *. 180. /. Float.pi
@@ -87,3 +93,8 @@ let point_in_polygon (x, y, _) poly =
       else inside, a
     in
     fst @@ List.fold ~init:(false, List.last_exn poly) ~f poly )
+
+let idx_to_find = function
+  | First -> Map.min_elt >> Option.map ~f:snd
+  | Last  -> Map.max_elt >> Option.map ~f:snd
+  | Idx i -> Fn.flip Map.find i
