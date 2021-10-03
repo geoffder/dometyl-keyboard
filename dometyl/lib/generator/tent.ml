@@ -60,7 +60,7 @@ let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   bump, inset_cut
 
 let make
-    ?(degrees = 30.)
+    ?(degrees = 20.)
     ?(z_offset = 0.)
     ?fastener
     ?(foot_thickness = 2.)
