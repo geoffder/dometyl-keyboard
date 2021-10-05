@@ -6,8 +6,8 @@ module Bone = struct
     { scad : Scad.t
     ; base : Vec3.t
     ; tip : Vec3.t
-    ; joint : Vec3.t [@unit]
-    ; normal : Vec3.t [@unit]
+    ; joint : Vec3.t [@scad.unit]
+    ; normal : Vec3.t [@scad.unit]
     }
   [@@deriving scad]
 
