@@ -103,9 +103,35 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       match Map.find keys (key + 1) with
       | None    -> m
       | Some k2 ->
-        let scad = join_keys k1 k2 in
-        let west = Scad.difference scad [ Scad.translate (0.01, 0., 0.) scad ]
-        and east = Scad.difference scad [ Scad.translate (-0.01, 0., 0.) scad ] in
+        let open Vec3 in
+        let scad = join_keys k1 k2
+        and dir1 = KeyHole.Face.direction k1.faces.north
+        and dir2 = KeyHole.Face.direction k2.faces.south in
+        let west =
+          Util.prism_exn
+            [ k1.faces.north.points.top_left
+            ; k1.faces.north.points.bot_left
+            ; k2.faces.south.points.bot_right
+            ; k2.faces.south.points.top_right
+            ]
+            [ k1.faces.north.points.top_left <+> mul_scalar dir1 (-0.01)
+            ; k1.faces.north.points.bot_left <+> mul_scalar dir1 (-0.01)
+            ; k2.faces.south.points.bot_right <+> mul_scalar dir2 0.01
+            ; k2.faces.south.points.top_right <+> mul_scalar dir2 0.01
+            ]
+        and east =
+          Util.prism_exn
+            [ k1.faces.north.points.top_right
+            ; k1.faces.north.points.bot_right
+            ; k2.faces.south.points.bot_left
+            ; k2.faces.south.points.top_left
+            ]
+            [ k1.faces.north.points.top_right <+> mul_scalar dir1 0.01
+            ; k1.faces.north.points.bot_right <+> mul_scalar dir1 0.01
+            ; k2.faces.south.points.bot_left <+> mul_scalar dir2 (-0.01)
+            ; k2.faces.south.points.top_left <+> mul_scalar dir2 (-0.01)
+            ]
+        in
         Map.add_exn m ~key ~data:Join.{ scad; faces = { west; east } }
     in
     Map.fold ~f ~init:(Map.empty (module Int)) keys
