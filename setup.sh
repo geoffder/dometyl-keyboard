@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# move to location of this script
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 # install opam depenencies
 opam --yes install \
     dune base stdio ppx_jane ppx_inline_test  \
