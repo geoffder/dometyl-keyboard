@@ -56,9 +56,9 @@ which are available through the opam package manager.
 One day I may get to upstreaming my drammatic changes to
 [scad-ml](https://github.com/namachan10777/scad-ml) and do the work to get the
 library added to the **opam** repository, but for now, you'll need to clone and
-locally install my fork (anywhere, no need to be in your clone of this repo, as
-doing this will make it available in your opam switch alogside the packages you
-install from the package repository).
+locally install [my fork](https://github.com/geoffder/scad-ml) (anywhere, no
+need to be in your clone of this repo, as doing this will make it available in
+your opam switch alogside the packages you install from the package repository).
 1. `git clone https://github.com/geoffder/scad-ml`
 2. `cd scad-ml`
 3. `dune build`
@@ -164,7 +164,7 @@ their respective configurations.
 ![Hand](images/hand_example.png)
 There is an as yet undocumented (and subject to evolution) [Hand
 module](dometyl/lib/generator/hand.ml) available to play around with. One can
-generate hand from a knuckle (base of proximal bones, or the meta-carpal for the
+generate hand from knuckle (base of proximal bones, or the meta-carpal for the
 thumb) offset coordinates and bone lengths, then pose it with the available
 flexion/extension/abduction/adduction/etc functions, and place it over the home
 row of a generated `Plate.t`. Hopefully this can help give you a sense of what
