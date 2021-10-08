@@ -117,7 +117,9 @@ let make
       let head_disc = Scad.circle head_rad in
       let hole =
         match sink with
-        | Counter   -> Scad.linear_extrude ~height ~scale:(shaft_rad /. head_rad) head_disc
+        | Counter   ->
+          let s = shaft_rad /. head_rad in
+          Scad.linear_extrude ~height ~scale:(s, s) head_disc
         | Pan inset ->
           Scad.union
             [ Scad.linear_extrude ~height:inset head_disc

@@ -46,9 +46,9 @@ let make
     in
     match fastener with
     | Screw { head_rad; shaft_rad; sink = Counter; _ } ->
+      let s = shaft_rad /. head_rad in
       ( thickness
-      , Scad.circle head_rad
-        |> Scad.linear_extrude ~height:thickness ~scale:(shaft_rad /. head_rad) )
+      , Scad.circle head_rad |> Scad.linear_extrude ~height:thickness ~scale:(s, s) )
     | Screw { head_rad; shaft_rad; sink = Pan depth; _ } ->
       ( thickness
       , Scad.union
