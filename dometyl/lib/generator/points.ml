@@ -8,6 +8,7 @@ type t =
   ; bot_right : Vec3.t
   ; centre : Vec3.t
   }
+[@@deriving scad]
 
 type pos =
   [ `TL
@@ -29,12 +30,6 @@ let fold ~f ~init t =
   let flipped = Fn.flip f in
   f init t.top_left |> flipped t.top_right |> flipped t.bot_left |> flipped t.bot_right
 
-let translate p = map ~f:(Vec3.add p)
-let mirror ax = map ~f:(Vec3.mirror ax)
-let rotate r = map ~f:(Vec3.rotate r)
-let rotate_about_pt r p = map ~f:(Vec3.rotate_about_pt r p)
-let quaternion q = map ~f:(Vec3.quaternion q)
-let quaternion_about_pt q p = map ~f:(Vec3.quaternion_about_pt q p)
 let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
 
 let of_clockwise_list_exn = function

@@ -6,6 +6,7 @@ module Face = struct
     { scad : Scad.t
     ; points : Points.t
     }
+  [@@deriving scad]
 
   let make ((x, y, _) as size) =
     let points =
@@ -19,25 +20,6 @@ module Face = struct
     in
     { scad = Scad.cube ~center:true size; points }
 
-  let translate p t =
-    { scad = Scad.translate p t.scad; points = Points.translate p t.points }
-
-  let mirror ax t = { scad = Scad.mirror ax t.scad; points = Points.mirror ax t.points }
-  let rotate r t = { scad = Scad.rotate r t.scad; points = Points.rotate r t.points }
-
-  let rotate_about_pt r p t =
-    { scad = Scad.rotate_about_pt r p t.scad
-    ; points = Points.rotate_about_pt r p t.points
-    }
-
-  let quaternion q t =
-    { scad = Scad.quaternion q t.scad; points = Points.quaternion q t.points }
-
-  let quaternion_about_pt q p t =
-    { scad = Scad.quaternion_about_pt q p t.scad
-    ; points = Points.quaternion_about_pt q p t.points
-    }
-
   let direction { points = { top_left; top_right; _ }; _ } =
     Vec3.normalize Vec3.(top_left <-> top_right)
 end
@@ -49,6 +31,7 @@ module Faces = struct
     ; east : Face.t
     ; west : Face.t
     }
+  [@@deriving scad]
 
   let map ~f t =
     { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
@@ -78,13 +61,6 @@ module Faces = struct
     | `South -> t.south
     | `East  -> t.east
     | `West  -> t.west
-
-  let translate p = map ~f:(Face.translate p)
-  let mirror ax = map ~f:(Face.mirror ax)
-  let rotate r = map ~f:(Face.rotate r)
-  let rotate_about_pt r p = map ~f:(Face.rotate_about_pt r p)
-  let quaternion q = map ~f:(Face.quaternion q)
-  let quaternion_about_pt q p = map ~f:(Face.quaternion_about_pt q p)
 end
 
 module Kind = struct
@@ -113,13 +89,14 @@ type 'k config =
   }
 
 type 'k t =
-  { config : 'k config
+  { config : 'k config [@scad.ignore]
   ; scad : Scad.t
   ; origin : Vec3.t
   ; faces : Faces.t
   ; cap : Scad.t option
   ; cutout : Scad.t option
   }
+[@@deriving scad]
 
 let orthogonal t side =
   Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
