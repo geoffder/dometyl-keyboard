@@ -105,60 +105,6 @@ let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
   Vec3.(normalize (top_left <-> bot_left))
 
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; origin = Vec3.add p t.origin
-  ; faces = Faces.translate p t.faces
-  ; cap = Option.map ~f:(Scad.translate p) t.cap
-  ; cutout = Option.map ~f:(Scad.translate p) t.cutout
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; origin = Vec3.mirror ax t.origin
-  ; faces = Faces.mirror ax t.faces
-  ; cap = Option.map ~f:(Scad.mirror ax) t.cap
-  ; cutout = Option.map ~f:(Scad.mirror ax) t.cutout
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; origin = Vec3.rotate r t.origin
-  ; faces = Faces.rotate r t.faces
-  ; cap = Option.map ~f:(Scad.rotate r) t.cap
-  ; cutout = Option.map ~f:(Scad.rotate r) t.cutout
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; origin = Vec3.rotate_about_pt r p t.origin
-  ; faces = Faces.rotate_about_pt r p t.faces
-  ; cap = Option.map ~f:(Scad.rotate_about_pt r p) t.cap
-  ; cutout = Option.map ~f:(Scad.rotate_about_pt r p) t.cutout
-  }
-
-let quaternion q t =
-  { t with
-    scad = Scad.quaternion q t.scad
-  ; origin = Vec3.quaternion q t.origin
-  ; faces = Faces.quaternion q t.faces
-  ; cap = Option.map ~f:(Scad.quaternion q) t.cap
-  ; cutout = Option.map ~f:(Scad.quaternion q) t.cutout
-  }
-
-let quaternion_about_pt q p t =
-  { t with
-    scad = Scad.quaternion_about_pt q p t.scad
-  ; origin = Vec3.quaternion_about_pt q p t.origin
-  ; faces = Faces.quaternion_about_pt q p t.faces
-  ; cap = Option.map ~f:(Scad.quaternion_about_pt q p) t.cap
-  ; cutout = Option.map ~f:(Scad.quaternion_about_pt q p) t.cutout
-  }
-
 let rotate_about_origin r t =
   let p = Vec3.negate t.origin in
   { t with

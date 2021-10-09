@@ -6,13 +6,9 @@ module Face : sig
     { scad : Scad.t
     ; points : Points.t
     }
+  [@@deriving scad]
 
   val make : Vec3.t -> t
-  val translate : Vec3.t -> t -> t
-  val rotate : Vec3.t -> t -> t
-  val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
-  val quaternion : Quaternion.t -> t -> t
-  val quaternion_about_pt : Quaternion.t -> Vec3.t -> t -> t
   val direction : t -> Vec3.t
 end
 
@@ -23,16 +19,12 @@ module Faces : sig
     ; east : Face.t
     ; west : Face.t
     }
+  [@@deriving scad]
 
   val map : f:(Face.t -> Face.t) -> t -> t
   val fold : f:('k -> Face.t -> 'k) -> init:'k -> t -> 'k
   val make : float -> float -> float -> t
   val face : t -> [< `East | `North | `South | `West ] -> Face.t
-  val translate : Vec3.t -> t -> t
-  val rotate : Vec3.t -> t -> t
-  val rotate_about_pt : Vec3.t -> Vec3.t -> t -> t
-  val quaternion : Quaternion.t -> t -> t
-  val quaternion_about_pt : Quaternion.t -> Vec3.t -> t -> t
 end
 
 module Kind : sig
@@ -61,18 +53,15 @@ type 'k config =
   }
 
 type 'k t =
-  { config : 'k config
+  { config : 'k config [@scad.ignore]
   ; scad : Scad.t
   ; origin : Vec3.t
   ; faces : Faces.t
   ; cap : Scad.t option
   ; cutout : Scad.t option
   }
+[@@deriving scad]
 
-include Sigs.Transformable' with type 'k t := 'k t
-
-val quaternion : Quaternion.t -> 'k t -> 'k t
-val quaternion_about_pt : Quaternion.t -> Vec3.t -> 'k t -> 'k t
 val rotate_about_origin : Vec3.t -> 'k t -> 'k t
 val quaternion_about_origin : float -> 'k t -> 'k t
 val cycle_faces : 'k t -> 'k t

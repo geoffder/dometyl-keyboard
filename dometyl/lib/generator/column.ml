@@ -7,12 +7,9 @@ module Join = struct
       { west : Scad.t
       ; east : Scad.t
       }
+    [@@deriving scad]
 
     let map ~f t = { west = f t.west; east = f t.east }
-    let translate p = map ~f:(Scad.translate p)
-    let mirror ax = map ~f:(Scad.mirror ax)
-    let rotate r = map ~f:(Scad.rotate r)
-    let rotate_about_pt r p = map ~f:(Scad.rotate_about_pt r p)
 
     let face t = function
       | `West -> t.west
@@ -23,15 +20,7 @@ module Join = struct
     { scad : Scad.t
     ; faces : Faces.t
     }
-
-  let translate p t =
-    { scad = Scad.translate p t.scad; faces = Faces.translate p t.faces }
-
-  let mirror ax t = { scad = Scad.mirror ax t.scad; faces = Faces.mirror ax t.faces }
-  let rotate r t = { scad = Scad.rotate r t.scad; faces = Faces.rotate r t.faces }
-
-  let rotate_about_pt r p t =
-    { scad = Scad.rotate_about_pt r p t.scad; faces = Faces.rotate_about_pt r p t.faces }
+  [@@deriving scad]
 end
 
 type 'k config =
