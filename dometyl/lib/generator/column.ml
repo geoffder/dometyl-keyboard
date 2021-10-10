@@ -30,39 +30,12 @@ type 'k config =
   }
 
 type 'k t =
-  { config : 'k config
+  { config : 'k config [@scad.ignore]
   ; scad : Scad.t
-  ; keys : 'k KeyHole.t Map.M(Int).t
-  ; joins : Join.t Map.M(Int).t
+  ; keys : 'k KeyHole.t Map.M(Int).t [@scad.jane]
+  ; joins : Join.t Map.M(Int).t [@scad.jane]
   }
-
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; keys = Map.map ~f:(KeyHole.translate p) t.keys
-  ; joins = Map.map ~f:(Join.translate p) t.joins
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; keys = Map.map ~f:(KeyHole.mirror ax) t.keys
-  ; joins = Map.map ~f:(Join.mirror ax) t.joins
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; keys = Map.map ~f:(KeyHole.rotate r) t.keys
-  ; joins = Map.map ~f:(Join.rotate r) t.joins
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; keys = Map.map ~f:(KeyHole.rotate_about_pt r p) t.keys
-  ; joins = Map.map ~f:(Join.rotate_about_pt r p) t.joins
-  }
+[@@deriving scad]
 
 let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
