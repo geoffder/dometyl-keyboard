@@ -9,7 +9,7 @@ module Lookups = struct
     ; swing : int -> float
     ; splay : int -> float
     ; rows : int -> int
-    ; centre : int -> int
+    ; centre : int -> float
     }
 
   let default_offset = function
@@ -38,7 +38,7 @@ module Lookups = struct
     | _ -> 0.
 
   let default_rows _ = 3
-  let default_centre _ = 1
+  let default_centre _ = 1.
 
   let make
       ?(offset = default_offset)
@@ -54,7 +54,7 @@ end
 
 type 'k config =
   { n_rows : int -> int
-  ; row_centres : int -> int
+  ; row_centres : int -> float
   ; n_cols : int
   ; centre_col : int
   ; spacing : float
@@ -117,7 +117,7 @@ let make
     ?(spacing = 1.)
     ?(tent = Float.pi /. 12.)
     ?(n_thumb_keys = 3)
-    ?(thumb_centre = 1)
+    ?(thumb_centre = 1.)
     ?(thumb_curve =
       Curvature.(
         curve
@@ -155,7 +155,7 @@ let make
     let tented = apply_tent off (curve_column i) in
     Column.rotate_about_pt
       (0., lookups.swing i, lookups.splay i)
-      (Vec3.negate (Map.find_exn tented.keys (lookups.centre i)).origin)
+      (Vec3.negate (Map.find_exn tented.keys (Int.of_float @@ lookups.centre i)).origin)
       tented
     |> Column.translate off
   in

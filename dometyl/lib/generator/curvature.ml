@@ -28,8 +28,8 @@ let pre_tweak ?well ?fan f = PreTweak (f, { well; fan })
 let post_tweak ?well ?fan f = PostTweak ({ well; fan }, f)
 let well_point { radius; _ } = 0., 0., -.radius
 let fan_point { radius; _ } = -.radius, 0., 0.
-let well_theta centre_idx { angle; _ } i = angle *. Int.to_float (i - centre_idx), 0., 0.
-let fan_theta centre_idx { angle; _ } i = 0., 0., -.angle *. Int.to_float (i - centre_idx)
+let well_theta centre_idx { angle; _ } i = angle *. (Float.of_int i -. centre_idx), 0., 0.
+let fan_theta centre_idx { angle; _ } i = 0., 0., -.angle *. (Float.of_int i -. centre_idx)
 
 let place ?well ?fan ~centre_idx i key =
   let well_theta' = well_theta centre_idx in

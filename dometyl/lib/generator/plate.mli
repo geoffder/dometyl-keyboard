@@ -23,10 +23,10 @@ module Lookups : sig
               will always have to go hand in hand with adjustments to {!offset} to end up
               with something sensible. *)
     ; rows : int -> int (** Number of keys to distribute for the given column. *)
-    ; centre : int -> int
-          (** Centre key index for the given column. Used by key distribution
-              functions, namely {!Curvature.place}. Relevant to [thumb_curve]
-              and {!Lookups.curve}. *)
+    ; centre : int -> float
+          (** Relative centre key index for the given column. Used by key
+              distribution functions, namely {!Curvature.place}. Relevant to
+              [thumb_curve] and {!Lookups.curve}. *)
     }
 
   val default_offset : int -> Vec3.t
@@ -34,7 +34,7 @@ module Lookups : sig
   val default_swing : int -> float
   val default_splay : int -> float
   val default_rows : int -> int
-  val default_centre : int -> int
+  val default_centre : int -> float
 
   (** [make ?offset ?curve ?swing ?splay ()]
 
@@ -46,7 +46,7 @@ module Lookups : sig
     -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> ?rows:(int -> int)
-    -> ?centre:(int -> int)
+    -> ?centre:(int -> float)
     -> unit
     -> 'k t
 end
@@ -54,7 +54,7 @@ end
 (** Non-function parameters used for the construction of the plate. *)
 type 'k config =
   { n_rows : int -> int
-  ; row_centres : int -> int
+  ; row_centres : int -> float
   ; n_cols : int
   ; centre_col : int
   ; spacing : float
@@ -87,7 +87,7 @@ bottom). You may want to set this according to orientation you would like to
 have your caps in, since Mx stems are not necessarily radially symmetric. *)
 val make_thumb
   :  n_keys:int
-  -> centre_idx:int
+  -> centre_idx:float
   -> curve:'k Curvature.t
   -> caps:(int -> Scad.t)
   -> rotate_clips:bool
@@ -129,7 +129,7 @@ val make
   -> ?spacing:float
   -> ?tent:float
   -> ?n_thumb_keys:int
-  -> ?thumb_centre:int
+  -> ?thumb_centre:float
   -> ?thumb_curve:'k Curvature.t
   -> ?rotate_thumb_clips:bool
   -> ?thumb_offset:Vec3.t

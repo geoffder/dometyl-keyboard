@@ -392,14 +392,18 @@ let to_scad
 
 let home ?(hover = 18.) Plate.{ columns; config; _ } t =
   let centre_row = config.row_centres config.centre_col in
-  let key = Columns.key_exn columns config.centre_col centre_row in
+  let key = Columns.key_exn columns config.centre_col (Int.of_float centre_row) in
   let pos = Vec3.(add key.origin (mul_scalar (KeyHole.normal key) hover))
   and aligned =
     let column_vec =
       Vec3.(
         normalize
           (mul
-             ( (Columns.key_exn columns config.centre_col (centre_row + 1)).origin
+             ( (Columns.key_exn
+                  columns
+                  config.centre_col
+                  (Int.of_float @@ (centre_row +. 1.)) )
+                 .origin
              <-> key.origin )
              (1., 1., 0.) ))
     in

@@ -27,15 +27,15 @@ val pre_tweak : ?well:spec -> ?fan:spec -> 'k custom -> 'k t
 val post_tweak : ?well:spec -> ?fan:spec -> 'k custom -> 'k t
 val well_point : spec -> Vec3.t
 val fan_point : spec -> Vec3.t
-val well_theta : int -> spec -> int -> Vec3.t
-val fan_theta : int -> spec -> int -> Vec3.t
+val well_theta : float -> spec -> int -> Vec3.t
+val fan_theta : float -> spec -> int -> Vec3.t
 
 val place
   :  ?well:spec
   -> ?fan:spec
-  -> centre_idx:int
+  -> centre_idx:float
   -> int
   -> 'k KeyHole.t
   -> 'k KeyHole.t
 
-val apply : centre_idx:int -> 'k t -> int -> 'k KeyHole.t -> 'k KeyHole.t
+val apply : centre_idx:float -> 'k t -> int -> 'k KeyHole.t -> 'k KeyHole.t

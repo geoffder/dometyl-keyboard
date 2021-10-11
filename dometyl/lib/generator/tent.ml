@@ -74,7 +74,11 @@ let make
     let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
     and pinky_home =
       let n = case.plate.config.n_cols - 1 in
-      (Columns.key_exn case.plate.columns n (case.plate.config.row_centres n)).origin
+      (Columns.key_exn
+         case.plate.columns
+         n
+         (Int.of_float @@ case.plate.config.row_centres n) )
+        .origin
     in
     if Float.(
          Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))
