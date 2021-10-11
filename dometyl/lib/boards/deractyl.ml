@@ -95,7 +95,7 @@ let holder_z = Float.pi /. 25.
 let holder ?reset_button () =
   Ports.reversible_holder ?reset_button ~x_off:holder_x ~y_off:holder_y ~z_rot:holder_z ()
 
-let build ?reset_button ?hotswap () =
+let build ?reset_button ?right_hand ?hotswap () =
   let keyhole = Mx.make_hole ?hotswap () in
   Case.make
     ~plate_builder
@@ -103,6 +103,7 @@ let build ?reset_button ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter:(holder ?reset_button ())
+    ?right_hand
     keyhole
 
 let compactyl =
