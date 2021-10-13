@@ -1,10 +1,21 @@
 #!/bin/bash
 
+# exit on failure
+set -e
+
 # move to location of this script
-cd "$( dirname "${BASH_SOURCE[0]}" )"
+base_dir="$( dirname "${BASH_SOURCE[0]}" )"
+cd "$base_dir"
+
+# auto-confirm opam prompts unless operating under cygwin
+opam_exec="opam --yes"
+if [ "$(expr substr $(uname -s) 1 6)" == "CYGWIN" ]
+then
+   opam_exec="opam"
+fi
 
 # install opam depenencies
-opam --yes install \
+$opam_exec --yes install \
     dune base stdio ppx_jane ppx_inline_test ppxlib \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
@@ -45,5 +56,5 @@ dune build
 opam install ./ppx_deriving_scad.opam
 
 # return to dometyl and build
-cd ../dometyl-keyboard/dometyl
+cd "$base_dir"
 dune build
