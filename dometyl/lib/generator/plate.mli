@@ -72,9 +72,7 @@ type 'k t =
   ; columns : 'k Columns.t
   ; thumb : 'k Column.t
   }
-
-(** Basic transformation functions, applied to all relevant non-config contents. *)
-include Sigs.Transformable' with type 'k t := 'k t
+[@@deriving scad]
 
 (** [make_thumb ~n_keys ~centre_idx ~curve ~rotate_clips ~caps keyhole]
 

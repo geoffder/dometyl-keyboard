@@ -36,8 +36,7 @@ type t =
   ; centre : Vec3.t
   ; config : config
   }
-
-include Sigs.Transformable with type t := t
+[@@deriving scad]
 
 val screw_fastener
   :  ?head_rad:float

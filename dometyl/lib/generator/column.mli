@@ -19,8 +19,7 @@ module Join : sig
     { scad : Scad.t
     ; faces : Faces.t
     }
-
-  include Sigs.Transformable with type t := t
+  [@@deriving scad]
 end
 
 type 'k config =
@@ -35,8 +34,7 @@ type 'k t =
   ; keys : 'k KeyHole.t Map.M(Int).t
   ; joins : Join.t Map.M(Int).t
   }
-
-include Sigs.Transformable' with type 'k t := 'k t
+[@@deriving scad]
 
 val make
   :  ?join_ax:[< `EW | `NS > `NS ]

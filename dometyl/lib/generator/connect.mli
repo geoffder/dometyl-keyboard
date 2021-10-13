@@ -6,10 +6,9 @@ type t =
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }
+[@@deriving scad]
 
 val centre : float * float * float * float -> float * float
-
-include Sigs.Transformable with type t := t
 
 val prism_connection
   :  (float -> Vec3.t) list

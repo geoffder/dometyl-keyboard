@@ -18,9 +18,12 @@ module Edge = struct
   type t = float -> Vec3.t
 
   let translate p = Fn.compose (Vec3.add p)
+  let scale s = Fn.compose (Vec3.scale s)
   let mirror ax = Fn.compose (Vec3.mirror ax)
   let rotate r = Fn.compose (Vec3.rotate r)
   let rotate_about_pt r p = Fn.compose (Vec3.rotate_about_pt r p)
+  let quaternion q = Fn.compose (Vec3.quaternion q)
+  let quaternion_about_pt q p = Fn.compose (Vec3.quaternion_about_pt q p)
 
   let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
     let bez_frac =
@@ -72,9 +75,14 @@ module EdgeDrawer = struct
 
   let map ~f t = { top = f t.top; bot = f t.bot }
   let translate p = map ~f:(fun d start -> d start >> Vec3.add p)
+  let scale s = map ~f:(fun d start -> d start >> Vec3.scale s)
   let mirror ax = map ~f:(fun d start -> d start >> Vec3.mirror ax)
   let rotate r = map ~f:(fun d start -> d start >> Vec3.rotate r)
   let rotate_about_pt r p = map ~f:(fun d start -> d start >> Vec3.rotate_about_pt r p)
+  let quaternion q = map ~f:(fun d start -> d start >> Vec3.quaternion q)
+
+  let quaternion_about_pt q p =
+    map ~f:(fun d start -> d start >> Vec3.quaternion_about_pt q p)
 end
 
 module Edges = struct
@@ -84,6 +92,7 @@ module Edges = struct
     ; bot_left : Edge.t
     ; bot_right : Edge.t
     }
+  [@@deriving scad]
 
   let map ~f t =
     { top_left = f t.top_left
@@ -91,11 +100,6 @@ module Edges = struct
     ; bot_left = f t.bot_left
     ; bot_right = f t.bot_right
     }
-
-  let translate p = map ~f:(Edge.translate p)
-  let mirror ax = map ~f:(Edge.mirror ax)
-  let rotate r = map ~f:(Edge.rotate r)
-  let rotate_about_pt r p = map ~f:(Edge.rotate_about_pt r p)
 
   let of_clockwise_list_exn = function
     | [ top_left; top_right; bot_right; bot_left ] ->
@@ -121,42 +125,7 @@ type t =
   ; edges : Edges.t
   ; screw : Eyelet.t option
   }
-
-let translate p t =
-  { scad = Scad.translate p t.scad
-  ; start = Points.translate p t.start
-  ; foot = Points.translate p t.foot
-  ; edge_drawer = EdgeDrawer.translate p t.edge_drawer
-  ; edges = Edges.translate p t.edges
-  ; screw = Option.map ~f:(Eyelet.translate p) t.screw
-  }
-
-let mirror ax t =
-  { scad = Scad.mirror ax t.scad
-  ; start = Points.mirror ax t.start
-  ; foot = Points.mirror ax t.foot
-  ; edge_drawer = EdgeDrawer.mirror ax t.edge_drawer
-  ; edges = Edges.mirror ax t.edges
-  ; screw = Option.map ~f:(Eyelet.mirror ax) t.screw
-  }
-
-let rotate r t =
-  { scad = Scad.rotate r t.scad
-  ; start = Points.rotate r t.start
-  ; foot = Points.rotate r t.foot
-  ; edge_drawer = EdgeDrawer.rotate r t.edge_drawer
-  ; edges = Edges.rotate r t.edges
-  ; screw = Option.map ~f:(Eyelet.rotate r) t.screw
-  }
-
-let rotate_about_pt r p t =
-  { scad = Scad.rotate_about_pt r p t.scad
-  ; start = Points.rotate_about_pt r p t.start
-  ; foot = Points.rotate_about_pt r p t.foot
-  ; edge_drawer = EdgeDrawer.rotate_about_pt r p t.edge_drawer
-  ; edges = Edges.rotate_about_pt r p t.edges
-  ; screw = Option.map ~f:(Eyelet.rotate_about_pt r p) t.screw
-  }
+[@@deriving scad]
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
   let quat = Quaternion.make (KeyHole.Face.direction face)

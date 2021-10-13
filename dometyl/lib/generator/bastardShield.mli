@@ -7,8 +7,7 @@ type t =
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
   }
-
-include Sigs.Transformable with type t := t
+[@@deriving scad]
 
 val print_pcb : float -> Scad.t
 val pcb : float -> Scad.t

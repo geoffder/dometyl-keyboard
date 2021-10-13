@@ -16,9 +16,7 @@ type 'k t =
   ; walls : Walls.t
   ; connections : Connect.t
   }
-
-(** Basic transformation functions, applied to all relevant non-config contents. *)
-include Sigs.Transformable' with type 'k t := 'k t
+[@@deriving scad]
 
 (** [make ?right_hand ~plate_builder ~plate_welder ~wall_builder ~base_connector
       ~ports_cutter keyhole]

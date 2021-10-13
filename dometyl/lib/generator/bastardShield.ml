@@ -3,38 +3,11 @@ open! Scad_ml
 
 type t =
   { scad : Scad.t
-  ; thickness : float
+  ; thickness : float [@scad.ignore]
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
   }
-
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; screw_l = Vec3.add p t.screw_l
-  ; screw_r = Vec3.add p t.screw_r
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; screw_l = Vec3.mirror ax t.screw_l
-  ; screw_r = Vec3.mirror ax t.screw_r
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; screw_l = Vec3.rotate r t.screw_l
-  ; screw_r = Vec3.rotate r t.screw_r
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; screw_l = Vec3.rotate_about_pt r p t.screw_l
-  ; screw_r = Vec3.rotate_about_pt r p t.screw_r
-  }
+[@@deriving scad]
 
 let screws t =
   let cyl =

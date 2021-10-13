@@ -19,10 +19,7 @@ module Body : sig
 
     val map_col : f:(Wall.t -> Wall.t) -> col -> col
 
-    type t = col Map.M(Int).t
-
-    (** Basic transformation functions *)
-    include Sigs.Transformable with type t := t
+    type t = col Map.M(Int).t [@@deriving scad]
 
     val make
       :  ?d1:float
@@ -51,11 +48,9 @@ module Body : sig
       { west : Wall.t Map.M(Int).t
       ; east : Wall.t Map.M(Int).t
       }
+    [@@deriving scad]
 
     val map : f:(Wall.t -> Wall.t) -> t -> t
-
-    (** Basic transformation functions *)
-    include Sigs.Transformable with type t := t
 
     val make
       :  ?d1:float
@@ -79,9 +74,7 @@ module Body : sig
     { cols : Cols.t
     ; sides : Sides.t
     }
-
-  (** Basic transformation functions *)
-  include Sigs.Transformable with type t := t
+  [@@deriving scad]
 
   val make
     :  ?d1:float
@@ -126,11 +119,9 @@ module Thumb : sig
     { keys : key Map.M(Int).t
     ; sides : sides
     }
+  [@@deriving scad]
 
   val map : f:(Wall.t -> Wall.t) -> t -> t
-
-  (** Basic transformation functions *)
-  include Sigs.Transformable with type t := t
 
   val make
     :  ?d1:float
@@ -156,9 +147,7 @@ type t =
   { body : Body.t
   ; thumb : Thumb.t
   }
-
-(** Basic transformation functions *)
-include Sigs.Transformable with type t := t
+[@@deriving scad]
 
 val to_scad : t -> Scad.t
 val collect_screws : t -> Eyelet.t list

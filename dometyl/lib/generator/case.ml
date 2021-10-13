@@ -8,34 +8,7 @@ type 'k t =
   ; walls : Walls.t
   ; connections : Connect.t
   }
-
-let translate p t =
-  { scad = Scad.translate p t.scad
-  ; plate = Plate.translate p t.plate
-  ; walls = Walls.translate p t.walls
-  ; connections = Connect.translate p t.connections
-  }
-
-let mirror ax t =
-  { scad = Scad.mirror ax t.scad
-  ; plate = Plate.mirror ax t.plate
-  ; walls = Walls.mirror ax t.walls
-  ; connections = Connect.mirror ax t.connections
-  }
-
-let rotate r t =
-  { scad = Scad.rotate r t.scad
-  ; plate = Plate.rotate r t.plate
-  ; walls = Walls.rotate r t.walls
-  ; connections = Connect.rotate r t.connections
-  }
-
-let rotate_about_pt r p t =
-  { scad = Scad.rotate_about_pt r p t.scad
-  ; plate = Plate.rotate_about_pt r p t.plate
-  ; walls = Walls.rotate_about_pt r p t.walls
-  ; connections = Connect.rotate_about_pt r p t.connections
-  }
+[@@deriving scad]
 
 let make
     ?(right_hand = true)

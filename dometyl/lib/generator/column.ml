@@ -32,8 +32,8 @@ type 'k config =
 type 'k t =
   { config : 'k config [@scad.ignore]
   ; scad : Scad.t
-  ; keys : 'k KeyHole.t Map.M(Int).t [@scad.jane]
-  ; joins : Join.t Map.M(Int).t [@scad.jane]
+  ; keys : 'k KeyHole.t Map.M(Int).t [@scad.mapf]
+  ; joins : Join.t Map.M(Int).t [@scad.mapf]
   }
 [@@deriving scad]
 

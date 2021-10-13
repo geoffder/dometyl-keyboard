@@ -23,10 +23,7 @@ end
 (** Bezier curve wall edge type and helpers. *)
 module Edge : sig
   (** Bezier function, returns position along curve, from 0. to 1. *)
-  type t = float -> Vec3.t
-
-  (** Basic transformation functions *)
-  include Sigs.Transformable with type t := t
+  type t = float -> Vec3.t [@@deriving scad]
 
   (** [point_at_z ?max_iter ?tolerance t z]
 
@@ -46,6 +43,7 @@ module EdgeDrawer : sig
     { top : drawer
     ; bot : drawer
     }
+  [@@deriving scad]
 
   val make
     :  ?max_iter:int
@@ -55,9 +53,6 @@ module EdgeDrawer : sig
     -> t
 
   val map : f:(drawer -> drawer) -> t -> t
-
-  (** Basic transformation functions *)
-  include Sigs.Transformable with type t := t
 end
 
 (** Bezier curves representing the four edges running from the start to the foot
@@ -72,11 +67,9 @@ module Edges : sig
     ; bot_left : Edge.t
     ; bot_right : Edge.t
     }
+  [@@deriving scad]
 
   val map : f:(Edge.t -> Edge.t) -> t -> t
-
-  (** Basic transformation functions *)
-  include Sigs.Transformable with type t := t
 
   (** [of_clockwise_list_exn l]
       Convert a four element list into a [t]. The ordering actually shouldn't just be
@@ -104,9 +97,7 @@ type t =
   ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }
-
-(** Basic transformation functions *)
-include Sigs.Transformable with type t := t
+[@@deriving scad]
 
 (** [swing_face ?step key_orgin face]
 
