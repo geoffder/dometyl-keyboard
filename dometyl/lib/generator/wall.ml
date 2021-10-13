@@ -118,7 +118,7 @@ module Edges = struct
 end
 
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; start : Points.t
   ; foot : Points.t
   ; edge_drawer : EdgeDrawer.t

@@ -3,7 +3,7 @@ open! Scad_ml
 
 module Bone = struct
   type t =
-    { scad : Scad.t
+    { scad : Scad.d3
     ; base : Vec3.t
     ; tip : Vec3.t
     ; joint : Vec3.t [@scad.unit]
@@ -190,7 +190,7 @@ type config =
 type t =
   { fingers : Fingers.t
   ; thumb : Thumb.t
-  ; carpals : Scad.t
+  ; carpals : Scad.d3
   ; knuckle_rad : float [@scad.ignore]
   ; origin : Vec3.t
   ; wrist : Vec3.t [@scad.unit]

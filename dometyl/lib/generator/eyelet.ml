@@ -31,8 +31,8 @@ type config =
   }
 
 type t =
-  { scad : Scad.t
-  ; cut : Scad.t option
+  { scad : Scad.d3
+  ; cut : Scad.d3 option
   ; centre : Vec3.t
   ; config : config [@scad.ignore]
   }

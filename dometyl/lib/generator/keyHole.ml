@@ -3,7 +3,7 @@ open Scad_ml
 
 module Face = struct
   type t =
-    { scad : Scad.t
+    { scad : Scad.d3
     ; points : Points.t
     }
   [@@deriving scad]
@@ -83,18 +83,18 @@ type 'k config =
   ; inner_w : float
   ; inner_h : float
   ; thickness : float
-  ; clip : Scad.t -> Scad.t
+  ; clip : Scad.d3 -> Scad.d3
   ; cap_height : float
   ; clearance : float
   }
 
 type 'k t =
   { config : 'k config [@scad.ignore]
-  ; scad : Scad.t
+  ; scad : Scad.d3
   ; origin : Vec3.t
   ; faces : Faces.t
-  ; cap : Scad.t option
-  ; cutout : Scad.t option
+  ; cap : Scad.d3 option
+  ; cutout : Scad.d3 option
   }
 [@@deriving scad]
 

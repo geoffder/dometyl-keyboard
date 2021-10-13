@@ -2,7 +2,7 @@ open Base
 open Scad_ml
 
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; points : Points.t
   }
 

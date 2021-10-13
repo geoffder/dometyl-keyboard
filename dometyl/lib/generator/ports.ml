@@ -2,8 +2,8 @@ open! Base
 open! Scad_ml
 
 type t =
-  { plus : Scad.t option
-  ; minus : Scad.t option
+  { plus : Scad.d3 option
+  ; minus : Scad.d3 option
   }
 
 type cutter = walls:Walls.t -> connections:Connect.t -> t
@@ -98,7 +98,7 @@ let place_tray
   Scad.rotate (0., 0., z_rot) scad |> Scad.translate (x, y, 0.)
 
 let carbonfet_stl micro =
-  let import s = Scad.import (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
+  let import s = Scad.import_3d (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
   Scad.color Color.FireBrick
   @@
   if micro
@@ -128,7 +128,7 @@ let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connection
 let derek_reversible_stl reset_button =
   (if reset_button then "elite-c_holder_w_reset" else "elite-c_holder")
   |> Printf.sprintf "../things/holders/dereknheiley/%s.stl"
-  |> Scad.import
+  |> Scad.import_3d
   |> Scad.translate (15.3, 0., 0.)
   |> Scad.color Color.FireBrick
 

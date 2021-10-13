@@ -3,7 +3,7 @@ open! Scad_ml
 open! Infix
 
 type 'k t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; plate : 'k Plate.t
   ; walls : Walls.t
   ; connections : Connect.t

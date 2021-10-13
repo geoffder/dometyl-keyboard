@@ -4,8 +4,8 @@ open Scad_ml
 module Join = struct
   module Faces = struct
     type t =
-      { west : Scad.t
-      ; east : Scad.t
+      { west : Scad.d3
+      ; east : Scad.d3
       }
     [@@deriving scad]
 
@@ -17,7 +17,7 @@ module Join = struct
   end
 
   type t =
-    { scad : Scad.t
+    { scad : Scad.d3
     ; faces : Faces.t
     }
   [@@deriving scad]
@@ -31,7 +31,7 @@ type 'k config =
 
 type 'k t =
   { config : 'k config [@scad.ignore]
-  ; scad : Scad.t
+  ; scad : Scad.d3
   ; keys : 'k KeyHole.t Map.M(Int).t [@scad.mapf]
   ; joins : Join.t Map.M(Int).t [@scad.mapf]
   }

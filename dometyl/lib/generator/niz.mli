@@ -13,10 +13,10 @@ module Bottom : sig
   val ellipse_inset_y_scale : float
   val corner_cut_rad : float
   val corner_cut_off : float
-  val ellipse : Scad.t
-  val bulge : Scad.t
-  val cutter : Scad.t
-  val scad : Scad.t
+  val ellipse : Scad.d2
+  val bulge : Scad.d3
+  val cutter : Scad.d2
+  val scad : Scad.d3
 end
 
 val hole_config : KeyHole.Kind.niz KeyHole.config
@@ -40,10 +40,10 @@ module Platform : sig
   type t =
     { config : config
     ; wall_height : float
-    ; scad : Scad.t
+    ; scad : Scad.d3
     }
 
   val make : config -> t
 end
 
-val example_cross_section : Scad.t
+val example_cross_section : Scad.d3

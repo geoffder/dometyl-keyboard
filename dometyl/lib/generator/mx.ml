@@ -5,7 +5,7 @@ open! Scad_ml
    For rough visualization. It does not seem to line up with the holes, even
    when holes are positioned more exactly according to specifications. *)
 let kailh_socket =
-  Scad.import "../things/switches/mx_hotswap_socket.stl"
+  Scad.import_3d "../things/switches/mx_hotswap_socket.stl"
   |> Scad.translate (0.65, -4.8, -5.15)
   |> Scad.color ~alpha:0.4 Color.Silver
 

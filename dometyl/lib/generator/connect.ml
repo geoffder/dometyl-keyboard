@@ -13,7 +13,7 @@ open! Infix
     of which are ignored.)
  *)
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }

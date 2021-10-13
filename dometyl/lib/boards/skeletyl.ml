@@ -93,7 +93,7 @@ let build ?right_hand ?hotswap () =
     keyhole
 
 let bastard_skelly =
-  Scad.import "../things/others/bastardkb_skeletyl_v3_v5.stl"
+  Scad.import_3d "../things/others/bastardkb_skeletyl_v3_v5.stl"
   |> Scad.translate (87., 0., 25.)
   |> Scad.rotate (Float.pi /. 2., 0., 0.)
   |> Scad.translate (0., -2., 8.)

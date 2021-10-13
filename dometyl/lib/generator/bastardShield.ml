@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; thickness : float [@scad.ignore]
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
@@ -21,7 +21,7 @@ let to_scad ?(show_screws = false) t =
   if show_screws then Scad.union [ t.scad; screws t ] else t.scad
 
 let print_pcb thickness =
-  let import n = Scad.import (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
+  let import n = Scad.import_2d (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
   Scad.difference
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]

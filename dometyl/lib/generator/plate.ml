@@ -65,7 +65,7 @@ type 'k config =
 
 type 'k t =
   { config : 'k config [@scad.ignore]
-  ; scad : Scad.t
+  ; scad : Scad.d3
   ; columns : 'k Column.t Map.M(Int).t [@scad.mapf]
   ; thumb : 'k Column.t
   }

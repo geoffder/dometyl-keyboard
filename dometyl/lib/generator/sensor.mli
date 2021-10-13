@@ -21,8 +21,8 @@ end
 
 type t =
   { config : Config.t
-  ; scad : Scad.t
+  ; scad : Scad.d3
   }
 
 val make : Config.t -> t
-val sink : t -> Float.t -> Scad.t
+val sink : t -> Float.t -> Scad.d3

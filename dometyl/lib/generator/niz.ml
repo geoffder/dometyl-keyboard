@@ -125,7 +125,7 @@ module Platform = struct
   type t =
     { config : config
     ; wall_height : float
-    ; scad : Scad.t
+    ; scad : Scad.d3
     }
 
   let make

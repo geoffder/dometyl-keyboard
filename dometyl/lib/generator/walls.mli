@@ -38,8 +38,8 @@ module Body : sig
       -> t
 
     val get : col -> [< `N | `S ] -> Wall.t option
-    val col_to_scad : col -> Scad.t
-    val to_scad : t -> Scad.t
+    val col_to_scad : col -> Scad.d3
+    val to_scad : t -> Scad.d3
     val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
@@ -66,7 +66,7 @@ module Body : sig
       -> 'a Plate.t
       -> t
 
-    val to_scad : t -> Scad.t
+    val to_scad : t -> Scad.d3
     val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
@@ -95,7 +95,7 @@ module Body : sig
     -> 'a Plate.t
     -> t
 
-  val to_scad : t -> Scad.t
+  val to_scad : t -> Scad.d3
   val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
@@ -139,7 +139,7 @@ module Thumb : sig
     -> 'a Plate.t
     -> t
 
-  val to_scad : t -> Scad.t
+  val to_scad : t -> Scad.d3
   val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
@@ -149,5 +149,5 @@ type t =
   }
 [@@deriving scad]
 
-val to_scad : t -> Scad.t
+val to_scad : t -> Scad.d3
 val collect_screws : t -> Eyelet.t list

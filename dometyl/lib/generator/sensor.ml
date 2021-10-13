@@ -44,7 +44,7 @@ end
 
 type t =
   { config : Config.t
-  ; scad : Scad.t
+  ; scad : Scad.d3
   }
 
 let make
