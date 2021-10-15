@@ -2,9 +2,11 @@ open! Base
 open! Scad_ml
 
 module Face : sig
+  (** An outer face of a keyhole. *)
+
   type t =
-    { scad : Scad.d3
-    ; points : Points.t
+    { scad : Scad.d3 (** Thin wall for the purposes of hulling to other faces. *)
+    ; points : Points.t (** Corner and centre points of the face. *)
     }
   [@@deriving scad]
 
@@ -13,6 +15,7 @@ module Face : sig
 end
 
 module Faces : sig
+  (** The four outer faces of a keyhole. *)
   type t =
     { north : Face.t
     ; south : Face.t

@@ -32,10 +32,10 @@ type 'k config =
 type 'k t =
   { config : 'k config [@scad.ignore]
   ; scad : Scad.d3
-  ; keys : 'k KeyHole.t Map.M(Int).t [@scad.mapf]
-  ; joins : Join.t Map.M(Int).t [@scad.mapf]
+  ; keys : 'k KeyHole.t Map.M(Int).t
+  ; joins : Join.t Map.M(Int).t
   }
-[@@deriving scad]
+[@@deriving scad_jane]
 
 let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
