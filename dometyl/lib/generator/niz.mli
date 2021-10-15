@@ -47,3 +47,4 @@ module Platform : sig
 end
 
 val example_cross_section : Scad.d3
+val new_hole_config : KeyHole.Kind.niz KeyHole.config

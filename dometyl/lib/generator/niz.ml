@@ -190,63 +190,7 @@ module Platform = struct
       Scad.cube (fudged_w, fudged_w, dome_thickness)
       |> Scad.translate (fudged_w /. -2., fudged_w /. -2., 0.)
     in
-    let ramp_cut =
-      (* ~30 degrees *)
-      let cut_l = 5.7 in
-      let cut_h = 4. in
-      let half_l = cut_l /. 2. in
-      let half_h = cut_h /. 2. in
-      let poly = Scad.polygon [ 0., 0.; cut_h, 0.; cut_h, cut_l ] in
-      let x_prism =
-        Scad.linear_extrude ~height:Bottom.x poly
-        |> Scad.translate (-.half_h, -.half_l, Bottom.x /. -2.)
-        |> Scad.rotate (Float.pi /. 2., Float.pi /. 2., Float.pi /. 2.)
-        |> Scad.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
-      in
-      let y_prism =
-        Scad.difference
-          ( Scad.linear_extrude ~height:Bottom.y poly
-          |> Scad.translate (-.half_h, -.half_l, Bottom.y /. -2.)
-          |> Scad.rotate (Float.pi /. 2., Float.pi /. 2., 0.)
-          |> Scad.translate ((dome_w /. 2.) -. half_l, 0., half_h +. dome_thickness) )
-          [ Scad.scale (1., 1., 1.2) pillars ]
-      in
-      let corners =
-        let block =
-          Scad.cube ~center:true (dome_w, cut_l, cut_h)
-          |> Scad.translate (0., (dome_w /. 2.) -. half_l, half_h +. dome_thickness)
-        in
-        let intersect =
-          let x =
-            Scad.difference
-              x_prism
-              [ Scad.translate (0., (Bottom.y -. dome_w) /. 2., 0.) block ]
-            |> Scad.translate ((dome_w -. Bottom.x) /. 2., 0., 0.)
-          and y =
-            Scad.difference
-              y_prism
-              [ Scad.rotate (0., 0., Float.pi /. -2.) block
-                |> Scad.translate ((Bottom.x -. dome_w) /. 2., 0., 0.)
-              ]
-            |> Scad.translate (0., (dome_w -. Bottom.y) /. 2., 0.)
-          in
-          Scad.intersection [ x; y ]
-        in
-        Scad.union
-          [ intersect
-          ; Scad.mirror (0., 1., 0.) intersect
-          ; Scad.mirror (1., 0., 0.) intersect
-          ; Scad.mirror (1., 0., 0.) intersect |> Scad.mirror (0., 1., 0.)
-          ]
-      in
-      Scad.union
-        [ x_prism
-        ; Scad.mirror (0., 1., 0.) x_prism
-        ; y_prism
-        ; Scad.mirror (1., 0., 0.) y_prism
-        ; corners
-        ]
-    and lugs =
+    let lugs =
       Scad.difference
         (Scad.cube ~center:true (Bottom.x -. 0.001, Bottom.y -. 0.001, lug_height))
         [ Scad.translate (0., 0., -1.) Bottom.scad ]
@@ -260,9 +204,7 @@ module Platform = struct
           ; lugs
           ]
       in
-      Scad.difference
-        block
-        [ Scad.translate (0., 0., -0.001) Bottom.scad; dome_cut; ramp_cut ]
+      Scad.difference block [ Scad.translate (0., 0., -0.001) Bottom.scad; dome_cut ]
     and snap_heads =
       let width = 2. *. Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale
       and z =
@@ -306,3 +248,90 @@ let example_cross_section =
        ; platform.scad
        ] )
     [ Scad.cube ~center:true (25., 15., 20.) |> Scad.translate (0., -7.5, 0.) ]
+
+let new_hole_config =
+  let dome_w = 19.
+  and dome_waist = 15.
+  and dome_thickness = 1.15
+  and base_thickness = 2.25
+  and sensor_depth = 1.5
+  and sensor_config = Sensor.Config.a3144_print
+  and w = 20.
+  and clip_height = 1.0
+  and snap_slot_h = 1.2
+  and outer_w = 19.5
+  and outer_h = 19.5
+  and inner_w = 14.
+  and inner_h = 14.
+  and thickness = 4.
+  and cap_height = 5. (* mx is 6.25, but niz seems to measure at 4.9 ~ 5. *)
+  and clearance = 2. in
+  let plat =
+    let base =
+      let slab =
+        Scad.cube ~center:true (outer_w, outer_h, base_thickness)
+        |> Scad.translate (0., 0., base_thickness /. -2.)
+      in
+      Scad.difference slab [ Sensor.(sink (make sensor_config) sensor_depth) ]
+    in
+    let wall_height =
+      Bottom.z -. hole_config.thickness +. clip_height +. dome_thickness +. 0.25
+    in
+    let pillars =
+      let waist_cut =
+        let width = Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2. in
+        Scad.polygon
+          [ 0., 0.
+          ; dome_waist, 0.
+          ; dome_waist, dome_thickness
+          ; dome_waist -. 0.5, dome_thickness +. 0.5
+          ; 0.5, dome_thickness +. 0.5
+          ; 0., dome_thickness
+          ]
+        |> Scad.linear_extrude ~height:width
+        |> Scad.translate (dome_waist /. -2., 0., width /. -2.)
+        |> Scad.rotate (Float.pi /. 2., 0., 0.)
+      in
+      let cyl =
+        Scad.difference
+          (Bottom.ellipse |> Scad.linear_extrude ~height:wall_height)
+          [ Scad.cube
+              ( Bottom.ellipse_inset_x_rad
+              , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2.
+              , wall_height )
+            |> Scad.translate
+                 ( w /. 2.
+                 , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. -1.
+                 , 0. )
+          ]
+      in
+      Scad.difference (Scad.union [ cyl; Scad.mirror (1., 0., 0.) cyl ]) [ waist_cut ]
+    and dome_cut =
+      (* ensure overlap *)
+      let fudged_w = dome_w +. 0.01 in
+      Scad.cube (fudged_w, fudged_w, dome_thickness)
+      |> Scad.translate (fudged_w /. -2., fudged_w /. -2., 0.)
+    in
+    let walls =
+      let block =
+        Scad.union
+          [ Scad.cube ~center:true (w, w, wall_height +. 0.001)
+            |> Scad.translate (0., 0., wall_height /. 2.)
+          ]
+      in
+      Scad.difference block [ Scad.translate (0., 0., -0.001) Bottom.scad; dome_cut ]
+    in
+    Scad.union [ base; Scad.translate (0., 0., -0.001) walls; pillars ]
+  in
+  let clip _ = plat in
+  KeyHole.
+    { spec = Kind.Niz { clip_height; snap_slot_h }
+    ; outer_w
+    ; outer_h
+    ; inner_w
+    ; inner_h
+    ; thickness
+    ; clip
+    ; cap_height
+    ; clearance
+    }
