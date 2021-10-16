@@ -215,7 +215,7 @@ let collect ~f t =
       ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
       t.columns
   in
-  Scad.union @@ Map.fold ~init:body ~f t.thumb.keys
+  Scad.union_3d @@ Map.fold ~init:body ~f t.thumb.keys
 
 let collect_caps t =
   collect
