@@ -39,7 +39,7 @@ let plate_builder =
           ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
           ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
           ())
-    ~thumb_offset:(-13., -41., 12.)
+    ~thumb_offset:(-13., -41., 10.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.thumb_1u
@@ -85,6 +85,9 @@ let plate_welder plate =
 
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 
+(* Beware that cap heights may be different between Mx and Niz, which will
+   impact the effective curvature, potentially causing collisions. Be sure to
+   check. *)
 let build ?right_hand ?(hole = `Mx None) () =
   let hole =
     match hole with
