@@ -61,6 +61,13 @@ module Bottom = struct
     |> fun b -> Scad.union (b :: bulges)
 end
 
+(* Dome thickness
+    - BKE ~= 0.85mm
+    - DES ~= 0.70mm
+   The actual value for [dome_thickness] though must account for FDM overhang
+   tolerance, thus it should be a good amount higher to ensure reliable fit.
+
+   Both BKE and DES domes are roughly ~19x19mm. *)
 let make_hole
     ?cap
     ?(outer_w = 20.5)
@@ -68,22 +75,21 @@ let make_hole
     ?(inner_w = 14.)
     ?(inner_h = 14.)
     ?(thickness = 4.)
-    ?(cap_height = 5.)
+    ?(cap_height = 7.)
     ?(cap_cutout_height = Some 1.5)
     ?(clearance = 4.)
     ?(dome_w = 19.5)
-    ?(dome_waist_clip = 0.75)
-    ?(dome_thickness = 1.4)
+    ?(dome_waist_clip = 1.)
+    ?(dome_thickness = 1.6)
     ?(base_thickness = 2.25)
     ?(sensor_depth = 1.5)
     ?(sensor_config = Sensor.Config.a3144_print)
     ()
   =
   let thickness = Float.max thickness (Bottom.thickness +. dome_thickness) in
-  let bottom_z = (thickness /. 2.) -. Bottom.thickness
-  and bottom_cut =
-    Scad.linear_extrude ~height:(Bottom.thickness +. 0.001) Bottom.shadow
-  in
+  let clearance = Float.max clearance (base_thickness +. 0.5)
+  and bottom_z = (thickness /. 2.) -. Bottom.thickness
+  and bottom_cut = Scad.linear_extrude ~height:(Bottom.thickness *. 2.) Bottom.shadow in
   let dome_z = bottom_z -. dome_thickness in
   let dome_cut =
     let waist_clip sign =
@@ -102,16 +108,14 @@ let make_hole
       [ waist_clip 1.; waist_clip (-1.) ]
     |> Scad.linear_extrude ~height:(dome_thickness +. 0.001)
     |> Scad.translate (0., 0., dome_z)
-  in
-  let base =
+  and base =
     let slab =
       Scad.cube (outer_w, outer_h, base_thickness +. 0.001)
       |> Scad.translate
            (outer_w /. -2., outer_h /. -2., bottom_z -. dome_thickness -. base_thickness)
     in
     Scad.difference slab [ Sensor.(sink ~z:dome_z (make sensor_config) sensor_depth) ]
-  in
-  let pillars =
+  and pillars =
     let cyl = Scad.linear_extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(
       union
@@ -133,8 +137,7 @@ let make_hole
         ; internals
         ]
     | None   -> internals
-  in
-  let clip hole = Scad.union [ base; hole; pillars ] in
+  and clip hole = Scad.union [ base; hole; pillars ] in
   KeyHole.(
     make
       ?cap
