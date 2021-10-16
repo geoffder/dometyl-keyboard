@@ -85,17 +85,12 @@ let plate_welder plate =
 
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 
-(* let build ?right_hand ?hotswap () =
- *   Case.make
- *     ?right_hand
- *     ~plate_builder
- *     ~plate_welder
- *     ~wall_builder
- *     ~base_connector
- *     ~ports_cutter
- *     (Mx.make_hole ?hotswap ~clearance:2. ()) *)
-let build ?right_hand ?hotswap () =
-  ignore hotswap;
+let build ?right_hand ?(hole = `Mx None) () =
+  let hole =
+    match hole with
+    | `Mx hotswap -> Mx.make_hole ?hotswap ~clearance:2. ()
+    | `Niz        -> Niz.make_hole ()
+  in
   Case.make
     ?right_hand
     ~plate_builder
@@ -103,8 +98,7 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (* (Mx.make_hole ?hotswap ~clearance:2. ()) *)
-    (Niz.make_hole ())
+    hole
 
 let bastard_compare () =
   Scad.union
