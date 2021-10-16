@@ -53,13 +53,12 @@ which are available through the opam package manager.
   ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
 
 ### Installing Scad_ml
-One day I may get to upstreaming my drammatic changes to
-[scad-ml](https://github.com/namachan10777/scad-ml) and do the work to get the
-library added to the **opam** repository, but for now, you'll need to clone and
-locally install [my fork](https://github.com/geoffder/scad-ml) (anywhere, no
-need to be in your clone of this repo, as doing this will make it available in
-your opam switch alogside the packages you install from the package repository).
-1. `git clone https://github.com/geoffder/scad-ml`
+Soon (TM), the [scad-ml](https://github.com/namachan10777/scad-ml) library
+should be added to the **opam** repository, but for now, you'll need to clone
+and locally install it (anywhere, no need to be in your clone of this repo, as
+doing this will make it available in your opam switch alogside the packages you
+install from the package repository).
+1. `git clone https://github.com/namachan10777/scad-ml`
 2. `cd scad-ml`
 3. `dune build`
 4. `opam install ./scad_ml.opam`
