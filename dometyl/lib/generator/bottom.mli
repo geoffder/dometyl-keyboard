@@ -16,4 +16,4 @@ val make
   -> ?bumpon_inset:float
   -> ?bump_locs:bump_loc list
   -> 'a Case.t
-  -> Scad.t
+  -> Scad.d3

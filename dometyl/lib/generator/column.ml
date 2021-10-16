@@ -4,15 +4,12 @@ open Scad_ml
 module Join = struct
   module Faces = struct
     type t =
-      { west : Scad.t
-      ; east : Scad.t
+      { west : Scad.d3
+      ; east : Scad.d3
       }
+    [@@deriving scad]
 
     let map ~f t = { west = f t.west; east = f t.east }
-    let translate p = map ~f:(Scad.translate p)
-    let mirror ax = map ~f:(Scad.mirror ax)
-    let rotate r = map ~f:(Scad.rotate r)
-    let rotate_about_pt r p = map ~f:(Scad.rotate_about_pt r p)
 
     let face t = function
       | `West -> t.west
@@ -20,18 +17,10 @@ module Join = struct
   end
 
   type t =
-    { scad : Scad.t
+    { scad : Scad.d3
     ; faces : Faces.t
     }
-
-  let translate p t =
-    { scad = Scad.translate p t.scad; faces = Faces.translate p t.faces }
-
-  let mirror ax t = { scad = Scad.mirror ax t.scad; faces = Faces.mirror ax t.faces }
-  let rotate r t = { scad = Scad.rotate r t.scad; faces = Faces.rotate r t.faces }
-
-  let rotate_about_pt r p t =
-    { scad = Scad.rotate_about_pt r p t.scad; faces = Faces.rotate_about_pt r p t.faces }
+  [@@deriving scad]
 end
 
 type 'k config =
@@ -41,39 +30,12 @@ type 'k config =
   }
 
 type 'k t =
-  { config : 'k config
-  ; scad : Scad.t
+  { config : 'k config [@scad.ignore]
+  ; scad : Scad.d3
   ; keys : 'k KeyHole.t Map.M(Int).t
   ; joins : Join.t Map.M(Int).t
   }
-
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; keys = Map.map ~f:(KeyHole.translate p) t.keys
-  ; joins = Map.map ~f:(Join.translate p) t.joins
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; keys = Map.map ~f:(KeyHole.mirror ax) t.keys
-  ; joins = Map.map ~f:(Join.mirror ax) t.joins
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; keys = Map.map ~f:(KeyHole.rotate r) t.keys
-  ; joins = Map.map ~f:(Join.rotate r) t.joins
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; keys = Map.map ~f:(KeyHole.rotate_about_pt r p) t.keys
-  ; joins = Map.map ~f:(Join.rotate_about_pt r p) t.joins
-  }
+[@@deriving scad_jane]
 
 let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =

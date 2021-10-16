@@ -31,11 +31,12 @@ type config =
   }
 
 type t =
-  { scad : Scad.t
-  ; cut : Scad.t option
+  { scad : Scad.d3
+  ; cut : Scad.d3 option
   ; centre : Vec3.t
-  ; config : config
+  ; config : config [@scad.ignore]
   }
+[@@deriving scad]
 
 let translate p t =
   { t with scad = Scad.translate p t.scad; centre = Vec3.add p t.centre }

@@ -49,8 +49,8 @@ The other dependencies include the build system
 [stdio](https://github.com/janestreet/stdio) (standard library replacements)
 from janestreet, as well as a couple ppx rewriters, and some dev tools, all of
 which are available through the opam package manager.
-* `opam install dune base stdio ppx_jane ppx_inline_test merlin ocp-indent ocaml-lsp-server
-  ocamlformat ocamlformat-rpc`
+* `opam install dune base stdio ppx_jane ppx_inline_test ppxlib merlin
+  ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
 
 ### Installing Scad_ml
 One day I may get to upstreaming my drammatic changes to
@@ -63,6 +63,15 @@ your opam switch alogside the packages you install from the package repository).
 2. `cd scad-ml`
 3. `dune build`
 4. `opam install ./scad_ml.opam`
+
+You'll also need [\[@@deriving
+scad\]](https://github.com/geoffder/ppx_deriving_scad) which is a code
+generation tool used internally by the generator library. Installed alongside
+**Scad_ml** as above:
+1. `git clone https://github.com/geoffder/ppx_deriving_scad`
+2. `cd ppx_deriving_scad`
+3. `dune build`
+4. `opam install ./ppx_deriving_scad.opam`
 
 ## Organization
 Online documentation is available
@@ -87,12 +96,12 @@ be filling in over time.
 4. Open generated `.scad` files in OpenSCAD where they can be
    previewed/rendered/exported to `.stl`. If a viewed `.scad` is overwritten by
    compiling and running the generator, the changes will be visible in the GUI.
-5. Once you've had success building your board your unique board, and have found
-   your new changes to be comfortable (e.g. cool new thumb cluster, tailored
-   splays, column tilts, a new look squeezed out of this jank library, etc),
-   consider making a PR for your addition to the [boards
-   library](dometyl/lib/boards). It would be nice to accumulate a zoo of
-   configurations that can serve as jumping off points / inspiration for others.
+5. Once you've had success building your own unique board, and have found your
+   design to be comfortable (e.g. cool new thumb cluster, tailored splays,
+   column tilts, a new look squeezed out of this jank library, etc), consider
+   making a PR for your addition to the [boards library](dometyl/lib/boards). It
+   would be nice to accumulate a zoo of configurations that can serve as jumping
+   off points / inspiration for others.
 6. PRs for added/improved functionality in the rest of the library that go
    beyond new combinations of the existing tools are welcomed as well. I know
    that it might be overly optimistic, but I think accumulating improvements and

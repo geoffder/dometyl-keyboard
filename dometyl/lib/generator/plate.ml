@@ -64,39 +64,12 @@ type 'k config =
   }
 
 type 'k t =
-  { config : 'k config
-  ; scad : Scad.t
-  ; columns : 'k Column.t Map.M(Int).t
+  { config : 'k config [@scad.ignore]
+  ; scad : Scad.d3
+  ; columns : 'k Column.t Map.M(Int).t [@scad.mapf]
   ; thumb : 'k Column.t
   }
-
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; columns = Columns.translate p t.columns
-  ; thumb = Column.translate p t.thumb
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; columns = Columns.mirror ax t.columns
-  ; thumb = Column.mirror ax t.thumb
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; columns = Columns.rotate r t.columns
-  ; thumb = Column.rotate r t.thumb
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; columns = Columns.rotate_about_pt r p t.columns
-  ; thumb = Column.rotate_about_pt r p t.thumb
-  }
+[@@deriving scad]
 
 let make_thumb ~n_keys ~centre_idx ~curve ~caps ~rotate_clips keyhole =
   Column.(
@@ -242,7 +215,7 @@ let collect ~f t =
       ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
       t.columns
   in
-  Scad.union @@ Map.fold ~init:body ~f t.thumb.keys
+  Scad.union_3d @@ Map.fold ~init:body ~f t.thumb.keys
 
 let collect_caps t =
   collect

@@ -2,39 +2,12 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Scad.t
-  ; thickness : float
+  { scad : Scad.d3
+  ; thickness : float [@scad.ignore]
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
   }
-
-let translate p t =
-  { t with
-    scad = Scad.translate p t.scad
-  ; screw_l = Vec3.add p t.screw_l
-  ; screw_r = Vec3.add p t.screw_r
-  }
-
-let mirror ax t =
-  { t with
-    scad = Scad.mirror ax t.scad
-  ; screw_l = Vec3.mirror ax t.screw_l
-  ; screw_r = Vec3.mirror ax t.screw_r
-  }
-
-let rotate r t =
-  { t with
-    scad = Scad.rotate r t.scad
-  ; screw_l = Vec3.rotate r t.screw_l
-  ; screw_r = Vec3.rotate r t.screw_r
-  }
-
-let rotate_about_pt r p t =
-  { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; screw_l = Vec3.rotate_about_pt r p t.screw_l
-  ; screw_r = Vec3.rotate_about_pt r p t.screw_r
-  }
+[@@deriving scad]
 
 let screws t =
   let cyl =
@@ -48,7 +21,7 @@ let to_scad ?(show_screws = false) t =
   if show_screws then Scad.union [ t.scad; screws t ] else t.scad
 
 let print_pcb thickness =
-  let import n = Scad.import (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
+  let import n = Scad.import_2d (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
   Scad.difference
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]

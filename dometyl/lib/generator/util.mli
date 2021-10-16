@@ -8,7 +8,7 @@ type idx =
 
 val rad_to_deg : float -> float
 val deg_to_rad : float -> float
-val prism_exn : Vec3.t list -> Vec3.t list -> Scad.t
+val prism_exn : Vec3.t list -> Vec3.t list -> Scad.d3
 
 val bisection_exn
   :  ?max_iter:int

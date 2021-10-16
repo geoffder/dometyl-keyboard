@@ -2,18 +2,17 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; thickness : float
   ; screw_l : Vec3.t
   ; screw_r : Vec3.t
   }
+[@@deriving scad]
 
-include Sigs.Transformable with type t := t
-
-val print_pcb : float -> Scad.t
-val pcb : float -> Scad.t
+val print_pcb : float -> Scad.d3
+val pcb : float -> Scad.d3
 val make : ?inset_depth:float -> ?thickness:float -> unit -> t
-val screws : t -> Scad.t
+val screws : t -> Scad.d3
 
 val place
   :  ?x_off:float
@@ -30,7 +29,7 @@ val eyelets
   -> ?eyelet_config:Eyelet.config
   -> Connect.t
   -> t
-  -> Scad.t
+  -> Scad.d3
 
 val cutter
   :  ?eye_width:float
@@ -45,4 +44,4 @@ val cutter
   -> connections:Connect.t
   -> Ports.t
 
-val to_scad : ?show_screws:bool -> t -> Scad.t
+val to_scad : ?show_screws:bool -> t -> Scad.d3

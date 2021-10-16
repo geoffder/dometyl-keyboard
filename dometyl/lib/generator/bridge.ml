@@ -1,7 +1,7 @@
 open Base
 open Scad_ml
 
-type t = Scad.t
+type t = Scad.d3
 
 let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
   let a = Scad.translate (Vec3.map (( *. ) d1) ortho) scad

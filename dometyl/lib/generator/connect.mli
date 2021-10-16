@@ -2,14 +2,13 @@ open! Base
 open! Scad_ml
 
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }
+[@@deriving scad]
 
 val centre : float * float * float * float -> float * float
-
-include Sigs.Transformable with type t := t
 
 val prism_connection
   :  (float -> Vec3.t) list
@@ -221,4 +220,4 @@ val closed
   -> Walls.t
   -> t
 
-val to_scad : t -> Scad.t
+val to_scad : t -> Scad.d3

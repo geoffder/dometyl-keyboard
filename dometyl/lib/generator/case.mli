@@ -7,18 +7,16 @@
 open! Base
 open! Scad_ml
 
-(** The top-level type of this library. The {!Scad.t} scad held within this type
+(** The top-level type of this library. The {!Scad.d3} scad held within this type
     should generally represent the finished case, made up of the three major building
     blocks: {!Plate.t}, {!Walls.t}, and {!Connect.t}. *)
 type 'k t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; plate : 'k Plate.t
   ; walls : Walls.t
   ; connections : Connect.t
   }
-
-(** Basic transformation functions, applied to all relevant non-config contents. *)
-include Sigs.Transformable' with type 'k t := 'k t
+[@@deriving scad]
 
 (** [make ?right_hand ~plate_builder ~plate_welder ~wall_builder ~base_connector
       ~ports_cutter keyhole]
@@ -28,7 +26,7 @@ A high level helper used to contsruct the case from provided functions and a
 [keyhole], then the completed case will be flipped (keeping non-reversible
 clips/cutouts such as those for hotswap holders in the right orientation).
 - [plate_builder] will use the provided {!KeyHole.t} to generate a {!Plate.t}
-- [plate_welder] function intended to generate a {!Scad.t} that provides support
+- [plate_welder] function intended to generate a {!Scad.d3} that provides support
   between columns of the built plate.
 - [wall_builder] uses the generated {!Plate.t} to create {!Walls.t} from the ends and
   sides of the columns to the ground (likely a closure using {!Walls.Body.make}
@@ -40,14 +38,14 @@ clips/cutouts such as those for hotswap holders in the right orientation).
   and {!module:Tent}. See {!Connect.skeleton} and {!Connect.closed} for examples that
   provide this functionality.
 - [ports_cutter] contains a function that uses {!Walls.t} and/or {!Connect.t} to
-  create a {!Ports.t} containing {!Scad.t}s to cut from / add to the case to
+  create a {!Ports.t} containing {!Scad.d3}s to cut from / add to the case to
   facilitate placement of jacks/ports. See {!Ports.make} for an example of such
   a function, which can be configured then wrapped in {!Ports.t} as this
   parameter. *)
 val make
   :  ?right_hand:bool
   -> plate_builder:('k KeyHole.t -> 'k Plate.t)
-  -> plate_welder:('k Plate.t -> Scad.t)
+  -> plate_welder:('k Plate.t -> Scad.d3)
   -> wall_builder:('k Plate.t -> Walls.t)
   -> base_connector:(Walls.t -> Connect.t)
   -> ports_cutter:Ports.cutter
@@ -56,11 +54,11 @@ val make
 
 (** [to_scad ?show_caps ?show_cutouts]
 
-    Extract the contained {!Scad.t}, optionally tacking on keycaps and case
+    Extract the contained {!Scad.d3}, optionally tacking on keycaps and case
     cutouts (such as representations of hotswap sockets, that are used to
     provide clearance), stored in {!KeyHole.t} with [show_caps] and
     [show_cutouts] respectively. I would recommend against rendering with these
     options active, as they will balloon the processing time, remove the
     colouration only visible in preview mode, and they are not something that
     you will want and stl of anyway. *)
-val to_scad : ?show_caps:bool -> ?show_cutouts:bool -> 'k t -> Scad.t
+val to_scad : ?show_caps:bool -> ?show_cutouts:bool -> 'k t -> Scad.d3

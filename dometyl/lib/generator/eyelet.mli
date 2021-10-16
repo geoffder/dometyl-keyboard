@@ -31,13 +31,12 @@ type config =
   }
 
 type t =
-  { scad : Scad.t
-  ; cut : Scad.t option
+  { scad : Scad.d3
+  ; cut : Scad.d3 option
   ; centre : Vec3.t
   ; config : config
   }
-
-include Sigs.Transformable with type t := t
+[@@deriving scad]
 
 val screw_fastener
   :  ?head_rad:float
@@ -54,4 +53,4 @@ val bumpon_config : config
 val magnet_6x3_config : config
 val m4_countersunk_fastener : fastener
 val make : ?n_steps:int -> placement:placement -> config -> Vec3.t -> Vec3.t -> t
-val to_scad : t -> Scad.t
+val to_scad : t -> Scad.d3

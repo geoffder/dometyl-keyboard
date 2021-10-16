@@ -13,36 +13,13 @@ open! Infix
     of which are ignored.)
  *)
 type t =
-  { scad : Scad.t
+  { scad : Scad.d3
   ; outline : Vec3.t list
   ; inline : Vec3.t list
   }
+[@@deriving scad]
 
 let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
-
-let translate p t =
-  { scad = Scad.translate p t.scad
-  ; outline = List.map ~f:(Vec3.add p) t.outline
-  ; inline = List.map ~f:(Vec3.add p) t.inline
-  }
-
-let mirror ax t =
-  { scad = Scad.mirror ax t.scad
-  ; outline = List.map ~f:(Vec3.mirror ax) t.outline
-  ; inline = List.map ~f:(Vec3.mirror ax) t.inline
-  }
-
-let rotate r t =
-  { scad = Scad.rotate r t.scad
-  ; outline = List.map ~f:(Vec3.rotate r) t.outline
-  ; inline = List.map ~f:(Vec3.rotate r) t.inline
-  }
-
-let rotate_about_pt r p t =
-  { scad = Scad.rotate_about_pt r p t.scad
-  ; outline = List.map ~f:(Vec3.rotate_about_pt r p) t.outline
-  ; inline = List.map ~f:(Vec3.rotate_about_pt r p) t.inline
-  }
 
 (* Assumes lists are lead with the outer (top) line along the xy plane. *)
 let prism_connection bezs steps =

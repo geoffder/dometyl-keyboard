@@ -5,6 +5,8 @@
 
 ; intended for use with `dune build -w @run`
 ; to automate generation on file save
+
 (rule
  (alias run)
- (action (run dometyl "../../../")))
+ (action
+  (run dometyl "../../../")))

@@ -2,9 +2,9 @@ open! Base
 open! Scad_ml
 
 module Rotator = struct
-  type t = float -> Scad.t -> Scad.t
+  type 's t = float -> 's Scad.t -> 's Scad.t
 
-  let make ?(pivot = Vec3.zero) q1 q2 : t =
+  let make ?(pivot = Vec3.zero) q1 q2 : 's t =
     let slerp = Quaternion.slerp q1 q2 in
     fun t -> Scad.quaternion_about_pt (slerp t) pivot
 end

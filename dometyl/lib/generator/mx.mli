@@ -1,7 +1,7 @@
 open! Base
 open! Scad_ml
 
-val kailh_socket : Scad.t
+val kailh_socket : Scad.d3
 
 module Hotswap : sig
   val make
@@ -9,15 +9,15 @@ module Hotswap : sig
     -> inner_h:float
     -> plate_thickness:float
     -> [< `North | `South ]
-    -> Scad.t * Scad.t
+    -> Scad.d3 * Scad.d3
 
-  val example : ?alpha:float -> ?show_cutout:bool -> [ `North | `South ] -> Scad.t
+  val example : ?alpha:float -> ?show_cutout:bool -> [ `North | `South ] -> Scad.d3
 end
 
-val teeth : inner_h:float -> thickness:float -> Scad.t -> Scad.t
+val teeth : inner_h:float -> thickness:float -> Scad.d3 -> Scad.d3
 
 val make_hole
-  :  ?cap:Scad.t
+  :  ?cap:Scad.d3
   -> ?hotswap:[< `North | `South ]
   -> ?outer_w:float
   -> ?outer_h:float
