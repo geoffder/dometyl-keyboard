@@ -39,7 +39,7 @@ let clockwise_union ts =
     scad :: scads, collect ~init:out_pts outline, collect ~init:in_pts inline
   in
   let scads, out_pts, in_pts = List.fold ~init:([], [], []) ~f ts in
-  { scad = Scad.union scads; outline = List.rev out_pts; inline = List.rev in_pts }
+  { scad = Scad.union_3d scads; outline = List.rev out_pts; inline = List.rev in_pts }
 
 let outline_2d t = List.map ~f:Vec3.to_vec2 t.outline
 let inline_2d t = List.map ~f:Vec3.to_vec2 t.inline
@@ -363,7 +363,8 @@ let join_walls
        don't flag. *)
     let foot_diff = Vec3.(w1.foot.top_right <-> w2.foot.top_right)
     and top_diff = Vec3.(mul (w1.start.top_right <-> w2.start.top_left) (1., 1., 0.)) in
-    Float.(Vec3.norm top_diff > 0.1 && Vec3.dot foot_diff top_diff < 0.)
+    let mag = Vec3.norm top_diff in
+    if Float.(mag > 0.1 && Vec3.dot foot_diff top_diff < 0.) then Some mag else None
   in
   (* Move the start or destination points along the outer face of the wall to improve angle. *)
   let fudge start =
@@ -377,21 +378,23 @@ let join_walls
       Vec3.(add (mul dir2 (-.extra, -.extra, 0.))) )
     else Fn.id
   and overlap =
-    let major_ax = if Float.(abs dx > abs dy) then dx else dy
-    and intersect = Points.overlapping_bounds w1.foot w2.foot in
-    if Float.(
-         ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
-         && abs major_diff > abs minor_diff )
-         || intersect > 0.
-         || overhang)
-    then (
-      let rough_area =
-        Vec3.(
-          distance w1.foot.top_right w1.foot.top_left
-          *. distance w1.foot.top_right w1.foot.bot_right)
-      in
-      Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
-    else 0.001
+    match overhang with
+    | Some over -> over *. overlap_factor
+    | None      ->
+      let major_ax = if Float.(abs dx > abs dy) then dx else dy
+      and intersect = Points.overlapping_bounds w1.foot w2.foot in
+      if Float.(
+           ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
+           && abs major_diff > abs minor_diff )
+           || intersect > 0.)
+      then (
+        let rough_area =
+          Vec3.(
+            distance w1.foot.top_right w1.foot.top_left
+            *. distance w1.foot.top_right w1.foot.bot_right)
+        in
+        Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
+      else 0.001
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
   (* HACK: The way I am using the overhang flag here seemed to partially rescue one case,
@@ -401,7 +404,7 @@ let join_walls
     let top =
       w1.edges.top_right 0.
       |> fudge true
-      |> (if overhang then Fn.id else shove)
+      |> (if Option.is_some overhang then Fn.id else shove)
       |> w1.edge_drawer.top
     in
     ( top
@@ -415,7 +418,7 @@ let join_walls
     let top =
       w2.edges.top_left 0.
       |> fudge false
-      |> (if overhang then Fn.id else shove)
+      |> (if Option.is_some overhang then Fn.id else shove)
       |> w2.edge_drawer.top
     in
     ( top
@@ -852,11 +855,17 @@ let closed
   =
   let join = full_join ?n_steps ?fudge_factor ?overlap_factor ()
   and corner = full_join ?n_steps ~fudge_factor:0. ?overlap_factor () in
-  let side last_idx i = if i = last_idx then corner else join in
-  let max_key m = fst (Map.max_elt_exn m) in
+  let side last_idx i = if i = last_idx then corner else join
+  and max_key m = fst (Map.max_elt_exn m) in
+  let north =
+    let last_idx = max_key body.cols in
+    if Map.length walls.body.sides.east = 0
+    then fun i -> if i = last_idx then cubic ~height:10. () else join
+    else side last_idx
+  in
   manual
     ~west:(side (max_key body.sides.west))
-    ~north:(side (max_key body.cols))
+    ~north
     ~east:(side 0)
     ~south:(fun _ -> join)
     ~east_link
