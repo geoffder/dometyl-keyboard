@@ -25,4 +25,4 @@ type t =
   }
 
 val make : Config.t -> t
-val sink : t -> Float.t -> Scad.d3
+val sink : ?z:float -> t -> Float.t -> Scad.d3
