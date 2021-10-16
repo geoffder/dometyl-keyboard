@@ -196,13 +196,13 @@ let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_cols; _ }; columns; _ } =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns in
   Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_cols - 1))
 
-let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { n_rows; n_cols; _ }; columns; _ } =
+let skeleton_bridges ?in_d ?out_d1 ?out_d2 { config = { row_centres; n_rows; n_cols; _ }; columns; _ } =
   let bridge c first =
     let r = if first then fun _ -> 0 else fun i -> n_rows i - 1 in
     Option.map2
       ~f:(Bridge.keys ?in_d ?out_d1 ?out_d2)
       (Columns.key columns c (r c))
-      (Columns.key columns (c + 1) (r (c + 1)))
+      (Columns.key columns (c + 1) (r c + Int.of_float (Float.round (row_centres (c+1) -. row_centres c))))
   in
   List.init ~f:(fun i -> bridge i (i < 2)) (n_cols - 1) |> List.filter_opt |> Scad.union
 
