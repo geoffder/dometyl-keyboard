@@ -85,15 +85,7 @@ let plate_welder plate =
 
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 
-(* Beware that cap heights may be different between Mx and Niz, which will
-   impact the effective curvature, potentially causing collisions. Be sure to
-   check. *)
-let build ?right_hand ?(hole = `Mx None) () =
-  let hole =
-    match hole with
-    | `Mx hotswap -> Mx.make_hole ?hotswap ~clearance:2. ()
-    | `Niz        -> Niz.make_hole ()
-  in
+let build ?right_hand ?hotswap () =
   Case.make
     ?right_hand
     ~plate_builder
@@ -101,7 +93,7 @@ let build ?right_hand ?(hole = `Mx None) () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    hole
+    (Mx.make_hole ?hotswap ~clearance:2. ())
 
 let bastard_compare () =
   Scad.union
