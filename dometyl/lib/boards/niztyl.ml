@@ -8,19 +8,17 @@ let lookups =
     | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
     | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2.75, 0., 4.9 (* inner index *)
+    | 0 -> -2.5, 0., 5.7 (* inner index *)
     | _ -> 0., 0., 0.
   and curve = function
     | i when i = 0 ->
       Curvature.(
         curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:41. (Float.pi /. 4.9)) ())
       (* tilted inner index *)
-    | i when i = 1 -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 5.)) ())
-    | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:37.75 (Float.pi /. 4.15)) ()) (* ring  *)
-    | i when i >= 4 ->
-      Curvature.(curve ~well:(spec ~radius:37.75 (Float.pi /. 4.)) ()) (* pinky  *)
-    | _ -> Curvature.(curve ~well:(spec ~radius:47.25 (Float.pi /. 6.05)) ())
+    | i when i = 1 -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 4.9)) ())
+    | i when i >= 3 ->
+      Curvature.(curve ~well:(spec ~radius:37.75 (Float.pi /. 4.)) ()) (* ring / pinky *)
+    | _ -> Curvature.(curve ~well:(spec ~radius:47.25 (Float.pi /. 5.9)) ())
   (* middle *)
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
@@ -64,7 +62,7 @@ let wall_builder plate =
           ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
           ~east_lookup:(fun _ -> Yes)
           ~n_facets:2
-          ~n_steps:(`PerZ 6.)
+          ~n_steps:(`PerZ 8.)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
@@ -89,7 +87,7 @@ let base_connector =
     ~west_link:(Connect.straight ~height:15. ())
 
 let plate_welder = Plate.column_joins
-let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.2) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.4) (make ()))
 
 let build ?right_hand ?(empty = false) () =
   let hole =
