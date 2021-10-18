@@ -6,7 +6,7 @@
 | Part name                                            | Amount |
 | -----------------------------------------------| ------|
 | MX switches of your choice                           | 36     |
-| Ideally MT3 caps (see [**Caps**](#Caps))             |        |
+| Ideally MT3 caps (see [below](#Switches-/-Caps))     |        |
 | Kailh Hotswap Socket (if applicable)                 | 36     |
 | Elite-C                                              | 2      |
 | Elite-C adapter PCB (>= V1.3)                        | 2      |
