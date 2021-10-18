@@ -6,7 +6,7 @@
 | Part name                                            | Amount |
 | -----------------------------------------------| ------|
 | MX switches of your choice                           | 36     |
-| Ideally MT3 caps (see [below](#Switches-/-Caps))     |        |
+| Ideally MT3 caps (see [below](#switches--caps))     |        |
 | Kailh Hotswap Socket (if applicable)                 | 36     |
 | Elite-C                                              | 2      |
 | Elite-C adapter PCB (>= V1.3)                        | 2      |
@@ -17,7 +17,7 @@
 | Audio jack, SMD                                      | 2      |
 | USB-C cable                                          | 1      |
 | TRRS / male-male audio cable                         | 1      |
-| Adhesive steel wheel weights (see [**Tent**](#Tent)) |        |
+| Adhesive steel wheel weights (see [**Tent**](#tent)) |        |
 | Bumpons / Bumper feet (10x2mm)                       | 10 for plates, 12 for tents |
 
 ### Switches / Caps
@@ -37,7 +37,7 @@ M4 heatset eyelets and case cutouts are included to fit the BastardKB Elite-C
 holder.
 
 ### Tent
-As noted under [**Fasteners**](#Fasteners), attaching the 30 degree tent is a bit tricky due
+As noted under [**Fasteners**](#fasteners), attaching the 30 degree tent is a bit tricky due
 to the cramped angles, but I was able to get it on (without the holes through
 the side). I recommend attaching adhesive wheel weights around the inside of the
 tent to keep it from tipping around and make it feel sturdier. Adding some foam
