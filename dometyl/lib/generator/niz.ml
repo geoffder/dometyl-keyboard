@@ -68,21 +68,33 @@ end
    tolerance, thus it should be a good amount higher to ensure reliable fit.
 
    Both BKE and DES domes are roughly ~19x19mm. *)
+
+(* Magnet size, with a sensor depth of 1.4mm (roughly the thickness of an A3144):
+   - 3x1mm magnets are able to actuate the sensor reliably after going over the
+    tactile bump
+   - 2x1 magnets require pressing "past" bottom out, squeezing the dome in order
+    to get a weak actuation of the sensor
+   - Have not tested larger than 3x1mm, but shorter actuation distances may be
+    achivable, but be wary of hyseresis (too strong magnets would never allow
+    the sensor to de-activate at the top of the stroke). 3x1mm magnets allow
+    deactivation even with the thick silencing rings Niz includes with their
+    stems. Thinner rings or no rings at all is an available compromise that may
+    help to get into an acceptable operating range with stronger magnets. *)
 let make_hole
     ?cap
     ?(outer_w = 20.5)
     ?(outer_h = 20.5)
     ?(inner_w = 14.)
     ?(inner_h = 14.)
-    ?(thickness = 4.)
+    ?(thickness = 5.6)
     ?(cap_height = 7.)
     ?(cap_cutout_height = Some 1.5)
     ?(clearance = 4.)
     ?(dome_w = 19.5)
     ?(dome_waist_clip = 1.)
     ?(dome_thickness = 1.6)
-    ?(base_thickness = 2.25)
-    ?(sensor_depth = 1.5)
+    ?(base_thickness = 3.)
+    ?(sensor_depth = 1.4)
     ?(sensor_config = Sensor.Config.a3144_print)
     ()
   =
@@ -111,8 +123,7 @@ let make_hole
   and base =
     let slab =
       Scad.cube (outer_w, outer_h, base_thickness +. 0.001)
-      |> Scad.translate
-           (outer_w /. -2., outer_h /. -2., bottom_z -. dome_thickness -. base_thickness)
+      |> Scad.translate (outer_w /. -2., outer_h /. -2., dome_z -. base_thickness)
     in
     Scad.difference slab [ Sensor.(sink ~z:dome_z (make sensor_config) sensor_depth) ]
   and pillars =
