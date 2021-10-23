@@ -8,7 +8,7 @@ let lookups =
     | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
     | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2.5, 0., 6. (* inner index *)
+    | 0 -> -2.5, 0., 5.6 (* inner index *)
     | _ -> 0., 0., 0.
   and curve = function
     | i when i = 0 ->
@@ -40,11 +40,6 @@ let thumb_curve =
       ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
       f)
 
-(* TODO: I think I do want to raise the thumb back up a bit. Maybe not quite
-     all the way, but it is too low I think. It is actually nice on the
-     splaytyl how my thumb basically stays on it while I am typing.
-    v3: ~thumb_offset:(-12., -43., 6.)
-     *)
 let plate_builder =
   Plate.make
     ~n_cols:5
