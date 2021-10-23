@@ -46,7 +46,7 @@ let plate_builder =
     ~spacing:0.
     ~lookups
     ~thumb_curve
-    ~thumb_offset:(-13., -43., 10.)
+    ~thumb_offset:(-13., -43., 9.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
