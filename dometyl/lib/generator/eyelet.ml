@@ -64,10 +64,10 @@ let screw_fastener
 
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
-let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.; hole = Inset 0.5 }
+let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.4; hole = Inset 0.6 }
 
 let magnet_6x3_config =
-  { outer_rad = 4.; inner_rad = 3.1; thickness = 4.; hole = Inset 3. }
+  { outer_rad = 4.4; inner_rad = 3.15; thickness = 4.6; hole = Inset 3.2 }
 
 let m4_countersunk_fastener = screw_fastener ()
 
