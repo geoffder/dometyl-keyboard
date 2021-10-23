@@ -86,7 +86,7 @@ let base_connector =
     ~west_link:(Connect.straight ~height:15. ())
 
 let plate_welder = Plate.column_joins
-let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.4) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.6) (make ()))
 
 let build ?right_hand ?(empty = false) () =
   let hole =
