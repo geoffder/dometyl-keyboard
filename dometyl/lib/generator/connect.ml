@@ -336,14 +336,20 @@ let straight_base
   }
 
 let join_walls
-    ?(n_steps = 6)
+    ?(n_steps = `Flat 6)
     ?(fudge_factor = 3.)
     ?(overlap_factor = 1.2)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
   let ((dx, dy, _) as dir1) = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2 in
+  and dir2 = Wall.foot_direction w2
+  and n_steps =
+    let summit (w : Wall.t) =
+      Points.fold ~f:(fun m p -> Float.max (Vec3.get_z p) m) ~init:Float.min_value w.start
+    in
+    Wall.Steps.to_int n_steps (Float.max (summit w1) (summit w2))
+  in
   let major_diff, minor_diff =
     let x, y, _ =
       Vec3.(
@@ -394,7 +400,7 @@ let join_walls
             *. distance w1.foot.top_right w1.foot.bot_right)
         in
         Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
-      else 0.001
+      else 0.01
     (* If the walls are overlapping, move back the start positions to counter. *)
   in
   (* HACK: The way I am using the overhang flag here seemed to partially rescue one case,
@@ -436,11 +442,11 @@ let join_walls
          [ w1.start.top_right
          ; w1.start.bot_right
          ; w1.edges.bot_right 0.
-         ; top_start 0.0001
+         ; top_start 0.001
          ] )
       (List.map
          ~f:Vec3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, 0.)))
-         [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.0001 ] )
+         [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.001 ] )
   in
   { scad = Scad.union [ Util.prism_exn starts dests; wedge ]
   ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ]
@@ -488,7 +494,7 @@ type config =
       ; n_steps : int option
       }
   | FullJoin of
-      { n_steps : int option
+      { n_steps : Wall.Steps.t option
       ; fudge_factor : float option
       ; overlap_factor : float option
       }
@@ -846,33 +852,37 @@ let skeleton
   |> clockwise_union
 
 let closed
-    ?n_steps
+    ?body_steps
+    ?thumb_steps
     ?fudge_factor
     ?overlap_factor
     ?(west_link = full_join ~fudge_factor:0. ())
     ?(east_link = snake ())
     (Walls.{ body; _ } as walls)
   =
-  let join = full_join ?n_steps ?fudge_factor ?overlap_factor ()
-  and corner = full_join ?n_steps ~fudge_factor:0. ?overlap_factor () in
-  let side last_idx i = if i = last_idx then corner else join
+  let join = full_join ?fudge_factor ?overlap_factor
+  and corner = full_join ~fudge_factor:0. ?overlap_factor in
+  let side ?n_steps last_idx i =
+    if i = last_idx then corner ?n_steps () else join ?n_steps ()
   and max_key m = fst (Map.max_elt_exn m) in
   let north =
     let last_idx = max_key body.cols in
     if Map.length walls.body.sides.east = 0
-    then fun i -> if i = last_idx then cubic ~height:10. () else join
-    else side last_idx
+    then
+      fun i ->
+      if i = last_idx then cubic ~height:10. () else join ?n_steps:body_steps ()
+    else side ?n_steps:body_steps last_idx
   in
   manual
     ~west:(side (max_key body.sides.west))
     ~north
     ~east:(side 0)
-    ~south:(fun _ -> join)
+    ~south:(fun _ -> join ?n_steps:body_steps ())
     ~east_link
-    ~thumb_east:(fun _ -> corner)
+    ~thumb_east:(fun _ -> corner ?n_steps:thumb_steps ())
     ~thumb_south:(side 0)
-    ~thumb_west:(fun _ -> corner)
-    ~thumb_north:(fun _ -> join)
+    ~thumb_west:(fun _ -> corner ?n_steps:thumb_steps ())
+    ~thumb_north:(fun _ -> join ?n_steps:thumb_steps ())
     ~west_link
     walls
 

@@ -75,8 +75,8 @@ let base_connector =
     ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
     ~cubic_d:2.
     ~cubic_scale:1.
-    ~body_join_steps:3
-    ~thumb_join_steps:3
+    ~body_join_steps:(`Flat 3)
+    ~thumb_join_steps:(`Flat 3)
     ~fudge_factor:8.
     ~close_thumb:false
 

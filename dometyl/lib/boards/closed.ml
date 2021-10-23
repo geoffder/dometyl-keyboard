@@ -29,7 +29,8 @@ let wall_builder plate =
 
 let base_connector =
   Connect.closed
-    ~n_steps:4
+    ~body_steps:(`PerZ 6.)
+    ~thumb_steps:(`Flat 4)
     ~east_link:(Connect.snake ~height:15. ())
     ~west_link:(Connect.straight ~height:15. ())
 

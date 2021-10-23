@@ -73,8 +73,8 @@ let base_connector =
     ~west_link:(Connect.straight ~height:12. ())
     ~cubic_d:2.
     ~cubic_scale:1.5
-    ~body_join_steps:3
-    ~thumb_join_steps:3
+    ~body_join_steps:(`Flat 3)
+    ~thumb_join_steps:(`Flat 3)
     ~fudge_factor:8.
     ~close_thumb:true
     ~pinky_elbow:false

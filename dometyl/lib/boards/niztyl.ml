@@ -8,12 +8,12 @@ let lookups =
     | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
     | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2.5, 0., 5.7 (* inner index *)
+    | 0 -> -2.5, 0., 6. (* inner index *)
     | _ -> 0., 0., 0.
   and curve = function
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 7.5) ~radius:41. (Float.pi /. 4.9)) ())
+        curve ~well:(spec ~tilt:(Float.pi /. 7.25) ~radius:41. (Float.pi /. 4.9)) ())
       (* tilted inner index *)
     | i when i = 1 -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 4.9)) ())
     | i when i >= 3 ->
@@ -40,22 +40,24 @@ let thumb_curve =
       ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
       f)
 
+(* TODO: I think I do want to raise the thumb back up a bit. Maybe not quite
+     all the way, but it is too low I think. It is actually nice on the
+     splaytyl how my thumb basically stays on it while I am typing.
+    v3: ~thumb_offset:(-12., -43., 6.)
+     *)
 let plate_builder =
   Plate.make
     ~n_cols:5
     ~spacing:0.
     ~lookups
     ~thumb_curve
-    ~thumb_offset:(-13., -43., 9.5)
+    ~thumb_offset:(-13., -43., 10.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 let wall_builder plate =
-  (* 6x3 magnet *)
-  let eyelet_config =
-    Eyelet.{ outer_rad = 4.5; inner_rad = 3.; thickness = 4.; hole = Inset 3. }
-  in
+  let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
         Body.make
@@ -73,7 +75,8 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> Yes)
           ~east:No
           ~west:Eye
-          ~n_steps:(`Flat 6)
+          ~n_facets:3
+          ~n_steps:(`Flat 5)
           ~clearance:3.
           ~eyelet_config
           plate
@@ -81,7 +84,8 @@ let wall_builder plate =
 
 let base_connector =
   Connect.closed
-    ~n_steps:6
+    ~body_steps:(`PerZ 8.)
+    ~thumb_steps:(`Flat 5)
     ~overlap_factor:1.5
     ~east_link:(Connect.snake ~height:15. ())
     ~west_link:(Connect.straight ~height:15. ())
@@ -100,7 +104,7 @@ let build ?right_hand ?(empty = false) () =
         ~inner_w:14.
         ~inner_h:14.
         ~thickness:4.
-        ~cap_height:7.
+        ~cap_height:6.7
         ()
     else Niz.make_hole ()
   in

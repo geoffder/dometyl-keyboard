@@ -78,7 +78,7 @@ val straight_base
   -> t
 
 val join_walls
-  :  ?n_steps:int
+  :  ?n_steps:Wall.Steps.t
   -> ?fudge_factor:float
   -> ?overlap_factor:float
   -> Wall.t
@@ -122,7 +122,7 @@ type config =
       ; n_steps : int option
       }
   | FullJoin of
-      { n_steps : int option
+      { n_steps : Wall.Steps.t option
       ; fudge_factor : float option
       ; overlap_factor : float option
       }
@@ -164,7 +164,7 @@ val snake
   -> config
 
 val full_join
-  :  ?n_steps:int
+  :  ?n_steps:Wall.Steps.t
   -> ?fudge_factor:float
   -> ?overlap_factor:float
   -> unit
@@ -193,8 +193,8 @@ val skeleton
   -> ?height:float
   -> ?min_straight_width:float
   -> ?n_steps:int
-  -> ?body_join_steps:int
-  -> ?thumb_join_steps:int
+  -> ?body_join_steps:Wall.Steps.t
+  -> ?thumb_join_steps:Wall.Steps.t
   -> ?fudge_factor:float
   -> ?join_fudge_factor:float
   -> ?overlap_factor:float
@@ -212,7 +212,8 @@ val skeleton
   -> t
 
 val closed
-  :  ?n_steps:int
+  :  ?body_steps:Wall.Steps.t
+  -> ?thumb_steps:Wall.Steps.t
   -> ?fudge_factor:float
   -> ?overlap_factor:float
   -> ?west_link:config

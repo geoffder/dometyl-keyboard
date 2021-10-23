@@ -87,8 +87,8 @@ let base_connector =
     ~cubic_d:2.
     ~cubic_scale:1.
     ~n_steps:9
-    ~body_join_steps:3
-    ~thumb_join_steps:4
+    ~body_join_steps:(`Flat 3)
+    ~thumb_join_steps:(`Flat 4)
     ~fudge_factor:8.
     ~overlap_factor:1.2
     ~close_thumb:true

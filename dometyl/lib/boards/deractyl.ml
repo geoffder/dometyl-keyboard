@@ -84,7 +84,8 @@ let plate_welder = Plate.column_joins
 
 let base_connector =
   Connect.closed
-    ~n_steps:5
+    ~body_steps:(`Flat 5)
+    ~thumb_steps:(`Flat 5)
     ~east_link:(Connect.snake ~d:2. ~scale:3. ~height:10. ~n_steps:12 ())
     ~west_link:(Connect.cubic ~d:3. ~scale:0.25 ~height:15. ~bow_out:false ())
 

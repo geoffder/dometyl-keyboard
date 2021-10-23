@@ -208,7 +208,7 @@ let poly_siding
       then thickness, d1 +. Float.max half_delta 0., top_offset
       else 0., d1 +. Float.min half_delta 0., (0., 0., 0.)
     in
-    let p1 = Vec3.(start <-> mul ortho (0.0002, 0.0002, 0.0002)) (* fudge for union *)
+    let p1 = Vec3.(start <-> mul ortho (0.01, 0.01, 0.01)) (* fudge for union *)
     and p2 =
       Vec3.(
         mul xy (d1 +. jog, d1 +. jog, 0.)
