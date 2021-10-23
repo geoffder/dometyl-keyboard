@@ -3,12 +3,12 @@
 ## About
 This is a library (currently under construction) for generation of paramaterized
 split-hand, concave, columnar, ergonomic keyboards in the spirit of the
-[Dactyl](https://github.com/adereth/dactyl-keyboard), but written in from the
+[Dactyl](https://github.com/adereth/dactyl-keyboard), but written from the
 ground up in [ocaml](https://ocaml.org/), rather than
 [clojure](https://clojure.org). **Dometyl** also takes inspiration from a
 lineage of **Dactyl-like** keyboards that evolved from the original script,
 including the [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight)
-itself a fork of forks of dactyl-manumform keyboards with many accumulated
+itself a fork of forks of dactyl-manuform keyboards with many accumulated
 features, and the [Skeletyl](https://github.com/Bastardkb/Skeletyl), a sleak,
 low-profile, open-case design built in
 [Fusion360](https://www.autodesk.ca/en/products/fusion-360/overview).
