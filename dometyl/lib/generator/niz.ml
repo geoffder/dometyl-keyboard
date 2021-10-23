@@ -87,7 +87,7 @@ let make_hole
     ?(inner_w = 14.)
     ?(inner_h = 14.)
     ?(thickness = 5.6)
-    ?(cap_height = 7.)
+    ?(cap_height = 6.5)
     ?(cap_cutout_height = Some 1.5)
     ?(clearance = 4.)
     ?(dome_w = 19.5)
@@ -144,7 +144,7 @@ let make_hole
       Scad.union
         [ Scad.translate
             (0., 0., 2.5 +. h +. (thickness /. 2.))
-            (Scad.cube ~center:true (20., 20., 5.))
+            (Scad.cube ~center:true (20., 20., 7.))
         ; internals
         ]
     | None   -> internals
