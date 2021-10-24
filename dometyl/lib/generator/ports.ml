@@ -134,7 +134,7 @@ let derek_reversible_stl reset_button =
 
 let reversible_holder
     ?(reset_button = false)
-    ?(rail_w = 1.5)
+    ?(rail_w = 1.6)
     ?x_off
     ?y_off
     ?z_rot
@@ -153,9 +153,9 @@ let reversible_holder
     |> Scad.translate (0., -8., 0.)
     |> Scad.color ~alpha:0.5 Color.Salmon
   and rails =
-    let rail = Scad.cube (rail_w, rail_w, h) in
-    [ Scad.translate (0., -.rail_w -. 1.5, 0.) rail
-    ; Scad.translate (w -. rail_w, -.rail_w -. 1.5, 0.) rail
+    let rail = Scad.cube ~center:true (rail_w +. 0.01, rail_w, h +. 0.01) in
+    [ Scad.translate (rail_w /. 2., -2.25, h /. 2.) rail
+    ; Scad.translate (w -. (rail_w /. 2.), -2.25, h /. 2.) rail
     ]
   in
   let minus =
