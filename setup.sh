@@ -32,7 +32,7 @@ then
     cd scad-ml
     git pull
 else
-    git clone https://github.com/geoffder/scad-ml
+    git clone https://github.com/namachan10777/scad-ml
     cd scad-ml
 fi
 
