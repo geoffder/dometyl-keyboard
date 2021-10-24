@@ -134,7 +134,7 @@ let derek_reversible_stl reset_button =
 
 let reversible_holder
     ?(reset_button = false)
-    ?(rail_w = 1.6)
+    ?(rail_w = 1.4)
     ?x_off
     ?y_off
     ?z_rot
