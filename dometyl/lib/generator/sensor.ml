@@ -23,7 +23,7 @@ module Config = struct
     ; leg_bend = 4.
     ; leg_z_offset = -0.2
     ; merge_legs = false
-    ; body_w = 3.93
+    ; body_w = 4.
     ; body_l = 3.
     ; body_thickness = 1.5
     }
@@ -37,7 +37,7 @@ module Config = struct
     ; leg_z_offset = -0.2
     ; merge_legs = true
     ; body_w = 4.2
-    ; body_l = 3.4
+    ; body_l = 3.2
     ; body_thickness = 1.5
     }
 end
