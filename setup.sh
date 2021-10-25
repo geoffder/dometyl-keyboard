@@ -8,8 +8,9 @@ base_dir="$( dirname "${BASH_SOURCE[0]}" )"
 cd "$base_dir"
 
 # auto-confirm opam prompts unless operating under cygwin
+os=$(uname -s)
 opam_exec="opam --yes"
-if [ "$(expr substr $(uname -s) 1 6)" == "CYGWIN" ]
+if [ "${os:0:6}" == "CYGWIN" ]
 then
    opam_exec="opam"
 fi
