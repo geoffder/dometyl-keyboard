@@ -31,7 +31,7 @@ let thumb_curve =
   let f = function
     | 2 ->
       KeyHole.quaternion_about_origin (Float.pi /. 30.)
-      >> KeyHole.translate (-0.5, -0.5, 1.)
+      >> KeyHole.translate (-0.5, -0.8, 1.)
     | _ -> Fn.id
   in
   Curvature.(
@@ -46,10 +46,10 @@ let plate_builder =
     ~spacing:0.
     ~lookups
     ~thumb_curve
-    ~thumb_offset:(-13., -43., 9.)
-    ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
+    ~thumb_offset:(-15., -44., 8.5)
+    ~thumb_angle:Float.(pi /. 60., pi /. -14., pi /. 12.)
     ~caps:Caps.Matty3.row
-    ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
+    ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
   let eyelet_config = Eyelet.magnet_6x3_config in
@@ -58,8 +58,10 @@ let wall_builder plate =
         Body.make
           ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
           ~east_lookup:(fun _ -> Yes)
+          ~d1:2.
+          ~d2:5.
           ~n_facets:2
-          ~n_steps:(`PerZ 8.)
+          ~n_steps:(`PerZ 6.)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
@@ -71,7 +73,7 @@ let wall_builder plate =
           ~east:No
           ~west:Eye
           ~n_facets:3
-          ~n_steps:(`Flat 5)
+          ~n_steps:(`Flat 6)
           ~clearance:3.
           ~eyelet_config
           plate
@@ -79,8 +81,8 @@ let wall_builder plate =
 
 let base_connector =
   Connect.closed
-    ~body_steps:(`PerZ 8.)
-    ~thumb_steps:(`Flat 5)
+    ~body_steps:(`PerZ 6.)
+    ~thumb_steps:(`Flat 6)
     ~overlap_factor:1.5
     ~east_link:(Connect.snake ~height:15. ())
     ~west_link:(Connect.straight ~height:15. ())
@@ -98,7 +100,8 @@ let build ?right_hand ?(empty = false) () =
         ~outer_h:20.5
         ~inner_w:14.
         ~inner_h:14.
-        ~thickness:4.
+        ~thickness:5.6
+        ~clearance:4.
         ~cap_height:6.7
         ()
     else Niz.make_hole ()
