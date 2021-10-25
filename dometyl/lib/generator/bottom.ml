@@ -56,12 +56,13 @@ let make
           ; Scad.cylinder ~fn:32 shaft_rad thickness
           ] )
     | Magnet ->
-      let Eyelet.{ inner_rad; thickness = thick; hole; _ } = screw_config in
+      let Eyelet.{ inner_rad; hole; _ } = screw_config in
       let h =
         match hole with
         | Eyelet.Inset inset -> inset
         | _                  -> 0.
-      and thickness = Float.max thickness thick in
+      in
+      let thickness = Float.max thickness (h +. 0.6) in
       ( thickness
       , Scad.union
           [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
