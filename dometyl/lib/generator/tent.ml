@@ -63,10 +63,10 @@ let make
     ?(degrees = 20.)
     ?(z_offset = 0.)
     ?fastener
-    ?(foot_thickness = 2.)
+    ?(foot_thickness = 2.4)
     ?(foot_rad = 6.)
     ?(bumpon_rad = 5.5)
-    ?(bumpon_inset = 0.5)
+    ?(bumpon_inset = 0.6)
     ?(bump_locs = default_bumps)
     (case : _ Case.t)
   =
