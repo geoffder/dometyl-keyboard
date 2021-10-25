@@ -239,7 +239,7 @@ let poly_siding
         let f m (_, _, z) = Float.min m z in
         Points.fold ~f ~init:Float.max_value cleared_face.points
       in
-      Float.(to_int (z /. lowest_z *. of_int (Steps.to_int n_steps z)))
+      Float.(to_int ((1. +. ((z -. lowest_z) /. z)) *. of_int (Steps.to_int n_steps z)))
     in
     `Ragged (List.map ~f:adjust cw_points)
   and end_ps, bezs =
