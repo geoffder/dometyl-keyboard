@@ -41,7 +41,9 @@ let plate_builder =
           ())
     ~thumb_offset:(-13., -41., 10.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
-    ~caps:Caps.Matty3.row
+    ~caps:
+      Caps.Matty3.row
+      (* ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u) *)
     ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
