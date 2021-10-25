@@ -874,13 +874,13 @@ let closed
     else side ?n_steps:body_steps last_idx
   in
   manual
-    ~west:(side (max_key body.sides.west))
+    ~west:(side ?n_steps:body_steps (max_key body.sides.west))
     ~north
-    ~east:(side 0)
+    ~east:(side ?n_steps:body_steps 0)
     ~south:(fun _ -> join ?n_steps:body_steps ())
     ~east_link
     ~thumb_east:(fun _ -> corner ?n_steps:thumb_steps ())
-    ~thumb_south:(side 0)
+    ~thumb_south:(side ?n_steps:thumb_steps 0)
     ~thumb_west:(fun _ -> corner ?n_steps:thumb_steps ())
     ~thumb_north:(fun _ -> join ?n_steps:thumb_steps ())
     ~west_link
