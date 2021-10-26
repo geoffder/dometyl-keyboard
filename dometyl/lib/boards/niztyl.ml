@@ -61,7 +61,7 @@ let wall_builder plate =
           ~d1:2.
           ~d2:5.
           ~n_facets:2
-          ~n_steps:(`PerZ 6.)
+          ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
@@ -73,7 +73,7 @@ let wall_builder plate =
           ~east:No
           ~west:Eye
           ~n_facets:3
-          ~n_steps:(`Flat 6)
+          ~n_steps:(`Flat 3)
           ~clearance:3.
           ~eyelet_config
           plate
@@ -81,8 +81,8 @@ let wall_builder plate =
 
 let base_connector =
   Connect.closed
-    ~body_steps:(`PerZ 6.)
-    ~thumb_steps:(`Flat 6)
+    ~body_steps:(`Flat 3)
+    ~thumb_steps:(`Flat 3)
     ~overlap_factor:1.5
     ~east_link:(Connect.snake ~height:15. ())
     ~west_link:(Connect.straight ~height:15. ())
