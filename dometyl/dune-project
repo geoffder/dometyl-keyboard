@@ -1,12 +1,31 @@
 (lang dune 2.8)
+
 (name dometyl)
+
 (generate_opam_files true)
 
-(source (github geoffder/dometyl-keyboard))
+(source
+ (github geoffder/dometyl-keyboard))
+
 (license AGPL-3.0-or-later)
+
 (authors "Geoff deRosenroll<geoffderosenroll@gmail.com>")
+
 (maintainers "Geoff deRosenroll<geoffderosenroll@gmail.com>")
+
 (package
-  (name dometyl)
-  (synopsis "Ergonomic keyboard generator")
-  (description "DSL to generate OpenSCAD models of concave split ergonomic keyboards."))
+ (name dometyl)
+ (synopsis "Ergonomic keyboard generator")
+ (description
+  "DSL to generate OpenSCAD models of concave split ergonomic keyboards.")
+ (depends
+  (ocaml
+   (>= 4.08.0))
+  (base
+   (>= 0.14.1))
+  (scad_ml
+   (>= 1.0.0))
+  ; (ppx_deriving_scad
+  ;  (>= 1.0.0))
+  ppx_jane
+  stdio))
