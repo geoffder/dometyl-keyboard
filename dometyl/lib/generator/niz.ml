@@ -69,17 +69,21 @@ end
 
    Both BKE and DES domes are roughly ~19x19mm. *)
 
-(* Magnet size, with a sensor depth of 1.4mm (roughly the thickness of an A3144):
-   - 3x1mm magnets are able to actuate the sensor reliably after going over the
-    tactile bump
-   - 2x1 magnets require pressing "past" bottom out, squeezing the dome in order
-    to get a weak actuation of the sensor
-   - Have not tested larger than 3x1mm, but shorter actuation distances may be
-    achivable, but be wary of hyseresis (too strong magnets would never allow
-    the sensor to de-activate at the top of the stroke). 3x1mm magnets allow
-    deactivation even with the thick silencing rings Niz includes with their
-    stems. Thinner rings or no rings at all is an available compromise that may
-    help to get into an acceptable operating range with stronger magnets. *)
+(* Magnet size, with a sensor depth of 1.4mm (slightly below the thickness of a
+     standard through-hole sensor package):
+   - 3x1mm magnets actuate the AH3574 sensor at ~1.16mm travel and are able to
+    deactivate by the top of the return with Niz rings
+   - 2x1 magnets actuate the AH3572 sensor at ~2.4mm travel, deactivation
+    occurs by the top of the return with Niz rings.
+
+   - recommended: 2x1 magnet with sensor_depth = 1.
+    (shorter actuation distance, easier to attach magnet size.) *)
+
+(* TODO: better magnet / sensor break down notes, and use an of_config pattern
+    such that there can be defaults for sensors / domes
+    - also, add param for easy setting to empty holes for tuning (faster
+    preview/render) *)
+
 let make_hole
     ?cap
     ?(outer_w = 20.5)
@@ -94,7 +98,7 @@ let make_hole
     ?(dome_waist_clip = 1.)
     ?(dome_thickness = 1.6)
     ?(base_thickness = 3.)
-    ?(sensor_depth = 1.4)
+    ?(sensor_depth = 1.)
     ?(sensor_config = Sensor.Config.a3144_print)
     ()
   =
