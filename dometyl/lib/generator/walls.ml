@@ -1,20 +1,15 @@
 open! Base
 open! Scad_ml
 
-type presence =
-  | No
-  | Yes
-  | Eye
+type presence = No | Yes | Eye
 
 module Body = struct
   module Cols = struct
-    type col =
-      { north : Wall.t option
-      ; south : Wall.t option
-      }
+    type col = { north : Wall.t option; south : Wall.t option }
     [@@deriving scad]
 
-    let map_col ~f c = { north = Option.map ~f c.north; south = Option.map ~f c.south }
+    let map_col ~f c =
+      { north = Option.map ~f c.north; south = Option.map ~f c.south }
 
     type t = (col Map.M(Int).t[@scad.mapf]) [@@deriving scad]
 
@@ -30,36 +25,33 @@ module Body = struct
         ?(n_facets = 1)
         ?(north_lookup = fun i -> if i = 2 || i = 4 then Eye else Yes)
         ?(south_lookup =
-          function
-          | i when i = 3 -> Eye
-          | i when i > 1 -> Yes
-          | _ -> No)
+          function i when i = 3 -> Eye | i when i > 1 -> Yes | _ -> No)
         ?(eyelet_config = Eyelet.m4_config)
-        Plate.{ config = { spacing; _ }; columns; _ }
-      =
-      let drop = Wall.column_drop ~spacing ~columns ~z_off ~n_steps ~n_facets ~d1 ~d2
+        Plate.{ config = { spacing; _ }; columns; _ } =
+      let drop =
+        Wall.column_drop ~spacing ~columns ~z_off ~n_steps ~n_facets ~d1 ~d2
       and index_thickness' = Option.value ~default:thickness index_thickness in
       let bez_wall north presence =
         let clearance = if north then north_clearance else south_clearance in
         match presence with
-        | No  -> fun _ _ -> None
+        | No -> fun _ _ -> None
         | Yes ->
-          fun side i ->
-            Some
-              (drop
-                 ~clearance
-                 ~thickness:(if i < 2 then index_thickness' else thickness)
-                 side
-                 i )
+            fun side i ->
+              Some
+                (drop
+                   ~clearance
+                   ~thickness:(if i < 2 then index_thickness' else thickness)
+                   side
+                   i )
         | Eye ->
-          fun side i ->
-            Some
-              (drop
-                 ~clearance
-                 ~thickness:(if i < 2 then index_thickness' else thickness)
-                 ~eyelet_config
-                 side
-                 i )
+            fun side i ->
+              Some
+                (drop
+                   ~clearance
+                   ~thickness:(if i < 2 then index_thickness' else thickness)
+                   ~eyelet_config
+                   side
+                   i )
       in
       Map.mapi
         ~f:(fun ~key:i ~data:_ ->
@@ -68,16 +60,17 @@ module Body = struct
           } )
         columns
 
-    let get t = function
-      | `N -> t.north
-      | `S -> t.south
+    let get t = function `N -> t.north | `S -> t.south
 
     let col_to_scad col =
       Scad.union
-        (List.filter_map ~f:(Option.map ~f:Wall.to_scad) [ col.north; col.south ])
+        (List.filter_map
+           ~f:(Option.map ~f:Wall.to_scad)
+           [ col.north; col.south ] )
 
     let to_scad t =
-      Scad.union (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
+      Scad.union
+        (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> col_to_scad data :: l) t)
 
     let collect_screws ?(init = []) (t : t) =
       let prepend wall =
@@ -109,8 +102,7 @@ module Body = struct
         ?(west_lookup = fun i -> if i = 0 then Eye else No)
         ?(east_lookup = fun _ -> No)
         ?(eyelet_config = Eyelet.m4_config)
-        Plate.{ columns; _ }
-      =
+        Plate.{ columns; _ } =
       let west_col = Map.find_exn columns 0
       and _, east_col = Map.max_elt_exn columns
       and siding =
@@ -118,17 +110,17 @@ module Body = struct
       in
       let sider side ~key ~data m =
         let lookup =
-          match side with
-          | `West -> west_lookup
-          | `East -> east_lookup
+          match side with `West -> west_lookup | `East -> east_lookup
         in
         match lookup key with
         | Yes -> Map.add_exn ~key ~data:(siding side data) m
         | Eye -> Map.add_exn ~key ~data:(siding ~eyelet_config side data) m
-        | No  -> m
+        | No -> m
       in
-      { west = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
-      ; east = Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
+      { west =
+          Map.fold ~init:(Map.empty (module Int)) ~f:(sider `West) west_col.keys
+      ; east =
+          Map.fold ~init:(Map.empty (module Int)) ~f:(sider `East) east_col.keys
       }
 
     let to_scad t =
@@ -142,11 +134,7 @@ module Body = struct
       Map.fold ~init:(Map.fold ~init ~f t.west) ~f t.east
   end
 
-  type t =
-    { cols : Cols.t
-    ; sides : Sides.t
-    }
-  [@@deriving scad]
+  type t = { cols : Cols.t; sides : Sides.t } [@@deriving scad]
 
   (* TODO: rough draft. This impl does not allow for different settings between cols
    * and siding. Is that fine? Or should I add more params here, or just make separately? *)
@@ -166,8 +154,7 @@ module Body = struct
       ?west_lookup
       ?east_lookup
       ?eyelet_config
-      plate
-    =
+      plate =
     { cols =
         Cols.make
           ?d1
@@ -205,33 +192,23 @@ module Body = struct
 end
 
 module Thumb = struct
-  type key =
-    { north : Wall.t option
-    ; south : Wall.t option
-    }
+  type key = { north : Wall.t option; south : Wall.t option } [@@deriving scad]
+
+  let map_key ~f k =
+    { north = Option.map ~f k.north; south = Option.map ~f k.south }
+
+  type sides = { west : Wall.t option; east : Wall.t option } [@@deriving scad]
+
+  let map_sides ~f s =
+    { west = Option.map ~f s.west; east = Option.map ~f s.east }
+
+  let get_side sides = function `W -> sides.west | `E -> sides.east
+
+  type t = { keys : key Map.M(Int).t [@scad.mapf]; sides : sides }
   [@@deriving scad]
 
-  let map_key ~f k = { north = Option.map ~f k.north; south = Option.map ~f k.south }
-
-  type sides =
-    { west : Wall.t option
-    ; east : Wall.t option
-    }
-  [@@deriving scad]
-
-  let map_sides ~f s = { west = Option.map ~f s.west; east = Option.map ~f s.east }
-
-  let get_side sides = function
-    | `W -> sides.west
-    | `E -> sides.east
-
-  type t =
-    { keys : key Map.M(Int).t [@scad.mapf]
-    ; sides : sides
-    }
-  [@@deriving scad]
-
-  let map ~f t = { keys = Map.map ~f:(map_key ~f) t.keys; sides = map_sides ~f t.sides }
+  let map ~f t =
+    { keys = Map.map ~f:(map_key ~f) t.keys; sides = map_sides ~f t.sides }
 
   let make
       ?(d1 = 1.)
@@ -242,17 +219,17 @@ module Thumb = struct
       ?(n_steps = `PerZ 4.)
       ?(n_facets = 1)
       ?(north_lookup = fun i -> if i = 0 then Yes else No)
-      ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
+      ?(south_lookup =
+        fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
       ?(west = Yes)
       ?(east = No)
       ?(eyelet_config = Eyelet.m4_config)
-      Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ }
-    =
+      Plate.{ thumb = { config = { n_keys; _ }; keys; _ }; _ } =
     let siding =
       Wall.poly_siding ~d1 ~d2 ~z_off ~thickness ~clearance ~n_steps ~n_facets
     in
     let bez_wall = function
-      | No  -> fun _ _ -> None
+      | No -> fun _ _ -> None
       | Yes -> fun side i -> Some (siding side i)
       | Eye -> fun side i -> Some (siding ~eyelet_config side i)
     in
@@ -274,24 +251,84 @@ module Thumb = struct
     Scad.union
     @@ Map.fold
          ~init:(prepend west [] |> prepend east)
-         ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
+         ~f:(fun ~key:_ ~data:{ north; south } acc ->
+           prepend north acc |> prepend south )
          keys
 
   let collect_screws ?(init = []) { keys; sides = { west; east } } =
-    let prepend wall = Util.prepend_opt @@ Option.bind ~f:(fun w -> w.Wall.screw) wall in
+    let prepend wall =
+      Util.prepend_opt @@ Option.bind ~f:(fun w -> w.Wall.screw) wall
+    in
     Map.fold
       ~init:(prepend west init |> prepend east)
-      ~f:(fun ~key:_ ~data:{ north; south } acc -> prepend north acc |> prepend south)
+      ~f:(fun ~key:_ ~data:{ north; south } acc ->
+        prepend north acc |> prepend south )
       keys
 end
 
-type t =
-  { body : Body.t
-  ; thumb : Thumb.t
-  }
-[@@deriving scad]
+type t = { body : Body.t; thumb : Thumb.t } [@@deriving scad]
 
-let to_scad { body; thumb } = Scad.union [ Body.to_scad body; Thumb.to_scad thumb ]
+let manual
+    ~body_west
+    ~body_north
+    ~body_east
+    ~body_south
+    ~thumb_south
+    ~thumb_north
+    ?thumb_east
+    ?thumb_west
+    Plate.{ columns; thumb; _ } =
+  let west_col = Map.find_exn columns 0
+  and _, east_col = Map.max_elt_exn columns in
+  let body =
+    let cols =
+      Map.mapi
+        ~f:(fun ~key:i ~data:_ ->
+          Body.Cols.{ north = body_north i i; south = body_south i i } )
+        columns
+    and sides =
+      let sider f ~key ~data m =
+        Option.value_map
+          ~default:m
+          ~f:(fun data -> Map.add_exn ~key ~data m)
+          (f key data)
+      in
+      Body.Sides.
+        { west =
+            Map.fold
+              ~init:(Map.empty (module Int))
+              ~f:(sider body_west)
+              west_col.keys
+        ; east =
+            Map.fold
+              ~init:(Map.empty (module Int))
+              ~f:(sider body_east)
+              east_col.keys
+        }
+    in
+    Body.{ cols; sides }
+  and thumb =
+    let sides =
+      Thumb.
+        { west =
+            Option.map ~f:(fun f -> f @@ Map.find_exn thumb.keys 0) thumb_west
+        ; east =
+            Option.map
+              ~f:(fun f -> Map.max_elt_exn thumb.keys |> snd |> f)
+              thumb_east
+        }
+    and keys =
+      Map.mapi
+        ~f:(fun ~key:i ~data ->
+          Thumb.{ north = thumb_north i data; south = thumb_south i data } )
+        thumb.keys
+    in
+    Thumb.{ keys; sides }
+  in
+  { body; thumb }
+
+let to_scad { body; thumb } =
+  Scad.union [ Body.to_scad body; Thumb.to_scad thumb ]
 
 let collect_screws { body; thumb } =
   Body.collect_screws ~init:(Thumb.collect_screws thumb) body
