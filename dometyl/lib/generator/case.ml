@@ -17,10 +17,10 @@ let make
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    keyhole
-  =
+    keyhole =
   let plate =
-    plate_builder (if right_hand then keyhole else KeyHole.mirror_internals keyhole)
+    plate_builder
+      (if right_hand then keyhole else KeyHole.mirror_internals keyhole)
   in
   let walls = wall_builder plate in
   let connections = base_connector walls in
@@ -45,8 +45,8 @@ let make
 let to_scad ?(show_caps = false) ?(show_cutouts = false) t =
   let caps = if show_caps then Some (Plate.collect_caps t.plate) else None
   and cutouts =
-    if show_cutouts
-    then Some (Scad.color Color.Black (Plate.collect_cutouts t.plate))
+    if show_cutouts then
+      Some (Scad.color Color.Black (Plate.collect_cutouts t.plate))
     else None
   in
   [ t.scad ] |> Util.prepend_opt caps |> Util.prepend_opt cutouts |> Scad.union
