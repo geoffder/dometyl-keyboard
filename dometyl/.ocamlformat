@@ -1,6 +1,21 @@
-profile = janestreet
+version=0.19.0
+profile=conventional
 
 exp-grouping = preserve
 let-binding-spacing = compact
 indicate-multiline-delimiters = space
-align-cases = true
+break-infix=fit-or-vertical
+break-fun-decl=fit-or-vertical
+break-fun-sig=fit-or-vertical
+parse-docstrings=true
+let-binding-spacing=compact
+space-around-arrays=true
+space-around-lists=true
+space-around-records=true
+space-around-variants=true
+sequence-style=terminator
+sequence-blank-line=compact
+dock-collection-brackets=false
+wrap-fun-args=false
+assignment-operator=begin-line
+break-separators=before
