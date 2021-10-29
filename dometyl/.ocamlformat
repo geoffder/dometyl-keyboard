@@ -19,3 +19,4 @@ dock-collection-brackets=false
 wrap-fun-args=false
 assignment-operator=begin-line
 break-separators=before
+module-item-spacing=compact

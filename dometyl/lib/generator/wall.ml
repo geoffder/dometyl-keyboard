@@ -3,15 +3,10 @@ open Scad_ml
 open Infix
 
 module Steps = struct
-  type t =
-    [ `PerZ of float
-    | `Flat of int
-    ]
+  type t = [ `PerZ of float | `Flat of int ]
 
   let to_int t z =
-    match t with
-    | `PerZ mm -> Int.max 2 (Float.to_int (z /. mm))
-    | `Flat n  -> n
+    match t with `PerZ mm -> Int.max 2 (Float.to_int (z /. mm)) | `Flat n -> n
 end
 
 module Edge = struct
@@ -27,34 +22,34 @@ module Edge = struct
 
   let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
     let bez_frac =
-      Util.bisection_exn ~max_iter ~tolerance ~f:(fun s -> Vec3.get_z (t s) -. z) 0. 1.
+      Util.bisection_exn
+        ~max_iter
+        ~tolerance
+        ~f:(fun s -> Vec3.get_z (t s) -. z)
+        0.
+        1.
     in
     t bez_frac
 end
 
 module EdgeDrawer = struct
   type drawer = Vec3.t -> Edge.t
-
-  type t =
-    { top : drawer
-    ; bot : drawer
-    }
+  type t = { top : drawer; bot : drawer }
 
   let make
       ?(max_iter = 100)
       ?(tolerance = 0.001)
       ~(get_bez : bool -> Vec3.t -> Edge.t)
-      Points.{ top_left; top_right; bot_left; bot_right; _ }
-    =
+      Points.{ top_left; top_right; bot_left; bot_right; _ } =
     let find_between lp rp (x, y, _) =
       let ((dx, dy, _) as diff) = Vec3.sub rp lp in
       let get_major, target =
-        if Float.(abs dx > abs dy) then Vec3.get_x, x else Vec3.get_y, y
+        if Float.(abs dx > abs dy) then (Vec3.get_x, x) else (Vec3.get_y, y)
       in
-      let ml = get_major lp
-      and mr = get_major rp in
-      if Float.(target > ml && target < mr) || Float.(target < ml && target > mr)
-      then (
+      let ml = get_major lp and mr = get_major rp in
+      if
+        Float.(target > ml && target < mr) || Float.(target < ml && target > mr)
+      then
         let get s = Vec3.(add lp (mul_scalar diff s)) in
         let pos =
           Util.bisection_exn
@@ -64,9 +59,8 @@ module EdgeDrawer = struct
             0.
             1.
         in
-        get pos )
-      else if Float.(abs (target -. ml) < abs (target -. mr))
-      then lp
+        get pos
+      else if Float.(abs (target -. ml) < abs (target -. mr)) then lp
       else rp
     in
     { top = find_between top_left top_right >> get_bez true
@@ -78,7 +72,10 @@ module EdgeDrawer = struct
   let scale s = map ~f:(fun d start -> d start >> Vec3.scale s)
   let mirror ax = map ~f:(fun d start -> d start >> Vec3.mirror ax)
   let rotate r = map ~f:(fun d start -> d start >> Vec3.rotate r)
-  let rotate_about_pt r p = map ~f:(fun d start -> d start >> Vec3.rotate_about_pt r p)
+
+  let rotate_about_pt r p =
+    map ~f:(fun d start -> d start >> Vec3.rotate_about_pt r p)
+
   let quaternion q = map ~f:(fun d start -> d start >> Vec3.quaternion q)
 
   let quaternion_about_pt q p =
@@ -103,12 +100,13 @@ module Edges = struct
 
   let of_clockwise_list_exn = function
     | [ top_left; top_right; bot_right; bot_left ] ->
-      { top_left; top_right; bot_left; bot_right }
-    | _ -> failwith "Expect list of length 4, with edges beziers in clockwise order."
+        { top_left; top_right; bot_left; bot_right }
+    | _ ->
+        failwith
+          "Expect list of length 4, with edges beziers in clockwise order."
 
   let of_clockwise_list l =
-    try Ok (of_clockwise_list_exn l) with
-    | Failure e -> Error e
+    try Ok (of_clockwise_list_exn l) with Failure e -> Error e
 
   let get t = function
     | `TL -> t.top_left
@@ -116,6 +114,28 @@ module Edges = struct
     | `BL -> t.bot_left
     | `BR -> t.bot_right
 end
+
+type config =
+  { d1 : float
+  ; d2 : float
+  ; z_off : float
+  ; thickness : float
+  ; clearance : float
+  ; n_steps : Steps.t
+  ; n_facets : int
+  ; eyelet_config : Eyelet.config option
+  }
+
+let default =
+  { d1 = 2.
+  ; d2 = 5.
+  ; z_off = 0.
+  ; thickness = 3.5
+  ; clearance = 1.5
+  ; n_steps = `Flat 4
+  ; n_facets = 1
+  ; eyelet_config = None
+  }
 
 type t =
   { scad : Scad.d3
@@ -131,27 +151,28 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
   let quat = Quaternion.make (KeyHole.Face.direction face)
   and free, pivot, rock_z, z_sign =
     let ortho = Vec3.(normalize (face.points.centre <-> key_origin)) in
-    if Float.(Vec3.get_z ortho > 0.)
-    then
+    if Float.(Vec3.get_z ortho > 0.) then
       ( face.points.top_right
-      , Vec3.(div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
+      , Vec3.(
+          div (face.points.bot_left <+> face.points.bot_right) (-2., -2., -2.))
       , Vec3.get_z face.points.bot_right
       , 1. )
     else
       ( face.points.bot_right
-      , Vec3.(div (face.points.top_left <+> face.points.top_right) (-2., -2., -2.))
+      , Vec3.(
+          div (face.points.top_left <+> face.points.top_right) (-2., -2., -2.))
       , Vec3.get_z face.points.top_right
       , -1. )
   in
   let diff a =
-    Vec3.(get_z (Vec3.quaternion_about_pt (quat (a *. z_sign)) pivot free) -. rock_z)
+    Vec3.(
+      get_z (Vec3.quaternion_about_pt (quat (a *. z_sign)) pivot free) -. rock_z)
     *. z_sign
   in
   let rec find_angle a last_diff =
-    if Float.(a < pi)
-    then (
+    if Float.(a < pi) then
       let d = diff a in
-      if Float.(d < last_diff) then a -. step else find_angle (a +. step) d )
+      if Float.(d < last_diff) then a -. step else find_angle (a +. step) d
     else a -. step
   in
   let q = quat @@ (find_angle step (Vec3.get_z free -. rock_z) *. z_sign) in
@@ -161,7 +182,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     |> Vec3.sub face'.points.centre
     |> Vec3.normalize
   in
-  face', ortho'
+  (face', ortho')
 
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
  * do so in the higher level functions in walls that call this one. Having a larger
@@ -173,6 +194,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
  * implementing and switching to splines?
    Update: Clearance not using d1 has been added, so this is more of a cosmetic
    consideration now. *)
+
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
@@ -180,13 +202,12 @@ let poly_siding
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
     ?(n_facets = 1)
-    ?(d1 = 4.)
-    ?(d2 = 7.)
+    ?(d1 = 2.)
+    ?(d2 = 5.)
     ?thickness
     ?eyelet_config
     side
-    (key : _ KeyHole.t)
-  =
+    (key : _ KeyHole.t) =
   let start_face = KeyHole.Faces.face key.faces side
   and thickness = Option.value ~default:key.config.thickness thickness in
   let pivoted_face, ortho = swing_face key.origin start_face in
@@ -199,14 +220,15 @@ let poly_siding
   and z_hop = (Float.max 0. (Vec3.get_z ortho) *. key.config.thickness) +. z_off
   and top_offset =
     Vec3.(
-      mul (1., 1., 0.) (cleared_face.points.bot_right <-> cleared_face.points.top_right))
+      mul
+        (1., 1., 0.)
+        (cleared_face.points.bot_right <-> cleared_face.points.top_right))
   in
   let get_bez top ((x, y, z) as start) =
     let jog, d1, plus =
       let half_delta = (d2 -. d1) /. 2. in
-      if top
-      then thickness, d1 +. Float.max half_delta 0., top_offset
-      else 0., d1 +. Float.min half_delta 0., (0., 0., 0.)
+      if top then (thickness, d1 +. Float.max half_delta 0., top_offset)
+      else (0., d1 +. Float.min half_delta 0., (0., 0., 0.))
     in
     let p1 = Vec3.(start <-> mul ortho (0.01, 0.01, 0.01)) (* fudge for union *)
     and p2 =
@@ -216,15 +238,19 @@ let poly_siding
         |> add plus)
     and p3 =
       Vec3.(
-        add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x +. x_off, y +. y_off, 0.) |> add plus)
+        add (mul xy (d2 +. jog, d2 +. jog, 0.)) (x +. x_off, y +. y_off, 0.)
+        |> add plus)
     in
-    p3, Bezier.quad_vec3 ~p1 ~p2 ~p3
+    (p3, Bezier.quad_vec3 ~p1 ~p2 ~p3)
   in
   let cw_points =
     let n = n_facets - 1 in
     Util.fill_points
       ~init:
-        (Util.fill_points ~n cleared_face.points.bot_left cleared_face.points.bot_right)
+        (Util.fill_points
+           ~n
+           cleared_face.points.bot_left
+           cleared_face.points.bot_right )
       ~n
       cleared_face.points.top_right
       cleared_face.points.top_left
@@ -239,14 +265,16 @@ let poly_siding
         let f m (_, _, z) = Float.min m z in
         Points.fold ~f ~init:Float.max_value cleared_face.points
       in
-      Float.(to_int ((1. +. ((z -. lowest_z) /. z)) *. of_int (Steps.to_int n_steps z)))
+      Float.(
+        to_int
+          ((1. +. ((z -. lowest_z) /. z)) *. of_int (Steps.to_int n_steps z)))
     in
     `Ragged (List.map ~f:adjust cw_points)
   and end_ps, bezs =
     List.foldi
       ~f:(fun i (ends, bs) p ->
         let e, b = get_bez (i > n_facets) p in
-        e :: ends, b :: bs )
+        (e :: ends, b :: bs) )
       ~init:([], [])
       (List.rev cw_points)
   in
@@ -259,8 +287,12 @@ let poly_siding
         match config with
         | { hole = Through; _ } -> Normal n
         | { hole = Inset _; outer_rad; _ } ->
-          let offset = outer_rad +. Vec3.(norm (sub foot.top_left foot.bot_left) /. 4.) in
-          Point Vec3.(mean [ foot.top_left; foot.top_right ] <+> mul_scalar n offset)
+            let offset =
+              outer_rad +. Vec3.(norm (sub foot.top_left foot.bot_left) /. 4.)
+            in
+            Point
+              Vec3.(
+                mean [ foot.top_left; foot.top_right ] <+> mul_scalar n offset)
       in
       make ~placement config foot.bot_left foot.bot_right
     in
@@ -273,7 +305,10 @@ let poly_siding
       |> Scad.union
       |> Fn.flip
            Scad.difference
-           (Option.value_map ~default:[] ~f:(fun s -> Option.to_list s.cut) screw)
+           (Option.value_map
+              ~default:[]
+              ~f:(fun s -> Option.to_list s.cut)
+              screw )
   ; start = start_face.points
   ; foot
   ; edge_drawer =
@@ -283,6 +318,22 @@ let poly_siding
   ; edges = Edges.of_clockwise_list_exn (corners bezs)
   ; screw
   }
+
+let poly_of_config
+    ?x_off
+    ?y_off
+    { d1; d2; z_off; thickness; clearance; n_steps; n_facets; eyelet_config } =
+  poly_siding
+    ~d1
+    ~d2
+    ?x_off
+    ?y_off
+    ~z_off
+    ~thickness
+    ~clearance
+    ~n_steps
+    ~n_facets
+    ?eyelet_config
 
 let column_drop
     ?z_off
@@ -296,34 +347,34 @@ let column_drop
     ~spacing
     ~columns
     side
-    idx
-  =
+    idx =
   let key, face, hanging =
     let c : _ Column.t = Map.find_exn columns idx in
     match side with
     | `North ->
-      let key = snd @@ Map.max_elt_exn c.keys in
-      let edge_y = Vec3.get_y key.faces.north.points.centre in
-      key, key.faces.north, Float.(( <= ) edge_y)
+        let key = snd @@ Map.max_elt_exn c.keys in
+        let edge_y = Vec3.get_y key.faces.north.points.centre in
+        (key, key.faces.north, Float.(( <= ) edge_y))
     | `South ->
-      let key = Map.find_exn c.keys 0 in
-      let edge_y = Vec3.get_y key.faces.south.points.centre in
-      key, key.faces.south, Float.(( >= ) edge_y)
+        let key = Map.find_exn c.keys 0 in
+        let edge_y = Vec3.get_y key.faces.south.points.centre in
+        (key, key.faces.south, Float.(( >= ) edge_y))
   in
   let x_dodge =
     match Map.find columns (idx + 1) with
     | Some next_c ->
-      let right_x = Vec3.get_x face.points.top_right
-      and next_face =
-        KeyHole.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side
-      in
-      let diff =
-        if hanging (Vec3.get_y next_face.points.centre)
-        then right_x -. Vec3.get_x next_face.points.bot_left
-        else -.spacing
-      in
-      if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
-    | _           -> 0.
+        let right_x = Vec3.get_x face.points.top_right
+        and next_face =
+          KeyHole.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side
+        in
+        let diff =
+          if hanging (Vec3.get_y next_face.points.centre) then
+            right_x -. Vec3.get_x next_face.points.bot_left
+          else -.spacing
+        in
+        if Float.(diff > 0.) then diff +. spacing
+        else Float.max 0. (spacing +. diff)
+    | _ -> 0.
   in
   poly_siding
     ~x_off:(x_dodge *. -1.)
@@ -337,6 +388,20 @@ let column_drop
     ?eyelet_config
     side
     key
+
+let drop_of_config
+    ~spacing
+    { d1; d2; z_off; thickness; clearance; n_steps; n_facets; eyelet_config } =
+  column_drop
+    ~d1
+    ~d2
+    ~z_off
+    ~thickness
+    ~clearance
+    ~n_steps
+    ~n_facets
+    ~spacing
+    ?eyelet_config
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   Vec3.normalize Vec3.(top_left <-> top_right)

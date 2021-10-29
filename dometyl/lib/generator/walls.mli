@@ -1,6 +1,11 @@
 open! Base
 open! Scad_ml
 
+module Side : sig
+  type t = Wall.t Map.M(Int).t [@@deriving scad]
+  type config = int -> Wall.config option
+end
+
 (** Used for lookups, indicating whether to place a wall at a particular
     position on the plate, and if so, whether there should be an eyelet
     attached. *)
@@ -33,11 +38,8 @@ module Body : sig
       -> t
 
     val get : col -> [< `N | `S ] -> Wall.t option
-
     val col_to_scad : col -> Scad.d3
-
     val to_scad : t -> Scad.d3
-
     val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
@@ -62,7 +64,6 @@ module Body : sig
       -> t
 
     val to_scad : t -> Scad.d3
-
     val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
   end
 
@@ -88,7 +89,6 @@ module Body : sig
     -> t
 
   val to_scad : t -> Scad.d3
-
   val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
@@ -100,7 +100,6 @@ module Thumb : sig
   type sides = { west : Wall.t option; east : Wall.t option }
 
   val map_sides : f:(Wall.t -> Wall.t) -> sides -> sides
-
   val get_side : sides -> [ `W | `E ] -> Wall.t option
 
   type t = { keys : key Map.M(Int).t; sides : sides } [@@deriving scad]
@@ -124,7 +123,6 @@ module Thumb : sig
     -> t
 
   val to_scad : t -> Scad.d3
-
   val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
@@ -143,5 +141,4 @@ val manual :
   -> t
 
 val to_scad : t -> Scad.d3
-
 val collect_screws : t -> Eyelet.t list

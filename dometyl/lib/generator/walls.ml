@@ -3,7 +3,49 @@ open! Scad_ml
 
 type presence = No | Yes | Eye
 
+module Side = struct
+  type t = Wall.t Map.M(Int).t [@@deriving scad_jane]
+  type config = int -> Wall.config option
+end
+
 module Body = struct
+  type tt = { west : Side.t; north : Side.t; east : Side.t; south : Side.t }
+  [@@deriving scad]
+
+  let make'
+      ~west
+      ~north
+      ~east
+      ~south
+      Plate.{ config = { spacing; _ }; columns; _ } =
+    { west =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            Option.map ~f:(fun c -> Wall.poly_of_config c `West data) (west key)
+            )
+          (Map.find_exn columns 0).keys
+    ; north =
+        Map.filter_mapi
+          ~f:(fun ~key ~data:_ ->
+            Option.map
+              ~f:(fun c -> Wall.drop_of_config ~spacing c `North key)
+              (north key) )
+          columns
+    ; east =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            Option.map ~f:(fun c -> Wall.poly_of_config c `East data) (east key)
+            )
+          (snd @@ Map.max_elt_exn columns).keys
+    ; south =
+        Map.filter_mapi
+          ~f:(fun ~key ~data:_ ->
+            Option.map
+              ~f:(fun c -> Wall.drop_of_config ~spacing c `South key)
+              (south key) )
+          columns
+    }
+
   module Cols = struct
     type col = { north : Wall.t option; south : Wall.t option }
     [@@deriving scad]
