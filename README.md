@@ -38,39 +38,24 @@ the generated models.
 
 After installing `opam`, you can run the [setup.sh](setup.sh) script for
 convenience, or follow the instructions under the [opam
-dependencies](#opam-dependencies) and [Installing Scad_ml](#Installing-Scad_ml)
-sub-sections, followed by copying [main.ml.example](dometyl/bin/main.ml.example)
-to `dometyl/bin/main.ml`.
+dependencies](#opam-dependencies) sub-section, followed by copying
+[main.ml.example](dometyl/bin/main.ml.example) to `dometyl/bin/main.ml`.
 
 ### opam dependencies
-The other dependencies include the build system
-[dune](https://github.com/ocaml/dune),
+All dependencies are available from the opam package manager including the build
+system [dune](https://github.com/ocaml/dune),
 [base](https://github.com/janestreet/base) and
 [stdio](https://github.com/janestreet/stdio) (standard library replacements)
-from janestreet, as well as a couple ppx rewriters, and some dev tools, all of
-which are available through the opam package manager.
-* `opam install dune base stdio ppx_jane ppx_inline_test ppxlib merlin
-  ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
-
-### Installing Scad_ml
-Soon (TM), the [scad-ml](https://github.com/namachan10777/scad-ml) library
-should be added to the **opam** repository, but for now, you'll need to clone
-and locally install it (anywhere, no need to be in your clone of this repo, as
-doing this will make it available in your opam switch alogside the packages you
-install from the package repository).
-1. `git clone https://github.com/namachan10777/scad-ml`
-2. `cd scad-ml`
-3. `dune build`
-4. `opam install ./scad_ml.opam`
-
-You'll also need [\[@@deriving
-scad\]](https://github.com/geoffder/ppx_deriving_scad) which is a code
-generation tool used internally by the generator library. Installed alongside
-**Scad_ml** as above:
-1. `git clone https://github.com/geoffder/ppx_deriving_scad`
-2. `cd ppx_deriving_scad`
-3. `dune build`
-4. `opam install ./ppx_deriving_scad.opam`
+from janestreet, and of course
+[Scad_ml](https://github.com/namachan10777/scad-ml) and
+[ppx_deriving_scad](https://github.com/geoffder/ppx_deriving_scad) for the
+modelling. I'd also recommend that you pick up the listed dev tools (which
+you'll want to get the corresponding packages/plugins for in your editor of
+choice).
+**Required:**
+* `opam install dune base stdio scad_ml ppx_deriving_scad ppx_jane`
+**Highly recommended for dev experience:**
+* `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
 
 ## Organization
 Online documentation is available
