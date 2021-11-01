@@ -30,7 +30,7 @@ module Sides = struct
        the rows of the LAST column. Need to decide how I want to adapt this to
        the thumb, THEN fix the connection ordering issue (and clean up that code
        in the Connect module) *)
-  let manual ?(spacing = 1.) ~west ~north ~east ~south (columns : _ Columns.t) =
+  let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : _ Columns.t) =
     { west =
         Map.filter_mapi
           ~f:(fun ~key ~data ->
@@ -57,6 +57,31 @@ module Sides = struct
           columns
     }
 
+  let manual_thumb ~west ~north ~east ~south (columns : _ Columns.t) =
+    { west =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            let%bind.Option _, k = Map.min_elt data.keys in
+            Option.map ~f:(fun c -> Wall.poly_of_config c `West k) (west key) )
+          columns
+    ; north =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            Option.map ~f:(fun c -> Wall.poly_of_config c `North data) (north key) )
+          (snd @@ Map.min_elt_exn columns).keys
+    ; east =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            let%bind.Option k = Map.find data.keys 0 in
+            Option.map ~f:(fun c -> Wall.poly_of_config c `East k) (east key) )
+          columns
+    ; south =
+        Map.filter_mapi
+          ~f:(fun ~key ~data ->
+            Option.map ~f:(fun c -> Wall.poly_of_config c `South data) (south key) )
+          (snd @@ Map.max_elt_exn columns).keys
+    }
+
   let make
       ?(d1 = 2.)
       ?(d2 = 5.)
@@ -78,6 +103,7 @@ module Sides = struct
       ?(east_lookup = fun _ -> No)
       ?(eyelet_config = Eyelet.m4_config)
       ?(spacing = 1.)
+      ?(thumb = false)
       (columns : 'k Columns.t) =
     let present m i conf = function
       | Yes -> Map.add_exn m ~key:i ~data:conf
@@ -97,22 +123,21 @@ module Sides = struct
         }
     and init = Map.empty (module Int) in
     let west =
-      let col = Map.find_exn columns 0 in
       Map.find
-      @@ Map.fold
+      @@ List.fold
            ~init
-           ~f:(fun ~key:i ~data:_ m -> present m i conf (west_lookup i))
-           col.keys
+           ~f:(fun m i -> present m i conf (west_lookup i))
+           (if thumb then Map.keys columns else Map.keys (Map.find_exn columns 0).keys)
     and east =
-      let col = snd @@ Map.max_elt_exn columns in
       Map.find
-      @@ Map.fold
+      @@ List.fold
            ~init
-           ~f:(fun ~key:i ~data:_ m -> present m i conf (east_lookup i))
-           col.keys
+           ~f:(fun m i -> present m i conf (east_lookup i))
+           ( if thumb then Map.keys columns
+           else Map.keys (snd @@ Map.min_elt_exn columns).keys )
     and north =
       let index = Option.value ~default:thickness index_thickness in
-      let f ~key:i ~data:_ m =
+      let f m i =
         present
           m
           i
@@ -122,16 +147,23 @@ module Sides = struct
           }
           (north_lookup i)
       in
-      Map.find @@ Map.fold ~init ~f columns
+      Map.find
+      @@ List.fold
+           ~init
+           ~f
+           ( if thumb then Map.keys (snd @@ Map.min_elt_exn columns).keys
+           else Map.keys columns )
     and south =
       Map.find
-      @@ Map.fold
+      @@ List.fold
            ~init
-           ~f:(fun ~key:i ~data:_ m ->
+           ~f:(fun m i ->
              present m i { conf with clearance = south_clearance } (south_lookup i) )
-           columns
+           ( if thumb then Map.keys (snd @@ Map.max_elt_exn columns).keys
+           else Map.keys columns )
     in
-    manual ~west ~north ~east ~south ~spacing columns
+    if thumb then manual_thumb ~west ~north ~east ~south columns
+    else manual_body ~west ~north ~east ~south ~spacing columns
 
   let fold ~init ~f (t : t) =
     let init = Map.fold ~init ~f t.west in
@@ -208,7 +240,7 @@ let make_thumb
     ?(west_lookup = fun i -> if i = 0 then Yes else No)
     ?(east_lookup = fun _ -> No)
     ?eyelet_config
-    Plate.{ config = { spacing; _ }; thumb; _ } =
+    Plate.{ thumb; _ } =
   Sides.make
     ~d1
     ~d2
@@ -225,7 +257,7 @@ let make_thumb
     ~west_lookup
     ~east_lookup
     ?eyelet_config
-    ~spacing
+    ~thumb:true
     thumb
 
 type t =
@@ -251,7 +283,7 @@ let manual
     ~thumb_west
     Plate.{ config = { spacing; _ }; body; thumb; _ } =
   { body =
-      Sides.manual
+      Sides.manual_body
         ~west:body_west
         ~north:body_north
         ~east:body_east
@@ -259,12 +291,11 @@ let manual
         ~spacing
         body
   ; thumb =
-      Sides.manual
+      Sides.manual_thumb
         ~west:thumb_west
         ~north:thumb_north
         ~east:thumb_east
         ~south:thumb_south
-        ~spacing
         thumb
   }
 

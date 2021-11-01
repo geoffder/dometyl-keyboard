@@ -22,7 +22,7 @@ module Sides : sig
     }
   [@@deriving scad]
 
-  val manual :
+  val manual_body :
        ?spacing:float
     -> west:(int -> Wall.config option)
     -> north:(int -> Wall.config option)
@@ -48,6 +48,7 @@ module Sides : sig
     -> ?east_lookup:(int -> presence)
     -> ?eyelet_config:Eyelet.config
     -> ?spacing:float
+    -> ?thumb:bool
     -> 'k Columns.t
     -> t
 
