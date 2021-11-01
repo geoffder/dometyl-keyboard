@@ -3,7 +3,7 @@ open! Scad_ml
 open! Generator
 open! Infix
 
-let lookups =
+let body_lookups =
   let offset = function
     | 0 -> -3.5, -6., 7. (* outer index *)
     | 2 -> 0., 3., -5.5 (* middle *)
@@ -40,28 +40,33 @@ let lookups =
     | 5 -> 3
     | _ -> 4
   in
-  Plate.Lookups.make ~offset ~curve ~swing ~splay ~rows ()
+  Plate.Lookups.body ~offset ~curve ~swing ~splay ~rows ()
+
+let thumb_lookups =
+  let curve _ =
+    Curvature.(
+      curve
+        ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
+        ~fan:{ angle = Float.pi /. 28.; radius = 200.; tilt = 0. }
+        ())
+  in
+  Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
   Plate.make
-    ~n_cols:6
+    ~n_body_cols:6
     ~spacing:1.
     ~tent:(Float.pi /. 12.)
     ~thumb_offset:(7., -52., 11.5)
     ~thumb_angle:Float.(0., pi /. -3.8, pi /. 6.5)
-    ~thumb_curve:
-      Curvature.(
-        curve
-          ~well:{ angle = Float.pi /. 8.; radius = 50.; tilt = 0. }
-          ~fan:{ angle = Float.pi /. 28.; radius = 200.; tilt = 0. }
-          ())
-    ~lookups
+    ~body_lookups
+    ~thumb_lookups
     ~caps:Caps.SA.uniform
 
 let wall_builder plate =
   Walls.
     { body =
-        Body.make
+        make_body
           ~west_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~east_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~n_steps:(`Flat 5)
@@ -71,8 +76,8 @@ let wall_builder plate =
           ~index_thickness:5.
           plate
     ; thumb =
-        Thumb.make
-          ~east:No
+        make_thumb
+          ~east_lookup:(fun _ -> No)
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~n_steps:(`Flat 5)

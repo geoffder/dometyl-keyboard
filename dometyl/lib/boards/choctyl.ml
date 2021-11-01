@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 open! Generator
 
-let lookups =
+let body_lookups =
   let offset = function
     | 2 -> 0., 3.5, -6. (* middle *)
     | 3 -> 0.5, -2.5, 0.5 (* ring *)
@@ -23,27 +23,32 @@ let lookups =
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
     | _ -> 0.
   and rows _ = 3 in
-  Plate.Lookups.make ~offset ~curve ~splay ~rows ()
+  Plate.Lookups.body ~offset ~curve ~splay ~rows ()
+
+let thumb_lookups =
+  let curve _ =
+    Curvature.(
+      curve
+        ~fan:{ angle = Float.pi /. 9.5; radius = 70.; tilt = Float.pi /. 48. }
+        ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
+        ())
+  in
+  Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
   Plate.make
-    ~n_cols:5
+    ~n_body_cols:5
     ~spacing:0.5
     ~tent:(Float.pi /. 16.)
-    ~thumb_curve:
-      Curvature.(
-        curve
-          ~fan:{ angle = Float.pi /. 9.5; radius = 70.; tilt = Float.pi /. 48. }
-          ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
-          ())
     ~thumb_offset:(-12., -39., 14.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~rotate_thumb_clips:true
-    ~lookups
+    ~body_lookups
+    ~thumb_lookups
     ~caps:Caps.MBK.uniform
 
 let plate_welder plate =
-  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
+  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
 let wall_builder plate =
   (* 6x2 magnet *)
@@ -52,7 +57,7 @@ let wall_builder plate =
   in
   Walls.
     { body =
-        Body.make
+        make_body
           ~index_thickness:4.
           ~n_facets:3
           ~n_steps:(`Flat 3)
@@ -66,11 +71,13 @@ let wall_builder plate =
           ~eyelet_config
           plate
     ; thumb =
-        Thumb.make
+        make_thumb
           ~south_lookup:(fun _ -> Yes)
-          ~east:No
-          ~west:Eye
-          ~clearance:3.
+          ~east_lookup:(fun _ -> No)
+          ~west_lookup:(fun _ -> Eye)
+          ~north_clearance:3.
+          ~south_clearance:3.
+          ~side_clearance:3.
           ~n_facets:3
           ~n_steps:(`Flat 4)
           ~eyelet_config

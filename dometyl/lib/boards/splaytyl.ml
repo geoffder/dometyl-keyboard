@@ -7,7 +7,7 @@ open! Generator
    can be seen if you set `Plate.make ~caps:Caps.SA.row`. The inner index Matty3
    key models appear to collide here, but cases printed with this config do make
    room for real MT3 caps. *)
-let lookups =
+let body_lookups =
   let offset = function
     | 2 -> 0., 3.5, -5. (* middle *)
     | 3 -> 1., -2.5, 0.5 (* ring *)
@@ -27,20 +27,26 @@ let lookups =
     | i when i >= 4 -> Float.pi /. -11. (* pinky *)
     | _ -> 0.
   and rows _ = 3 in
-  Plate.Lookups.make ~offset ~curve ~splay ~rows ()
+  Plate.Lookups.body ~offset ~curve ~splay ~rows ()
+
+let thumb_lookups =
+  let curve _ =
+    Curvature.(
+      curve
+        ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
+        ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
+        ())
+  in
+  Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
   Plate.make
-    ~n_cols:5
-    ~lookups
-    ~thumb_curve:
-      Curvature.(
-        curve
-          ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
-          ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
-          ())
+    ~n_body_cols:5
+    ~body_lookups
+    ~thumb_lookups
     ~thumb_offset:(-13., -41., 10.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
+    ~rotate_thumb_clips:false
     ~caps:
       Caps.Matty3.row
       (* ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u) *)
@@ -49,18 +55,20 @@ let plate_builder =
 let wall_builder plate =
   Walls.
     { body =
-        Body.make
+        make_body
           ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
           plate
     ; thumb =
-        Thumb.make
+        make_thumb
           ~south_lookup:(fun _ -> Yes)
-          ~east:No
-          ~west:Eye
-          ~clearance:3.0
+          ~east_lookup:(fun _ -> No)
+          ~west_lookup:(fun _ -> Eye)
+          ~north_clearance:3.
+          ~south_clearance:3.
+          ~side_clearance:3.
           ~n_steps:(`Flat 3)
           plate
     }
@@ -83,7 +91,7 @@ let base_connector =
     ~overlap_factor:1.
 
 let plate_welder plate =
-  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.columns 1 2 ]
+  Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
 

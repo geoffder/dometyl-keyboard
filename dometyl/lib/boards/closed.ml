@@ -2,13 +2,14 @@ open! Base
 open! Scad_ml
 open! Generator
 
-let lookups = Splaytyl.lookups
+let body_lookups = Splaytyl.body_lookups
+let thumb_lookups = Splaytyl.thumb_lookups
 let plate_builder = Splaytyl.plate_builder
 
 let wall_builder plate =
   Walls.
     { body =
-        Body.make
+        make_body
           ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
           ~east_lookup:(fun _ -> Yes)
           ~n_facets:1
@@ -18,12 +19,14 @@ let wall_builder plate =
           ~side_clearance:1.5
           plate
     ; thumb =
-        Thumb.make
+        make_thumb
           ~south_lookup:(fun _ -> Yes)
-          ~east:No
-          ~west:Eye
+          ~east_lookup:(fun _ -> No)
+          ~west_lookup:(fun _ -> Eye)
           ~n_steps:(`Flat 4)
-          ~clearance:3.
+          ~north_clearance:3.
+          ~south_clearance:3.
+          ~side_clearance:3.
           plate
     }
 

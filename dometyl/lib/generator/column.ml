@@ -106,3 +106,5 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
          keys )
   in
   { config = { key; n_keys; curve }; scad; keys; joins }
+
+let to_scad t = t.scad

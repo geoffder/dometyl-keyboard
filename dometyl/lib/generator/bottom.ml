@@ -3,26 +3,27 @@ open! Scad_ml
 open Infix
 
 type bump_loc =
-  | Thumb of Util.idx
-  | Col of Util.idx * Util.idx
+  | Thumb of Util.idx * Util.idx
+  | Body of Util.idx * Util.idx
   | Point of Vec3.t
 
 let locate_bump (plate : _ Plate.t) = function
-  | Thumb k    ->
-    let%map.Option key = Util.idx_to_find k plate.thumb.keys in
-    Vec3.mul (1., 1., 0.) key.origin
-  | Col (c, k) ->
-    let%bind.Option col = Util.idx_to_find c plate.columns in
+  | Thumb (c, k) ->
+    let%bind.Option col = Util.idx_to_find c plate.thumb in
     let%map.Option key = Util.idx_to_find k col.keys in
     Vec3.mul (1., 1., 0.) key.origin
-  | Point p    -> Some p
+  | Body (c, k)  ->
+    let%bind.Option col = Util.idx_to_find c plate.body in
+    let%map.Option key = Util.idx_to_find k col.keys in
+    Vec3.mul (1., 1., 0.) key.origin
+  | Point p      -> Some p
 
 let default_bumps =
-  [ Thumb First
-  ; Col (First, Last)
-  ; Col (Idx 3, Last)
-  ; Col (Last, Last)
-  ; Col (Last, First)
+  [ Thumb (Last, Last)
+  ; Body (First, Last)
+  ; Body (Idx 3, Last)
+  ; Body (Last, Last)
+  ; Body (Last, First)
   ]
 
 let make
@@ -31,15 +32,14 @@ let make
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.5)
     ?(bump_locs = default_bumps)
-    case
-  =
+    case =
   let screws = Walls.collect_screws case.Case.walls in
   let screw_config = (List.hd_exn screws).config in
   let thickness, screw_hole =
     let fastener =
       match fastener with
-      | None          ->
-        ( match screw_config with
+      | None          -> (
+        match screw_config with
         | { hole = Through; _ } -> Eyelet.screw_fastener ()
         | _                     -> Magnet )
       | Some fastener -> fastener

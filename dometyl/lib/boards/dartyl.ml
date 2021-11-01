@@ -8,7 +8,7 @@ let bumpon =
 let wall_builder plate =
   Walls.
     { body =
-        Body.make
+        make_body
           ~n_steps:(`Flat 10)
           ~north_clearance:2.19
           ~south_clearance:2.19
@@ -17,11 +17,14 @@ let wall_builder plate =
           ~eyelet_config:bumpon
           plate
     ; thumb =
-        Thumb.make
+        make_thumb
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun _ -> Yes)
-          ~west:Eye
-          ~clearance:0.5
+          ~east_lookup:(fun _ -> No)
+          ~west_lookup:(fun _ -> Eye)
+          ~north_clearance:0.5
+          ~south_clearance:0.5
+          ~side_clearance:0.5
           ~d1:3.
           ~d2:4.75
           ~n_facets:60
@@ -45,7 +48,7 @@ let base_connector =
     ~close_thumb:true
     ~south_joins:(fun _ -> false)
 
-let lookups =
+let body_lookups =
   let offset = function
     | 2 -> -1., 4.6, -3. (* middle *)
     | 3 -> 0.33, 0., 0. (* ring *)
@@ -70,7 +73,13 @@ let lookups =
     | 3 -> -0.05
     | _ -> 0.
   and rows _ = 3 in
-  Plate.Lookups.make ~offset ~curve ~splay ~swing ~rows ()
+  Plate.Lookups.body ~offset ~curve ~splay ~swing ~rows ()
+
+let thumb_lookups =
+  let curve _ =
+    Curvature.(curve ~fan:{ angle = Float.pi /. 10.5; radius = 75.; tilt = 0.2 } ())
+  and rows _ = 2 in
+  Plate.Lookups.thumb ~curve ~rows ()
 
 let plate_welder = Plate.skeleton_bridges
 
@@ -81,15 +90,13 @@ let build ?hotswap () =
   let keyhole = Mx.make_hole ~clearance:0.5 ~thickness:4.88 ?hotswap () in
   let plate_builder =
     Plate.make
-      ~n_cols:5
+      ~n_body_cols:5
       ~spacing:1.5
       ~tent:(Float.pi /. 12.)
-      ~lookups
-      ~n_thumb_keys:2
+      ~body_lookups
+      ~thumb_lookups
       ~thumb_offset:(4., -45., 10.)
       ~thumb_angle:Float.(0., -0.133, pi /. 17.)
-      ~thumb_curve:
-        Curvature.(curve ~fan:{ angle = Float.pi /. 10.5; radius = 75.; tilt = 0.2 } ())
   in
   Case.make
     ~plate_welder

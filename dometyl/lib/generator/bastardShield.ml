@@ -107,11 +107,10 @@ let place
     ?(y_off = -0.5)
     ?(z_off = 2.5)
     ?(z_rot = 0.)
-    Walls.{ body = { cols; _ }; _ }
-    t
-  =
-  let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot
-  and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+    Walls.{ body = { north; _ }; _ }
+    t =
+  let left_foot = (Map.find_exn north 0).foot
+  and right_foot = (Map.find_exn north 1).foot in
   let x = Vec3.get_x left_foot.bot_left +. x_off
   and y =
     let inner (ps : Points.t) = Vec3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
@@ -124,8 +123,7 @@ let eyelets
     ?(z_off = 1.)
     ?(eyelet_config = Eyelet.m4_config)
     Connect.{ inline; _ }
-    { screw_l; screw_r; thickness; _ }
-  =
+    { screw_l; screw_r; thickness; _ } =
   let perim = Array.of_list inline
   and half_width =
     Option.value_map ~default:(eyelet_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
@@ -147,13 +145,11 @@ let eyelets
       let budge p = Vec3.(add (map (( *. ) 0.1) (sub p closest)) closest)
       and ccw_idx = wrap (idx - 1)
       and cw_idx = wrap (idx + 1) in
-      let ccw = budge perim.(ccw_idx)
-      and cw = budge perim.(cw_idx) in
+      let ccw = budge perim.(ccw_idx) and cw = budge perim.(cw_idx) in
       if Float.(dist loc cw < dist loc ccw) then true, cw else false, ccw
     in
     let centre =
-      let diff = Vec3.sub neighbour closest
-      and step = 0.05 in
+      let diff = Vec3.sub neighbour closest and step = 0.05 in
       let rec loop last_dist last frac =
         let next = Vec3.(add (map (( *. ) frac) diff) closest) in
         let next_dist = dist loc next in
@@ -166,17 +162,16 @@ let eyelets
       let rec loop acc_dist last_pos i =
         let pos = perim.(i) in
         let acc_dist' = dist pos last_pos +. acc_dist in
-        if Float.(acc_dist' < half_width)
-        then loop acc_dist' pos (step i)
-        else (
+        if Float.(acc_dist' < half_width) then loop acc_dist' pos (step i)
+        else
           let vec = Vec3.(normalize (pos <-> last_pos)) in
-          Vec3.(add (map (( *. ) (half_width -. acc_dist)) vec) last_pos) )
+          Vec3.(add (map (( *. ) (half_width -. acc_dist)) vec) last_pos)
       in
       (* Check that we aren't too far from the original closest point before
            stepping over it. *)
       let drift = Vec3.sub perim.(idx) centre in
-      if (not neighbour_wise) && Float.(Vec3.norm drift > half_width)
-      then Vec3.(add centre (mul_scalar (Vec3.normalize drift) half_width))
+      if (not neighbour_wise) && Float.(Vec3.norm drift > half_width) then
+        Vec3.(add centre (mul_scalar (Vec3.normalize drift) half_width))
       else loop 0. centre (step idx)
     in
     Scad.union
@@ -198,8 +193,7 @@ let cutter
     ?z_rot
     t
     ~walls
-    ~connections
-  =
+    ~connections =
   let t' = place ?x_off ?y_off ?z_off ?z_rot walls t in
   Ports.
     { plus =

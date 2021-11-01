@@ -1,15 +1,14 @@
 (** This is configuration is a mimicry of BastardKB's skeletyl keyboard.
-   (https://github.com/Bastardkb/Skeletyl).
+    (https://github.com/Bastardkb/Skeletyl).
 
-   This is is a good place to start from if you'd like to have something like the
-   skeletyl, but with some more pinky stagger. Though, it will never be as
-   pretty. *)
+    This is is a good place to start from if you'd like to have something like the
+    skeletyl, but with some more pinky stagger. Though, it will never be as pretty. *)
 
 open! Base
 open! Scad_ml
 open Generator
 
-let lookups =
+let body_lookups =
   let offset = function
     | 2 -> 0., 3.5, -8. (* middle *)
     | 3 -> 1., -1., -1.5 (* ring *)
@@ -28,25 +27,30 @@ let lookups =
     | _ -> 0.
   and splay _ = 0.
   and rows _ = 3 in
-  Plate.Lookups.make ~offset ~curve ~splay ~swing ~rows ()
+  Plate.Lookups.body ~offset ~curve ~splay ~swing ~rows ()
+
+let thumb_lookups =
+  let curve _ =
+    Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
+  in
+  Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
   Plate.make
-    ~n_cols:5
+    ~n_body_cols:5
     ~spacing:1.5
     ~tent:(Float.pi /. 10.)
-    ~lookups
+    ~body_lookups
+    ~thumb_lookups
     ~thumb_offset:(-1., -50., -6.)
     ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
-    ~thumb_curve:
-      Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ())
 
 let plate_welder = Plate.skeleton_bridges
 
 let wall_builder plate =
   Walls.
     { body =
-        Body.make
+        make_body
           ~n_steps:(`Flat 5)
           ~n_facets:5
           ~north_clearance:1.5
@@ -54,11 +58,13 @@ let wall_builder plate =
           ~side_clearance:1.5
           plate
     ; thumb =
-        Thumb.make
+        make_thumb
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
-          ~east:No
-          ~west:Eye
-          ~clearance:0.5
+          ~east_lookup:(fun _ -> No)
+          ~west_lookup:(fun _ -> Eye)
+          ~north_clearance:0.5
+          ~south_clearance:0.5
+          ~side_clearance:0.5
           ~d1:4.
           ~d2:4.75
           ~n_steps:(`PerZ 5.)

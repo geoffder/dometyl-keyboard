@@ -27,11 +27,10 @@ let make
     ?(x_off = 3.3)
     ?(z_off = 6.4)
     ()
-    ~walls:Walls.{ body = { cols; _ }; _ }
-    ~connections:_
-  =
-  let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot in
-  let right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+    ~walls:Walls.{ body = { north; _ }; _ }
+    ~connections:_ =
+  let left_foot = (Map.find_exn north 0).foot
+  and right_foot = (Map.find_exn north 1).foot in
   let inner_y (foot : Points.t) =
     Vec3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2.
   in
@@ -85,11 +84,10 @@ let place_tray
     ?(x_off = 0.)
     ?(y_off = -0.25)
     ?(z_rot = 0.)
-    Walls.{ body = { cols; _ }; _ }
-    scad
-  =
-  let left_foot = (Option.value_exn (Map.find_exn cols 0).north).foot
-  and right_foot = (Option.value_exn (Map.find_exn cols 1).north).foot in
+    Walls.{ body = { north; _ }; _ }
+    scad =
+  let left_foot = (Map.find_exn north 0).foot
+  and right_foot = (Map.find_exn north 1).foot in
   let x = Vec3.get_x left_foot.bot_left +. x_off
   and y =
     let outer (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
@@ -101,8 +99,7 @@ let carbonfet_stl micro =
   let import s = Scad.import_3d (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
   Scad.color Color.FireBrick
   @@
-  if micro
-  then Scad.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
+  if micro then Scad.translate (-108.8, -125.37, 0.) (import "pro_micro_holder")
   else Scad.translate (-109.5, -123.8, 0.) (import "elite-c_holder")
 
 let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connections:_ =
@@ -140,10 +137,8 @@ let reversible_holder
     ?z_rot
     ()
     ~walls
-    ~connections:_
-  =
-  let w = 30.6
-  and h = if reset_button then 15. else 8.4 in
+    ~connections:_ =
+  let w = 30.6 and h = if reset_button then 15. else 8.4 in
   let tray =
     Scad.cube (27.6, 38.8, 7.7)
     |> Scad.translate (3., -38.8, 0.)

@@ -12,8 +12,7 @@ module Bone = struct
   [@@deriving scad]
 
   let bend a t =
-    let q = Quaternion.make t.joint a
-    and p = Vec3.negate t.base in
+    let q = Quaternion.make t.joint a and p = Vec3.negate t.base in
     { t with
       scad = Scad.quaternion_about_pt q p t.scad
     ; tip = Vec3.quaternion_about_pt q p t.tip
@@ -21,8 +20,7 @@ module Bone = struct
     }
 
   let splay a t =
-    let q = Quaternion.make t.normal a
-    and p = Vec3.negate t.base in
+    let q = Quaternion.make t.normal a and p = Vec3.negate t.base in
     { t with
       scad = Scad.quaternion_about_pt q p t.scad
     ; tip = Vec3.quaternion_about_pt q p t.tip
@@ -224,8 +222,7 @@ let update_digits
     ?(middle = Fn.id)
     ?(pinky = Fn.id)
     ?(thumb = Fn.id)
-    t
-  =
+    t =
   { t with
     fingers = Fingers.update ~index ~ring ~middle ~pinky t.fingers
   ; thumb = { t.thumb with bones = thumb t.thumb.bones }
@@ -245,8 +242,7 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
       ~f:(fun m a -> Float.min m (Vec3.get_z a.prox.base))
       fingers
   in
-  let heading = Vec3.normalize (0., mid_y, -.z)
-  and origin = mid_x, y, z in
+  let heading = Vec3.normalize (0., mid_y, -.z) and origin = mid_x, y, z in
   { fingers
   ; thumb
   ; carpals
@@ -266,8 +262,7 @@ let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
 let to_scad
     ?(alpha = 0.5)
     ?(color = Color.Pink)
-    { fingers; thumb; carpals; knuckle_rad; _ }
-  =
+    { fingers; thumb; carpals; knuckle_rad; _ } =
   let palm =
     Scad.hull
       [ carpals
@@ -282,9 +277,9 @@ let to_scad
   Scad.union [ Fingers.to_scad fingers; Thumb.to_scad thumb; palm ]
   |> Scad.color ~alpha color
 
-let home ?(hover = 18.) Plate.{ columns; config; _ } t =
-  let centre_row = config.row_centres config.centre_col in
-  let key = Columns.key_exn columns config.centre_col (Int.of_float centre_row) in
+let home ?(hover = 18.) Plate.{ body; config; _ } t =
+  let centre_row = config.body_centres config.centre_col in
+  let key = Columns.key_exn body config.centre_col (Int.of_float centre_row) in
   let pos = Vec3.(add key.origin (mul_scalar (KeyHole.normal key) hover))
   and aligned =
     let column_vec =
@@ -292,7 +287,7 @@ let home ?(hover = 18.) Plate.{ columns; config; _ } t =
         normalize
           (mul
              ( (Columns.key_exn
-                  columns
+                  body
                   config.centre_col
                   (Int.of_float @@ (centre_row +. 1.)) )
                  .origin

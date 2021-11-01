@@ -2,28 +2,20 @@ open! Base
 open! Scad_ml
 
 type bump_loc =
-  | Col of Util.idx * [ `N | `S ]
-  | Thumb of [ `N of Util.idx | `E | `S of Util.idx | `W ]
+  | Body of Util.idx * [ `N | `E | `S | `W ]
+  | Thumb of Util.idx * [ `N | `E | `S | `W ]
 
 let find_bump_wall (walls : Walls.t) = function
-  | Col (i, side)             ->
-    let%bind.Option c = Util.idx_to_find i @@ walls.body.cols in
-    Walls.Body.Cols.get c side
-  | Thumb ((`W | `E) as side) -> Walls.Thumb.get_side walls.thumb.sides side
-  | Thumb (`N i)              ->
-    let%bind.Option k = Util.idx_to_find i @@ walls.thumb.keys in
-    k.north
-  | Thumb (`S i)              ->
-    let%bind.Option k = Util.idx_to_find i @@ walls.thumb.keys in
-    k.south
+  | Body (i, side)  -> Util.idx_to_find i @@ Walls.Sides.get walls.body side
+  | Thumb (i, side) -> Util.idx_to_find i @@ Walls.Sides.get walls.thumb side
 
 let default_bumps =
-  [ Thumb `W
-  ; Col (First, `N)
-  ; Col (Idx 3, `N)
-  ; Col (Last, `N)
-  ; Col (Last, `S)
-  ; Col (Idx 2, `S)
+  [ Thumb (First, `W)
+  ; Body (First, `N)
+  ; Body (Idx 3, `N)
+  ; Body (Last, `N)
+  ; Body (Last, `S)
+  ; Body (Idx 2, `S)
   ]
 
 let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
@@ -68,21 +60,21 @@ let make
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.6)
     ?(bump_locs = default_bumps)
-    (case : _ Case.t)
-  =
+    (case : _ Case.t) =
   let bb_index, bb_pinky, rot_sign =
     let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
     and pinky_home =
-      let n = case.plate.config.n_cols - 1 in
+      let n = case.plate.config.n_body_cols - 1 in
       (Columns.key_exn
-         case.plate.columns
+         case.plate.body
          n
-         (Int.of_float @@ case.plate.config.row_centres n) )
+         (Int.of_float @@ case.plate.config.body_centres n) )
         .origin
     in
-    if Float.(
-         Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))
-         < Vec3.(norm (pinky_home <-> (bb_left, 0., 0.))))
+    if
+      Float.(
+        Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))
+        < Vec3.(norm (pinky_home <-> (bb_left, 0., 0.))))
     then bb_left, bb_right, 1.
     else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
@@ -94,8 +86,8 @@ let make
   let eyelet_config = (List.hd_exn screws).config in
   let fastener =
     match fastener with
-    | None          ->
-      ( match eyelet_config with
+    | None          -> (
+      match eyelet_config with
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
       | _                     -> Magnet )
     | Some fastener -> fastener
