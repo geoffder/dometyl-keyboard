@@ -31,9 +31,6 @@ _opam/
 # junk _esy directory
 _esy/
 
-# .opam file (dune generated)
-*.opam
-
 # main.ml (user customized, don't commit)
 main.ml
 
