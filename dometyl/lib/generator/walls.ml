@@ -256,12 +256,8 @@ type t =
   }
 [@@deriving scad]
 
-(* TODO: Sides needs to take the body plate or thumb plate, this also means that
-   the thumb needs to be redefined as a full "plate" in Plate.t, rather than
-   just a single column. This will allow multicolumn/row freedom for the thumb,
-   as well as unifying the way this is done. The first standout I am seeing is
-   needing the ~spacing config param for the thumb now, as with the plate, given
-   that the thumb will now be the same type as the main body. *)
+let make ~body ~thumb = { body; thumb }
+
 let manual
     ~body_west
     ~body_north

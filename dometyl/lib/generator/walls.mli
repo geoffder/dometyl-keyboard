@@ -109,6 +109,8 @@ type t =
   }
 [@@deriving scad]
 
+val make : body:Sides.t -> thumb:Sides.t -> t
+
 val manual :
      body_west:Side.config
   -> body_north:Side.config
