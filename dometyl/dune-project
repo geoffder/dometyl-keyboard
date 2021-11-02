@@ -25,7 +25,7 @@
    (>= 0.14.1))
   (scad_ml
    (>= 1.0.0))
-  ; (ppx_deriving_scad
-  ;  (>= 1.0.0))
+  (ppx_deriving_scad
+   (>= 1.0.0))
   ppx_jane
   stdio))
