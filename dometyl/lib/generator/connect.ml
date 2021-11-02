@@ -2,16 +2,6 @@ open! Base
 open! Scad_ml
 open! Infix
 
-(* TODO: cubic base for w_link of skeleton thumb is unreliable. Worked before,
-   but with current rotation and closeness to the body it is faltering. *)
-(* TODO: related to jank fix of allowing switch to straight base rather than cubic
-   for the w_link:
-   - should I make config types for each of the connections?
-   - would allow giving sum types holding the configs for some of the places
-     where options for the type of connection are desirable.
-   - this way I can cut down on the enormous number of separate parameters (some
-     of which are ignored.)
-*)
 type t =
   { scad : Scad.d3
   ; outline : Vec3.t list
