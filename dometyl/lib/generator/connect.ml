@@ -526,6 +526,9 @@ let manual_joiner ~join ~key ~data:next (i, last, scads) =
   in
   key, Some next, scads'
 
+(* TODO: Now that Walls.t is simplified somewhat, this can likely be cleaned up
+   a bit. It's been adjusted to work with the change, but there is likely some
+   uneccesary repetition. Go over it again soon. *)
 let manual
     ?(west = fun _ -> bez ())
     ?(north =
@@ -629,7 +632,6 @@ let manual
      down more easily (a section disappears, rather than the whole thing) *)
   List.map ~f:clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
 
-(* TODO: re-write skeleton to use manual (as with closed). *)
 let skeleton
     ?(n_facets = 1)
     ?(index_height = 11.)
@@ -651,184 +653,82 @@ let skeleton
     ?(pinky_idx = 4)
     ?(pinky_elbow = true)
     ?(close_thumb = false)
-    Walls.{ body; thumb } =
+    (Walls.{ body; thumb } as walls) =
   (* TODO:
      - bez_base is not great on the northeast corner when there is actually a wall
        on that side that needs to be connected, because it was designed for cornering
-       like it is used on the west side.
-     - should still do some clean-up on this, especially now that I ripped through here
-       adjusting to the new type t. *)
-  let n_cols = Map.length body.north in
+       like it is used on the west side. *)
+  let body_join =
+    full_join ?n_steps:body_join_steps ?fudge_factor:join_fudge_factor ?overlap_factor ()
+  and thumb_join =
+    full_join ?n_steps:thumb_join_steps ?fudge_factor:join_fudge_factor ?overlap_factor ()
+  and body_straight index =
+    straight
+      ~n_facets
+      ?height:(if index then Some index_height else height)
+      ?min_width:min_straight_width
+      ?fudge_factor
+      ?overlap_factor
+      ()
+  and thumb_straight =
+    straight
+      ~n_facets
+      ?height:thumb_height
+      ?min_width:min_straight_width
+      ?fudge_factor
+      ?overlap_factor
+      ()
+  and thumb_corner =
+    if close_thumb then
+      full_join ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor ()
+    else bez ?height ?n_steps ()
+  in
+  let thumb_mid = if close_thumb then thumb_join else thumb_straight in
   let west =
-    let corner =
-      Option.map2
-        ~f:(bez_base ~height:index_height ?n_steps)
-        (Option.map ~f:snd @@ Map.max_elt body.west)
-        (Map.find body.north 0)
-    in
-    let _, side =
-      let f =
-        joiner
-          ~get:Option.some
-          ~join:
-            (straight_base
-               ~n_facets
-               ~height:index_height
-               ?fudge_factor
-               ?overlap_factor
-               ?min_width:min_straight_width )
-      in
-      Map.fold ~init:(None, []) ~f body.west
-    in
-    List.rev @@ Util.prepend_opt corner side
+    let last_idx = Option.value_map ~f:fst ~default:0 (Map.max_elt body.west) in
+    fun i ->
+      if i = last_idx then bez ~n_facets ~height:index_height ?n_steps ()
+      else body_straight true
   in
   let north =
-    List.init
-      ~f:(fun i ->
-        Option.map2
-          ~f:
-            ( if north_joins i then
-              join_walls
-                ?n_steps:body_join_steps
-                ?fudge_factor:join_fudge_factor
-                ?overlap_factor
-            else
-              straight_base
-                ~n_facets
-                ?height:(if i < 2 then Some index_height else height)
-                ?min_width:min_straight_width
-                ?fudge_factor
-                ?overlap_factor )
-          (Map.find body.north i)
-          (Map.find body.north (i + 1)) )
-      (n_cols - 1)
-    |> List.filter_opt
+    let last_idx = Option.value_map ~f:fst ~default:0 (Map.max_elt body.north) in
+    fun i ->
+      match last_idx = i, north_joins i with
+      | true, _     ->
+        if Map.is_empty body.east then
+          cubic ~n_facets ?height ?d:cubic_d ?scale:cubic_scale ?n_steps ()
+        else bez ?height ?n_steps ()
+      | false, true -> body_join
+      | _           -> body_straight (i < 2)
   in
   let east =
-    let north = Map.find body.north (n_cols - 1)
-    and south = Map.find body.south (n_cols - 1) in
-    if Map.is_empty body.east then
-      Option.map2
-        ~f:(cubic_base ~n_facets ?height ?d:cubic_d ?scale:cubic_scale ?n_steps)
-        north
-        south
-      |> Option.to_list
-    else
-      let draw_corner = Option.map2 ~f:(bez_base ?height ?n_steps) in
-      let south_corner = draw_corner (Option.map ~f:snd @@ Map.min_elt body.east) south in
-      let _, side =
-        let f =
-          joiner
-            ~get:Option.some
-            ~join:
-              (straight_base
-                 ~n_facets
-                 ?height
-                 ?fudge_factor
-                 ?overlap_factor
-                 ?min_width:min_straight_width )
-        in
-        Map.fold_right ~init:(None, Option.to_list south_corner) ~f body.east
-      and north_corner = draw_corner north (Option.map ~f:snd @@ Map.max_elt body.east) in
-      Util.prepend_opt north_corner side
+    let last_idx = Option.value_map ~f:fst ~default:0 (Map.min_elt body.east) in
+    fun i -> if i = last_idx then body_straight false else bez ?height ?n_steps ()
   in
   let south =
-    let base i =
-      if south_joins i then
-        join_walls ?n_steps:body_join_steps ?fudge_factor ?overlap_factor
-      else if i = pinky_idx && pinky_elbow then
-        inward_elbow_base ~n_facets ~d:1.5 ?height ?n_steps
-      else
-        straight_base
-          ~n_facets
-          ?height
-          ?fudge_factor
-          ?overlap_factor
-          ?min_width:min_straight_width
-    in
-    List.init
-      ~f:(fun i ->
-        let idx = n_cols - 1 - i in
-        Option.map2
-          ~f:(base idx)
-          (Map.find body.south idx)
-          (Map.find body.south (idx - 1)) )
-      (n_cols - 1)
-    |> List.filter_opt
+    let last_idx = Option.value_map ~f:fst ~default:0 (Map.min_elt body.south) in
+    fun i ->
+      match last_idx = i, south_joins i with
+      | true, _     -> east_link
+      | false, true -> body_join
+      | _           ->
+        if i = pinky_idx && pinky_elbow then elbow ~n_facets ~d:1.5 ?height ?n_steps ()
+        else body_straight false
   in
-  let east_swoop, west_swoop =
-    let w_n = Option.map ~f:snd @@ Map.min_elt thumb.north
-    and w_s = Option.map ~f:snd @@ Map.min_elt thumb.south
-    (* let Walls.Thumb.{ north = w_n; south = w_s } = Map.find_exn thumb.keys 0 *)
-    and e_s = Option.map ~f:snd @@ Map.max_elt thumb.south
-    (* and _, Walls.Thumb.{ south = e_s; _ } = Map.max_elt_exn thumb.keys *)
-    and last_west = Option.map ~f:snd @@ Map.min_elt thumb.west
-    and corner =
-      Option.map2
-        ~f:(join_walls ?n_steps:thumb_join_steps ~fudge_factor:0. ?overlap_factor)
-    and link = Option.map2 ~f:(connect east_link) in
-    (* TODO: es and sw are pretty repetitive, can probably clean up, and also take
-       lessons from using closest key into other places. *)
-    let es =
-      let last_east = Option.map ~f:snd @@ Map.max_elt thumb.east in
-      match corner last_east e_s with
-      | Some _ as es -> es
-      | None         ->
-        Map.closest_key thumb.south `Less_than (Map.length thumb.south)
-        |> Option.map ~f:snd
-        |> Option.map2 ~f:(bez_base ?n_steps ?height:thumb_height) last_east
-    and e_link =
-      let first_east = Option.map ~f:snd @@ Map.min_elt thumb.east in
-      if Option.is_some first_east then
-        Option.map2 ~f:(bez_base ?n_steps ?height) (Map.find body.south 2) first_east
-      else link (Map.find body.south 2) e_s
-    and sw =
-      let first_west = Option.map ~f:snd @@ Map.max_elt thumb.west in
-      match corner w_s first_west with
-      | Some _ as sw -> sw
-      | None         ->
-        let next =
-          Option.map ~f:snd @@ Map.closest_key thumb.south `Greater_or_equal_to 1
-        in
-        Option.map2
-          ~f:
-            (straight_base
-               ~n_facets
-               ?height:thumb_height
-               ?fudge_factor
-               ?overlap_factor
-               ?min_width:min_straight_width )
-          next
-          first_west
-    and nw = corner last_west w_n
-    and w_link =
-      let f = connect west_link in
-      Option.map2
-        ~f
-        (Option.first_some w_n last_west)
-        (Option.map ~f:snd @@ Map.min_elt body.west)
-    in
-    let east_swoop =
-      Util.prepend_opt e_link
-      @@
-      if close_thumb then
-        let _, scads =
-          let join = join_walls ?n_steps:thumb_join_steps ?fudge_factor ?overlap_factor in
-          Map.fold_right
-            ~init:(None, Option.to_list es)
-            ~f:(joiner ~get:Option.some ~join)
-            thumb.south
-        in
-        List.rev scads
-      else
-        Option.map2 ~f:(bez_base ?height:thumb_height ?n_steps) e_s w_s |> Option.to_list
-    in
-    east_swoop, List.filter_opt [ sw; nw; w_link ]
-  in
-  (* unions separately, followed by final union so failures in CGAL can be narrowed
-     down more easily (a section disappears, rather than the whole thing) *)
-  List.map ~f:clockwise_union [ west; north; east; south; east_swoop; west_swoop ]
-  |> clockwise_union
+  let thumb_side last_idx i = if i = last_idx then thumb_corner else thumb_mid
+  and idx elt = Option.value_map ~f:fst ~default:0 elt in
+  manual
+    ~west
+    ~north
+    ~east
+    ~south
+    ~east_link
+    ~thumb_east:(thumb_side (idx @@ Map.max_elt thumb.east))
+    ~thumb_south:(thumb_side (idx @@ Map.min_elt thumb.south))
+    ~thumb_west:(thumb_side (idx @@ Map.min_elt thumb.west))
+    ~thumb_north:(thumb_side (idx @@ Map.max_elt thumb.north))
+    ~west_link
+    walls
 
 let closed
     ?body_steps
