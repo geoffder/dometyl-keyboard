@@ -25,8 +25,7 @@ jobs:
         run: opam exec -- dune build @doc
 
       - name: Deploy to GitHub Pages
-        working-directory: ./dometyl
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ github.token }}
-          publish_dir: _build/default/_doc/_html
+          publish_dir: dometyl/_build/default/_doc/_html
