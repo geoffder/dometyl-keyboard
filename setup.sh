@@ -15,9 +15,11 @@ then
    opam_exec="opam"
 fi
 
-# install opam depenencies
+# install project dependencies
+$opam_exec install ./dometyl --deps-only --with-doc
+
+# install opam dev depenencies
 $opam_exec --yes install \
-    dune base stdio ppx_jane scad_ml ppx_deriving_scad \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
 # make user copy of main.ml from example

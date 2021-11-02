@@ -54,7 +54,7 @@ you'll want to get the corresponding packages/plugins for in your editor of
 choice).
 
 **Required:**
-* `opam install dune base stdio scad_ml ppx_deriving_scad ppx_jane`
+* From inside [dometyl](dometyl): `opam install . --deps-only --with-doc`
 
 **Highly recommended for dev experience:**
 * `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
