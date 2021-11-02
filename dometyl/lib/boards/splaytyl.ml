@@ -55,14 +55,14 @@ let plate_builder =
 let wall_builder plate =
   Walls.
     { body =
-        make_body
+        auto_body
           ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~south_lookup:(fun _ -> Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)

@@ -8,7 +8,7 @@ let bumpon =
 let wall_builder plate =
   Walls.
     { body =
-        make_body
+        auto_body
           ~n_steps:(`Flat 10)
           ~north_clearance:2.19
           ~south_clearance:2.19
@@ -17,7 +17,7 @@ let wall_builder plate =
           ~eyelet_config:bumpon
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun _ -> Yes)
           ~east_lookup:(fun _ -> No)

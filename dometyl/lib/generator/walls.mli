@@ -24,14 +24,22 @@ module Sides : sig
 
   val manual_body :
        ?spacing:float
-    -> west:(int -> Wall.config option)
-    -> north:(int -> Wall.config option)
-    -> east:(int -> Wall.config option)
-    -> south:(int -> Wall.config option)
+    -> west:Side.config
+    -> north:Side.config
+    -> east:Side.config
+    -> south:Side.config
     -> 'k Columns.t
     -> t
 
-  val make :
+  val manual_thumb :
+       west:Side.config
+    -> north:Side.config
+    -> east:Side.config
+    -> south:Side.config
+    -> 'k Columns.t
+    -> t
+
+  val auto :
        ?d1:float
     -> ?d2:float
     -> ?z_off:float
@@ -57,7 +65,7 @@ module Sides : sig
   val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
-val make_body :
+val auto_body :
      ?d1:float
   -> ?d2:float
   -> ?z_off:float
@@ -76,7 +84,7 @@ val make_body :
   -> 'k Plate.t
   -> Sides.t
 
-val make_thumb :
+val auto_thumb :
      ?d1:float
   -> ?d2:float
   -> ?z_off:float
@@ -102,14 +110,14 @@ type t =
 [@@deriving scad]
 
 val manual :
-     body_west:(int -> Wall.config option)
-  -> body_north:(int -> Wall.config option)
-  -> body_east:(int -> Wall.config option)
-  -> body_south:(int -> Wall.config option)
-  -> thumb_south:(int -> Wall.config option)
-  -> thumb_north:(int -> Wall.config option)
-  -> thumb_east:(int -> Wall.config option)
-  -> thumb_west:(int -> Wall.config option)
+     body_west:Side.config
+  -> body_north:Side.config
+  -> body_east:Side.config
+  -> body_south:Side.config
+  -> thumb_south:Side.config
+  -> thumb_north:Side.config
+  -> thumb_east:Side.config
+  -> thumb_west:Side.config
   -> 'k Plate.t
   -> t
 

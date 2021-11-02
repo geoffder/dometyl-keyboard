@@ -66,7 +66,7 @@ let plate_builder =
 let wall_builder plate =
   Walls.
     { body =
-        make_body
+        auto_body
           ~west_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~east_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~n_steps:(`Flat 5)
@@ -76,7 +76,7 @@ let wall_builder plate =
           ~index_thickness:5.
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~east_lookup:(fun _ -> No)
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then Eye else Yes)

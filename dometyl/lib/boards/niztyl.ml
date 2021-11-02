@@ -58,7 +58,7 @@ let wall_builder plate =
   let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
-        make_body
+        auto_body
           ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
           ~east_lookup:(fun _ -> Yes)
           ~d1:2.
@@ -71,7 +71,7 @@ let wall_builder plate =
           ~eyelet_config
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~south_lookup:(fun _ -> Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)

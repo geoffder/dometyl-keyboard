@@ -50,7 +50,7 @@ let eyelet_config = Eyelet.{ bumpon_config with hole = Inset 0.8 }
 let wall_builder plate =
   Walls.
     { body =
-        make_body
+        auto_body
           ~n_steps:(`Flat 3)
           ~n_facets:5
           ~north_clearance:1.5
@@ -59,7 +59,7 @@ let wall_builder plate =
           ~eyelet_config
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)

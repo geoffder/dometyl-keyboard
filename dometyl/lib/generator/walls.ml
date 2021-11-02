@@ -72,7 +72,7 @@ module Sides = struct
           (snd @@ Map.max_elt_exn columns).keys
     }
 
-  let make
+  let auto
       ?(d1 = 2.)
       ?(d2 = 5.)
       ?(z_off = 0.)
@@ -178,7 +178,7 @@ module Sides = struct
     fold ~init ~f t
 end
 
-let make_body
+let auto_body
     ?d1
     ?d2
     ?z_off
@@ -195,7 +195,7 @@ let make_body
     ?east_lookup
     ?eyelet_config
     Plate.{ config = { spacing; _ }; body; _ } =
-  Sides.make
+  Sides.auto
     ?d1
     ?d2
     ?z_off
@@ -214,7 +214,7 @@ let make_body
     ~spacing
     body
 
-let make_thumb
+let auto_thumb
     ?(d1 = 1.)
     ?(d2 = 3.)
     ?(z_off = 0.)
@@ -231,7 +231,7 @@ let make_thumb
     ?(east_lookup = fun _ -> No)
     ?eyelet_config
     Plate.{ thumb; _ } =
-  Sides.make
+  Sides.auto
     ~d1
     ~d2
     ~z_off

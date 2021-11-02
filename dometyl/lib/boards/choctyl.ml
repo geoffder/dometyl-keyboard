@@ -57,7 +57,7 @@ let wall_builder plate =
   in
   Walls.
     { body =
-        make_body
+        auto_body
           ~index_thickness:4.
           ~n_facets:3
           ~n_steps:(`Flat 3)
@@ -71,7 +71,7 @@ let wall_builder plate =
           ~eyelet_config
           plate
     ; thumb =
-        make_thumb
+        auto_thumb
           ~south_lookup:(fun _ -> Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)
