@@ -20,6 +20,10 @@ jobs:
       - name: Install dependencies
         run: opam install ./dometyl --deps-only --with-doc
 
+      - name: Copy main.ml
+        working-directory: ./dometyl/bin
+        run: cp main.ml.example main.ml
+
       - name: Build docs
         working-directory: ./dometyl
         run: opam exec -- dune build @doc
