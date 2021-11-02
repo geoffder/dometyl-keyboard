@@ -52,10 +52,14 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     in
     Map.add_exn ~key:i ~data:(curve i { key with cap }) keys
   in
-  let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
+  let get_start, get_dest =
+    let get s key = KeyHole.Faces.face key.KeyHole.faces s in
     match join_ax with
-    | `NS -> Scad.hull [ a.faces.north.scad; b.faces.south.scad ]
-    | `EW -> Scad.hull [ a.faces.east.scad; b.faces.west.scad ]
+    | `NS -> get `North, get `South
+    | `EW -> get `East, get `West
+  in
+  let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
+    Scad.hull [ (get_start a).scad; (get_dest b).scad ]
   in
   let keys =
     List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
@@ -66,32 +70,33 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       | None    -> m
       | Some k2 ->
         let open Vec3 in
+        let face1 = get_start k1 and face2 = get_dest k2 in
         let scad = join_keys k1 k2
-        and dir1 = KeyHole.Face.direction k1.faces.north
-        and dir2 = KeyHole.Face.direction k2.faces.south in
+        and dir1 = KeyHole.Face.direction face1
+        and dir2 = KeyHole.Face.direction face2 in
         let west =
           Util.prism_exn
-            [ k1.faces.north.points.top_left
-            ; k1.faces.north.points.bot_left
-            ; k2.faces.south.points.bot_right
-            ; k2.faces.south.points.top_right
+            [ face1.points.top_left
+            ; face1.points.bot_left
+            ; face2.points.bot_right
+            ; face2.points.top_right
             ]
-            [ k1.faces.north.points.top_left <+> mul_scalar dir1 (-0.01)
-            ; k1.faces.north.points.bot_left <+> mul_scalar dir1 (-0.01)
-            ; k2.faces.south.points.bot_right <+> mul_scalar dir2 0.01
-            ; k2.faces.south.points.top_right <+> mul_scalar dir2 0.01
+            [ face1.points.top_left <+> mul_scalar dir1 (-0.01)
+            ; face1.points.bot_left <+> mul_scalar dir1 (-0.01)
+            ; face2.points.bot_right <+> mul_scalar dir2 0.01
+            ; face2.points.top_right <+> mul_scalar dir2 0.01
             ]
         and east =
           Util.prism_exn
-            [ k1.faces.north.points.top_right
-            ; k1.faces.north.points.bot_right
-            ; k2.faces.south.points.bot_left
-            ; k2.faces.south.points.top_left
+            [ face1.points.top_right
+            ; face1.points.bot_right
+            ; face2.points.bot_left
+            ; face2.points.top_left
             ]
-            [ k1.faces.north.points.top_right <+> mul_scalar dir1 0.01
-            ; k1.faces.north.points.bot_right <+> mul_scalar dir1 0.01
-            ; k2.faces.south.points.bot_left <+> mul_scalar dir2 (-0.01)
-            ; k2.faces.south.points.top_left <+> mul_scalar dir2 (-0.01)
+            [ face1.points.top_right <+> mul_scalar dir1 0.01
+            ; face1.points.bot_right <+> mul_scalar dir1 0.01
+            ; face2.points.bot_left <+> mul_scalar dir2 (-0.01)
+            ; face2.points.top_left <+> mul_scalar dir2 (-0.01)
             ]
         in
         Map.add_exn m ~key ~data:Join.{ scad; faces = { west; east } }

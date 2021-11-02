@@ -163,12 +163,12 @@ let make
              thumb_lookups
              i
              keyhole )
-        (* orient along x-axis *)
-        |> Column.rotate (0., 0., Float.pi /. -2.)
         |> Column.translate off
       in
       let placed =
         Map.mapi ~f:place thumb_offsets
+        (* orient along x-axis *)
+        |> Columns.rotate (0., 0., Float.pi /. -2.)
         |> Columns.rotate thumb_angle
         |> Columns.translate thumb_offset
       in
@@ -222,15 +222,22 @@ let make
   ; thumb
   }
 
-let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_body_cols; _ }; body; _ } =
+let join_thumb ?in_d ?out_d1 ?out_d2 thumb =
+  let join = Bridge.cols ~ax:`NS ?in_d ?out_d1 ?out_d2 ~columns:thumb in
+  Scad.union_3d (List.init ~f:(fun i -> join i (i + 1)) (Map.length thumb - 1))
+
+let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_body_cols; _ }; body; thumb; _ } =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns:body in
-  Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_body_cols - 1))
+  Scad.union
+    [ Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_body_cols - 1))
+    ; join_thumb ?in_d ?out_d1 ?out_d2 thumb
+    ]
 
 let skeleton_bridges
     ?in_d
     ?out_d1
     ?out_d2
-    { config = { n_body_rows; n_body_cols; _ }; body; _ } =
+    { config = { n_body_rows; n_body_cols; _ }; body; thumb; _ } =
   let bridge c first =
     let r = if first then fun _ -> 0 else fun i -> n_body_rows i - 1 in
     match Columns.key body c (r c) with
@@ -244,9 +251,13 @@ let skeleton_bridges
       Option.map ~f:(Bridge.keys ?in_d ?out_d1 ?out_d2 k1) k2
     | None -> None
   in
-  List.init ~f:(fun i -> bridge i (i < 2)) (n_body_cols - 1)
-  |> List.filter_opt
-  |> Scad.union
+  ignore thumb;
+  Scad.union
+    [ List.init ~f:(fun i -> bridge i (i < 2)) (n_body_cols - 1)
+      |> List.filter_opt
+      |> Scad.union
+    ; join_thumb ?in_d ?out_d1 ?out_d2 thumb
+    ]
 
 let to_scad t = t.scad
 

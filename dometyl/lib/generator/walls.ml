@@ -20,16 +20,6 @@ module Sides = struct
     }
   [@@deriving scad]
 
-  (* FIXME:
-     - currently, thumb wall building is messed up!
-     - while the "south" face of the keyholes is indeed facing south, this
-       method of iterating over the columns for north/south and up/down the rows
-       of the flanking columns for east/west is correct for the body, the thumb
-       is orthogonal to this
-     - to iterate over the southern side of the thumb I actually want to go up
-       the rows of the LAST column. Need to decide how I want to adapt this to
-       the thumb, THEN fix the connection ordering issue (and clean up that code
-       in the Connect module) *)
   let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : _ Columns.t) =
     { west =
         Map.filter_mapi

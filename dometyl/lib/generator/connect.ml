@@ -518,17 +518,13 @@ let connect = function
   | InwardElbow { n_facets; height; n_steps; d } ->
     inward_elbow_base ?n_facets ?height ?n_steps ?d
 
-let manual_joiner ~get ~join ~key ~data (i, last, scads) =
-  let next = get data in
+let manual_joiner ~join ~key ~data:next (i, last, scads) =
   let scads' =
-    match Option.map2 ~f:(connect @@ join i) last next with
+    match Option.map ~f:(fun l -> connect (join i) l next) last with
     | Some j -> j :: scads
     | None   -> scads
   in
-  match next, last with
-  | Some _, _    -> key, next, scads'
-  | None, Some _ -> i, last, scads'
-  | _            -> i, last, scads'
+  key, Some next, scads'
 
 let manual
     ?(west = fun _ -> bez ())
@@ -550,7 +546,7 @@ let manual
   let west =
     let northwest = Map.find body.north 0
     and last_idx, last, side =
-      let f = manual_joiner ~get:Option.some ~join:west in
+      let f = manual_joiner ~join:west in
       Map.fold ~init:(0, None, []) ~f body.west
     in
     List.rev
@@ -558,7 +554,7 @@ let manual
   in
   let north =
     let last_idx, last, side =
-      let f = manual_joiner ~get:Option.some ~join:north in
+      let f = manual_joiner ~join:north in
       Map.fold ~init:(0, None, []) ~f body.north
     and next =
       (* if there is nothing in the east, connect to the southern corner *)
@@ -576,57 +572,49 @@ let manual
       in
       Option.map2 ~f:(connect (east last_idx)) last southeast
     and _, _, side =
-      let f = manual_joiner ~get:Option.some ~join:east in
+      let f = manual_joiner ~join:east in
       Map.fold_right ~init:(0, None, []) ~f body.east
     in
     Util.prepend_opt south_corner side |> List.rev
   and last_south, south =
     let _, last, side =
-      let f = manual_joiner ~get:Option.some ~join:south in
+      let f = manual_joiner ~join:south in
       Map.fold_right ~init:(0, None, []) ~f body.south
     in
     last, List.rev side
   in
   let thumb_swoop =
     let last_idx, last_thumb_south, swoop =
-      let southeast = Option.map ~f:snd (Map.max_elt thumb.south)
-      and first =
-        Option.first_some
-          (Map.find thumb.east 0)
-          (Option.map ~f:snd (Map.max_elt thumb.south))
+      let southeast = Option.map ~f:snd (Map.max_elt thumb.south) in
+      let first =
+        Option.first_some (Option.map ~f:snd (Map.min_elt thumb.east)) southeast
       in
       let e_link = Option.map2 ~f:(connect east_link) last_south first in
       let last_idx, last_east, east =
-        let i, last, side =
-          let f = manual_joiner ~get:Option.some ~join:thumb_east in
-          Map.fold ~init:(0, None, []) ~f thumb.east
-        in
-        i, last, List.rev (Util.prepend_opt e_link side)
+        let f = manual_joiner ~join:thumb_east in
+        Map.fold ~init:(0, None, Option.to_list e_link) ~f thumb.east
       in
       let se = Option.map2 ~f:(connect (thumb_east last_idx)) last_east southeast in
-      let f = manual_joiner ~get:Option.some ~join:thumb_south in
+      let f = manual_joiner ~join:thumb_south in
       Map.fold_right ~init:(0, None, Util.prepend_opt se east) ~f thumb.south
     in
     let last_thumb_west, swoop =
       let sw =
         let first_west = Option.map ~f:snd (Map.max_elt thumb.west) in
         Option.map2 ~f:(connect (thumb_south last_idx)) last_thumb_south first_west
-      and last_west, west =
-        let northwest = Map.find thumb.north 0
-        and last_idx, last, side =
-          let f = manual_joiner ~get:Option.some ~join:thumb_west in
-          Map.fold_right ~init:(0, None, swoop) ~f thumb.west
-        in
-        ( last
-        , List.rev
-          @@ Util.prepend_opt
-               (Option.map2 ~f:(connect (thumb_west last_idx)) last northwest)
-               side )
       in
-      last_west, Util.prepend_opt sw west
+      let northwest = Map.find thumb.north 0
+      and last_idx, last, side =
+        let f = manual_joiner ~join:thumb_west in
+        Map.fold_right ~init:(0, None, Util.prepend_opt sw swoop) ~f thumb.west
+      in
+      ( last
+      , Util.prepend_opt
+          (Option.map2 ~f:(connect (thumb_west last_idx)) last northwest)
+          side )
     in
     let _, last, swoop =
-      let f = manual_joiner ~get:Option.some ~join:thumb_north in
+      let f = manual_joiner ~join:thumb_north in
       Map.fold ~init:(0, None, swoop) ~f thumb.north
     in
     Util.prepend_opt
