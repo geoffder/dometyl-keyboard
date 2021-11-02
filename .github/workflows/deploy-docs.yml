@@ -17,12 +17,16 @@ jobs:
         with:
           ocaml-compiler: 4.13.x
 
-      - run: opam install . --deps-only --with-doc
+      - name: Install dependencies
+        run: opam install ./dometyl --deps-only --with-doc
 
-      - run: opam exec -- dune build @doc
+      - name: Build docs
+        working-directory: ./dometyl
+        run: opam exec -- dune build @doc
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
+        working-directory: ./dometyl
         with:
           github_token: ${{ github.token }}
           publish_dir: _build/default/_doc/_html
