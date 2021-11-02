@@ -52,8 +52,10 @@ from janestreet, and of course
 modelling. I'd also recommend that you pick up the listed dev tools (which
 you'll want to get the corresponding packages/plugins for in your editor of
 choice).
+
 **Required:**
 * `opam install dune base stdio scad_ml ppx_deriving_scad ppx_jane`
+
 **Highly recommended for dev experience:**
 * `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
 
