@@ -20,8 +20,49 @@ module Bottom : sig
   val scad : Scad.d3
 end
 
-val make_hole
-  :  ?cap:Scad.d3
+module Config : sig
+  type t =
+    { outer_w : float
+    ; outer_h : float
+    ; inner_w : float
+    ; inner_h : float
+    ; thickness : float
+    ; cap_height : float
+    ; cap_cutout_height : float option
+    ; clearance : float
+    ; dome_w : float
+    ; dome_waist_clip : float
+    ; dome_thickness : float
+    ; base_thickness : float
+    ; sensor_depth : float
+    ; sensor_config : Sensor.ThroughHole.config
+    }
+
+  val make :
+       ?outer_w:float
+    -> ?outer_h:float
+    -> ?inner_w:float
+    -> ?inner_h:float
+    -> ?thickness:float
+    -> ?cap_height:float
+    -> ?cap_cutout_height:float option
+    -> ?clearance:float
+    -> ?dome_w:float
+    -> ?dome_waist_clip:float
+    -> ?dome_thickness:float
+    -> ?base_thickness:float
+    -> ?sensor_depth:float
+    -> ?sensor_config:Sensor.ThroughHole.config
+    -> unit
+    -> t
+
+  val default : t
+end
+
+val hole_of_config : ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+
+val make_hole :
+     ?cap:Scad.d3
   -> ?outer_w:float
   -> ?outer_h:float
   -> ?inner_w:float
@@ -35,6 +76,21 @@ val make_hole
   -> ?dome_thickness:float
   -> ?base_thickness:float
   -> ?sensor_depth:float
-  -> ?sensor_config:Sensor.Config.t
+  -> ?sensor_config:Sensor.ThroughHole.config
   -> unit
-  -> KeyHole.Kind.mx KeyHole.t
+  -> KeyHole.Kind.key KeyHole.t
+
+val empty_hole_of_config : ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+
+val make_empty_hole :
+     ?cap:Scad.d3
+  -> ?outer_w:float
+  -> ?outer_h:float
+  -> ?inner_w:float
+  -> ?inner_h:float
+  -> ?thickness:float
+  -> ?cap_height:float
+  -> ?cap_cutout_height:float option
+  -> ?clearance:float
+  -> unit
+  -> KeyHole.Kind.key KeyHole.t

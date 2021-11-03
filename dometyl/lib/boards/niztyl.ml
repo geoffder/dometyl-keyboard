@@ -93,23 +93,11 @@ let base_connector =
     ~west_link:(Connect.straight ~height:15. ())
 
 let plate_welder = Plate.column_joins
-let ports_cutter = BastardShield.(cutter ~x_off:1. ~y_off:(-1.6) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
 
 let build ?right_hand ?(empty = false) () =
-  let hole =
-    if empty then
-      (* mimic the shape of the Niz hole for quicker preview *)
-      Mx.make_hole
-        ~outer_w:20.5
-        ~outer_h:20.5
-        ~inner_w:14.
-        ~inner_h:14.
-        ~thickness:5.6
-        ~clearance:4.
-        ~cap_height:6.7
-        ()
-    else Niz.make_hole ()
-  in
+  (* use empty for quicker preview *)
+  let hole = if empty then Niz.make_empty_hole () else Niz.make_hole () in
   Case.make
     ?right_hand
     ~plate_builder
@@ -118,3 +106,12 @@ let build ?right_hand ?(empty = false) () =
     ~base_connector
     ~ports_cutter
     hole
+
+let bottom case =
+  (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
+     Bottom.make will default to the same magnet used for the case.
+     NOTE: this behaviour does not apply if the case has through-hole eyelets *)
+  let fastener = Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  Bottom.make ~fastener ~bumpon_inset:0.8 case
+
+let tent case = Tent.make ~degrees:30. case

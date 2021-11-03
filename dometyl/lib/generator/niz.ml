@@ -22,8 +22,7 @@ module Bottom = struct
   let cutter = Scad.circle ~fn:64 corner_cut_rad
 
   let corner x_sign y_sign =
-    let x = (w /. 2.) +. corner_cut_off
-    and y = (h /. 2.) +. corner_cut_off in
+    let x = (w /. 2.) +. corner_cut_off and y = (h /. 2.) +. corner_cut_off in
     Scad.translate (x *. x_sign, y *. y_sign, 0.) cutter
 
   let shadow =
@@ -61,6 +60,59 @@ module Bottom = struct
     |> fun b -> Scad.union (b :: bulges)
 end
 
+module Config = struct
+  type t =
+    { outer_w : float
+    ; outer_h : float
+    ; inner_w : float
+    ; inner_h : float
+    ; thickness : float
+    ; cap_height : float
+    ; cap_cutout_height : float option
+    ; clearance : float
+    ; dome_w : float
+    ; dome_waist_clip : float
+    ; dome_thickness : float
+    ; base_thickness : float
+    ; sensor_depth : float
+    ; sensor_config : Sensor.ThroughHole.config
+    }
+
+  let make
+      ?(outer_w = 20.5)
+      ?(outer_h = 20.5)
+      ?(inner_w = 14.)
+      ?(inner_h = 14.)
+      ?(thickness = 5.6)
+      ?(cap_height = 6.5)
+      ?(cap_cutout_height = Some 1.5)
+      ?(clearance = 4.)
+      ?(dome_w = 19.5)
+      ?(dome_waist_clip = 1.)
+      ?(dome_thickness = 1.6)
+      ?(base_thickness = 3.)
+      ?(sensor_depth = 1.)
+      ?(sensor_config = Sensor.ThroughHole.default_print)
+      () =
+    { outer_w
+    ; outer_h
+    ; inner_w
+    ; inner_h
+    ; thickness
+    ; cap_height
+    ; cap_cutout_height
+    ; clearance
+    ; dome_w
+    ; dome_waist_clip
+    ; dome_thickness
+    ; base_thickness
+    ; sensor_depth
+    ; sensor_config
+    }
+
+  let default = make ()
+end
+
 (* Dome thickness
     - BKE ~= 0.85mm
     - DES ~= 0.70mm
@@ -79,29 +131,26 @@ end
    - recommended: 2x1 magnet with sensor_depth = 1.
     (shorter actuation distance, easier to attach magnet size.) *)
 
-(* TODO: better magnet / sensor break down notes, and use an of_config pattern
-    such that there can be defaults for sensors / domes
-    - also, add param for easy setting to empty holes for tuning (faster
-    preview/render) *)
+(* TODO: better magnet / sensor break down notes *)
 
-let make_hole
+let hole_of_config
     ?cap
-    ?(outer_w = 20.5)
-    ?(outer_h = 20.5)
-    ?(inner_w = 14.)
-    ?(inner_h = 14.)
-    ?(thickness = 5.6)
-    ?(cap_height = 6.5)
-    ?(cap_cutout_height = Some 1.5)
-    ?(clearance = 4.)
-    ?(dome_w = 19.5)
-    ?(dome_waist_clip = 1.)
-    ?(dome_thickness = 1.6)
-    ?(base_thickness = 3.)
-    ?(sensor_depth = 1.)
-    ?(sensor_config = Sensor.Config.a3144_print)
-    ()
-  =
+    Config.
+      { outer_w
+      ; outer_h
+      ; inner_w
+      ; inner_h
+      ; thickness
+      ; cap_height
+      ; cap_cutout_height
+      ; clearance
+      ; dome_w
+      ; dome_waist_clip
+      ; dome_thickness
+      ; base_thickness
+      ; sensor_depth
+      ; sensor_config
+      } =
   let thickness = Float.max thickness (Bottom.thickness +. dome_thickness) in
   let clearance = Float.max clearance (base_thickness +. 0.5)
   and bottom_z = (thickness /. 2.) -. Bottom.thickness
@@ -129,7 +178,9 @@ let make_hole
       Scad.cube (outer_w, outer_h, base_thickness +. 0.001)
       |> Scad.translate (outer_w /. -2., outer_h /. -2., dome_z -. base_thickness)
     in
-    Scad.difference slab [ Sensor.(sink ~z:dome_z (make sensor_config) sensor_depth) ]
+    Scad.difference
+      slab
+      [ Sensor.ThroughHole.(sink ~z:dome_z (of_config sensor_config) sensor_depth) ]
   and pillars =
     let cyl = Scad.linear_extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(
@@ -157,7 +208,7 @@ let make_hole
     make
       ?cap
       ~cutout
-      { spec = Kind.Mx ()
+      { spec = Kind.Key
       ; outer_w
       ; outer_h
       ; inner_w
@@ -167,3 +218,88 @@ let make_hole
       ; cap_height
       ; clearance
       })
+
+let make_hole
+    ?cap
+    ?outer_w
+    ?outer_h
+    ?inner_w
+    ?inner_h
+    ?thickness
+    ?cap_height
+    ?cap_cutout_height
+    ?clearance
+    ?dome_w
+    ?dome_waist_clip
+    ?dome_thickness
+    ?base_thickness
+    ?sensor_depth
+    ?sensor_config
+    () =
+  hole_of_config
+    ?cap
+    (Config.make
+       ?outer_w
+       ?outer_h
+       ?inner_w
+       ?inner_h
+       ?thickness
+       ?cap_height
+       ?cap_cutout_height
+       ?clearance
+       ?dome_w
+       ?dome_waist_clip
+       ?dome_thickness
+       ?base_thickness
+       ?sensor_depth
+       ?sensor_config
+       () )
+
+let empty_hole_of_config
+    ?cap
+    Config.
+      { outer_w
+      ; outer_h
+      ; inner_w
+      ; inner_h
+      ; thickness
+      ; cap_height
+      ; cap_cutout_height
+      ; clearance
+      ; _
+      } =
+  Mx.make_hole
+    ?cap
+    ~outer_w
+    ~outer_h
+    ~inner_w
+    ~inner_h
+    ~thickness
+    ~cap_height
+    ~cap_cutout_height
+    ~clearance
+    ()
+
+let make_empty_hole
+    ?cap
+    ?outer_w
+    ?outer_h
+    ?inner_w
+    ?inner_h
+    ?thickness
+    ?cap_height
+    ?cap_cutout_height
+    ?clearance
+    () =
+  empty_hole_of_config
+    ?cap
+    (Config.make
+       ?outer_w
+       ?outer_h
+       ?inner_w
+       ?inner_h
+       ?thickness
+       ?cap_height
+       ?cap_cutout_height
+       ?clearance
+       () )
