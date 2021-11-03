@@ -64,16 +64,8 @@ module Faces = struct
 end
 
 module Kind = struct
-  type niz =
-    { clip_height : float
-    ; snap_slot_h : float
-    }
-
-  type mx = unit
-
-  type _ t =
-    | Mx : mx -> mx t
-    | Niz : niz -> niz t
+  type key = Key
+  type 'k t = Key : key t
 end
 
 type 'k config =
@@ -115,8 +107,7 @@ let rotate_about_origin r t =
   }
 
 let quaternion_about_origin angle t =
-  let p = Vec3.negate t.origin
-  and q = Quaternion.make (normal t) angle in
+  let p = Vec3.negate t.origin and q = Quaternion.make (normal t) angle in
   { t with
     scad = Scad.quaternion_about_pt q p t.scad
   ; faces = Faces.quaternion_about_pt q p t.faces
@@ -130,8 +121,7 @@ let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
 let make
     ?cap
     ?cutout
-    ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
-  =
+    ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
   let hole =
     let outer = Scad.cube ~center:true (outer_w, outer_h, thickness) in
     let inner = Scad.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in

@@ -11,8 +11,7 @@ let kailh_socket =
 
 module Hotswap = struct
   let make ~inner_w ~inner_h ~plate_thickness facing =
-    let holder_thickness = 3.
-    and hole_depth = 5. in
+    let holder_thickness = 3. and hole_depth = 5. in
     let shallowness = hole_depth -. plate_thickness in
     let socket_z = -2.6 -. ((hole_depth +. shallowness) /. 2.)
     (* hotswap socket cutout position *)
@@ -39,8 +38,7 @@ module Hotswap = struct
     in
     let hotswap =
       let access_cuts =
-        let x = (w /. 2.) -. (w /. 8.04)
-        and y = h /. 2. in
+        let x = (w /. 2.) -. (w /. 8.04) and y = h /. 2. in
         let cut = Scad.square ~center:true (w /. 4., 5.) in
         Scad.union
           [ Scad.translate (x, y *. sign, 0.) cut
@@ -72,8 +70,7 @@ module Hotswap = struct
       |> Scad.translate (0., 0., z)
       |> Fn.flip Scad.difference [ access_cuts; cutout ]
     in
-    ( ( if Float.(shallowness > 0.)
-      then (
+    ( ( if Float.(shallowness > 0.) then
         let spacer =
           Scad.difference
             (Scad.square ~center:true (w, h))
@@ -81,15 +78,14 @@ module Hotswap = struct
           |> Scad.linear_extrude ~height:shallowness
           |> Scad.translate (0., 0., (plate_thickness /. -2.) -. shallowness)
         in
-        Scad.union [ hotswap; spacer ] )
+        Scad.union [ hotswap; spacer ]
       else hotswap )
     , cutout )
 
   let example ?alpha ?(show_cutout = false) facing =
     let swap, cut = make ~inner_w:13.9 ~inner_h:13.8 ~plate_thickness:5. facing in
     let swap = Scad.color ?alpha Color.FireBrick swap in
-    if show_cutout
-    then Scad.union [ swap; Scad.color ?alpha Color.DarkMagenta cut ]
+    if show_cutout then Scad.union [ swap; Scad.color ?alpha Color.DarkMagenta cut ]
     else swap
 end
 
@@ -111,8 +107,7 @@ let make_hole
     ?(cap_height = 6.25)
     ?(cap_cutout_height = Some 1.5)
     ?(clearance = 3.)
-    ()
-  =
+    () =
   let clearance, clip, cutout =
     match hotswap with
     | Some facing ->
@@ -134,7 +129,7 @@ let make_hole
     make
       ?cap
       ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
-      { spec = Kind.Mx ()
+      { spec = Kind.Key
       ; outer_w
       ; outer_h
       ; inner_w

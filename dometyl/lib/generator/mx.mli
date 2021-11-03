@@ -4,8 +4,8 @@ open! Scad_ml
 val kailh_socket : Scad.d3
 
 module Hotswap : sig
-  val make
-    :  inner_w:float
+  val make :
+       inner_w:float
     -> inner_h:float
     -> plate_thickness:float
     -> [< `North | `South ]
@@ -16,8 +16,8 @@ end
 
 val teeth : inner_h:float -> thickness:float -> Scad.d3 -> Scad.d3
 
-val make_hole
-  :  ?cap:Scad.d3
+val make_hole :
+     ?cap:Scad.d3
   -> ?hotswap:[< `North | `South ]
   -> ?outer_w:float
   -> ?outer_h:float
@@ -28,4 +28,4 @@ val make_hole
   -> ?cap_cutout_height:float option
   -> ?clearance:float
   -> unit
-  -> KeyHole.Kind.mx KeyHole.t
+  -> KeyHole.Kind.key KeyHole.t

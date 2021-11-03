@@ -18,8 +18,7 @@ let switch =
 
 module Hotswap = struct
   let make ~inner_w ~inner_h ~outer_w ~outer_h ~plate_thickness facing =
-    let holder_thickness = 3.
-    and hole_depth = 2.2 in
+    let holder_thickness = 3. and hole_depth = 2.2 in
     let shallowness = hole_depth -. plate_thickness in
     (* hotswap socket cutout position *)
     let w = inner_w +. 3.
@@ -35,8 +34,7 @@ module Hotswap = struct
     in
     let socket_z = z -. 1.4 in
     let cutout =
-      let edge_x = 0.2 +. (outer_w /. 2.)
-      and edge_y = 0.2 +. (outer_h /. 2.) in
+      let edge_x = 0.2 +. (outer_w /. 2.) and edge_y = 0.2 +. (outer_h /. 2.) in
       let poly =
         Scad.polygon
         @@ List.map
@@ -90,8 +88,7 @@ module Hotswap = struct
       |> Scad.translate (0., 0., z)
       |> Fn.flip Scad.difference [ cutout ]
     in
-    ( ( if Float.(shallowness > 0.)
-      then (
+    ( ( if Float.(shallowness > 0.) then
         let spacer =
           Scad.difference
             (Scad.square ~center:true (w, h))
@@ -99,7 +96,7 @@ module Hotswap = struct
           |> Scad.linear_extrude ~height:shallowness
           |> Scad.translate (0., 0., (plate_thickness /. -2.) -. shallowness)
         in
-        Scad.union [ hotswap; spacer ] )
+        Scad.union [ hotswap; spacer ]
       else hotswap )
     , cutout )
 end
@@ -126,8 +123,7 @@ let make_hole
     ?(cap_height = 5.)
     ?(cap_cutout_height = Some 0.8)
     ?(clearance = 2.)
-    ()
-  =
+    () =
   let clearance, clip, cutout =
     match hotswap with
     | Some facing ->
@@ -149,7 +145,7 @@ let make_hole
     make
       ?cap
       ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
-      { spec = Kind.Mx ()
+      { spec = Kind.Key
       ; outer_w
       ; outer_h
       ; inner_w
@@ -165,8 +161,7 @@ let example_assembly
     ?(show_switch = false)
     ?(show_socket = false)
     ?(show_cap = false)
-    ()
-  =
+    () =
   let hole = make_hole ~hotswap:`South ~cap:Caps.MBK.mbk () in
   let cutout = Option.value_exn hole.cutout in
   let hole =
@@ -174,8 +169,7 @@ let example_assembly
     |> Scad.translate (0., 0., -2.)
     |> Scad.color ~alpha:0.5 Color.FireBrick
   and cutout =
-    if show_cutout
-    then
+    if show_cutout then
       Some (Scad.translate (0., 0., -20.) cutout |> Scad.color Color.DarkGray ~alpha:0.5)
     else None
   and choc = Option.some_if show_switch switch

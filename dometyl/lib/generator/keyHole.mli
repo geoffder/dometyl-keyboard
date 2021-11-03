@@ -5,8 +5,8 @@ module Face : sig
   (** An outer face of a keyhole. *)
 
   type t =
-    { scad : Scad.d3 (** Thin wall for the purposes of hulling to other faces. *)
-    ; points : Points.t (** Corner and centre points of the face. *)
+    { scad : Scad.d3  (** Thin wall for the purposes of hulling to other faces. *)
+    ; points : Points.t  (** Corner and centre points of the face. *)
     }
   [@@deriving scad]
 
@@ -31,16 +31,8 @@ module Faces : sig
 end
 
 module Kind : sig
-  type niz =
-    { clip_height : float
-    ; snap_slot_h : float
-    }
-
-  type mx = unit
-
-  type _ t =
-    | Mx : mx -> mx t
-    | Niz : niz -> niz t
+  type key = Key
+  type 'k t = Key : key t
 end
 
 type 'k config =
