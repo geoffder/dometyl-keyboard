@@ -128,8 +128,8 @@ end
    - 2x1 magnets actuate the AH3572 sensor at ~2.4mm travel, deactivation
     occurs by the top of the return with Niz rings.
 
-   - recommended: 2x1 magnet with sensor_depth = 1.
-    (shorter actuation distance, easier to attach magnet size.) *)
+   - recommended: 2x1 magnet with sensor_depth = 1, to reduce actuation distance.
+    (easier to attach magnet size) *)
 
 (* TODO: better magnet / sensor break down notes *)
 
