@@ -47,12 +47,11 @@ let plate_builder =
     ~thumb_offset:(-13., -41., 10.)
     ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
     ~rotate_thumb_clips:false
-    ~caps:
-      Caps.Matty3.row
-      (* ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u) *)
-    ~thumb_caps:Caps.MT3.thumb_1u
+    ~caps:Caps.Matty3.row
+    ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 let wall_builder plate =
+  let eyelet_config = Eyelet.m4_config in
   Walls.
     { body =
         auto_body
@@ -60,6 +59,7 @@ let wall_builder plate =
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
+          ~eyelet_config
           plate
     ; thumb =
         auto_thumb
@@ -70,6 +70,7 @@ let wall_builder plate =
           ~south_clearance:3.
           ~side_clearance:3.
           ~n_steps:(`Flat 3)
+          ~eyelet_config
           plate
     }
 
@@ -104,6 +105,10 @@ let build ?right_hand ?hotswap () =
     ~base_connector
     ~ports_cutter
     (Mx.make_hole ?hotswap ~clearance:2. ())
+
+let fastener = Eyelet.m4_countersunk_fastener
+let bottom case = Bottom.make ~fastener case
+let tent case = Tent.make ~fastener ~degrees:30. case
 
 let bastard_compare () =
   Scad.union
