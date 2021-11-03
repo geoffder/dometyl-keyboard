@@ -89,7 +89,7 @@ let make
     | None          -> (
       match eyelet_config with
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
-      | _                     -> Magnet )
+      | _                     -> SameMagnet )
     | Some fastener -> fastener
   and rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
   and pivot_pt = -.bb_pinky, 0., 0. in
@@ -108,6 +108,15 @@ let make
   and trans s = Scad.rotate_about_pt rot pivot_pt s |> Scad.translate (0., 0., z_offset)
   and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
   let hole, top_height, clearances =
+    let magnetize rad h thickness =
+      let hole =
+        Scad.union
+          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 rad h
+          ; Scad.cylinder ~fn:32 (rad /. 2.) (thickness -. h)
+          ]
+      in
+      hole, thickness, []
+    in
     match fastener with
     | Screw { head_rad; shaft_rad; sink; height; clearance } ->
       let head_disc = Scad.circle head_rad in
@@ -131,20 +140,15 @@ let make
           screws
       in
       hole, height, clearances
-    | Magnet ->
+    | SameMagnet ->
       let Eyelet.{ inner_rad; thickness; hole; _ } = eyelet_config in
       let h =
         match hole with
         | Eyelet.Inset inset -> inset
-        | _                  -> 0.
+        | _                  -> failwith "Case eyelet expected to be magnet inset."
       in
-      let hole =
-        Scad.union
-          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
-          ; Scad.cylinder ~fn:32 (inner_rad /. 2.) (thickness -. h)
-          ]
-      in
-      hole, thickness, []
+      magnetize inner_rad h thickness
+    | Magnet { rad; thickness } -> magnetize rad thickness (thickness +. 1.4)
   in
   let top =
     Scad.difference

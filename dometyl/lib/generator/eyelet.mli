@@ -10,7 +10,11 @@ type sink =
   | Counter
 
 type fastener =
-  | Magnet
+  | SameMagnet
+  | Magnet of
+      { rad : float
+      ; thickness : float
+      }
   | Screw of
       { head_rad : float
       ; shaft_rad : float
@@ -38,8 +42,8 @@ type t =
   }
 [@@deriving scad]
 
-val screw_fastener
-  :  ?head_rad:float
+val screw_fastener :
+     ?head_rad:float
   -> ?shaft_rad:float
   -> ?sink:sink
   -> ?height:float

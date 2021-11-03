@@ -41,8 +41,15 @@ let make
       | None          -> (
         match screw_config with
         | { hole = Through; _ } -> Eyelet.screw_fastener ()
-        | _                     -> Magnet )
+        | _                     -> SameMagnet )
       | Some fastener -> fastener
+    and magnetize rad h =
+      let thickness = Float.max thickness (h +. 0.6) in
+      ( thickness
+      , Scad.union
+          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 rad h
+          ; Scad.cylinder ~fn:32 (rad /. 2.) (thickness -. h)
+          ] )
     in
     match fastener with
     | Screw { head_rad; shaft_rad; sink = Counter; _ } ->
@@ -55,19 +62,15 @@ let make
           [ Scad.cylinder ~fn:32 head_rad depth
           ; Scad.cylinder ~fn:32 shaft_rad thickness
           ] )
-    | Magnet ->
+    | SameMagnet ->
       let Eyelet.{ inner_rad; hole; _ } = screw_config in
       let h =
         match hole with
         | Eyelet.Inset inset -> inset
-        | _                  -> 0.
+        | _                  -> failwith "Case eyelet expected to be magnet inset."
       in
-      let thickness = Float.max thickness (h +. 0.6) in
-      ( thickness
-      , Scad.union
-          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 inner_rad h
-          ; Scad.cylinder ~fn:32 (inner_rad /. 2.) (thickness -. h)
-          ] )
+      magnetize inner_rad h
+    | Magnet { rad; thickness } -> magnetize rad thickness
   and insets =
     let cut = Scad.cylinder bumpon_rad bumpon_inset in
     List.filter_map

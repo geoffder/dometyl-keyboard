@@ -10,7 +10,11 @@ type sink =
   | Counter
 
 type fastener =
-  | Magnet
+  | SameMagnet
+  | Magnet of
+      { rad : float
+      ; thickness : float
+      }
   | Screw of
       { head_rad : float
       ; shaft_rad : float
@@ -58,8 +62,7 @@ let screw_fastener
     ?(sink = Counter)
     ?(height = 2.)
     ?(clearance = 0.)
-    ()
-  =
+    () =
   Screw { head_rad; shaft_rad; sink; height; clearance }
 
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
@@ -76,8 +79,7 @@ let make
     ~placement
     ({ outer_rad; inner_rad; thickness; hole } as config)
     p1
-    p2
-  =
+    p2 =
   let base_centre = Vec3.(mul_scalar (p1 <+> p2) 0.5) in
   let hole_offset, foot_offset =
     match placement with
