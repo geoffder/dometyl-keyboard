@@ -1,8 +1,8 @@
 open! Base
 open! Scad_ml
 
-module Config : sig
-  type t =
+module ThroughHole : sig
+  type config =
     { leg_w : float
     ; leg_thickness : float
     ; leg_l : float
@@ -15,14 +15,13 @@ module Config : sig
     ; body_thickness : float
     }
 
-  val a3144 : t
-  val a3144_print : t
+  type t =
+    { config : config
+    ; scad : Scad.d3
+    }
+
+  val default : config
+  val default_print : config
+  val of_config : config -> t
+  val sink : ?z:float -> t -> Float.t -> Scad.d3
 end
-
-type t =
-  { config : Config.t
-  ; scad : Scad.d3
-  }
-
-val make : Config.t -> t
-val sink : ?z:float -> t -> Float.t -> Scad.d3

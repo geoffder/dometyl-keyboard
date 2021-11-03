@@ -1,8 +1,8 @@
 open! Base
 open! Scad_ml
 
-module Config = struct
-  type t =
+module ThroughHole = struct
+  type config =
     { leg_w : float
     ; leg_thickness : float
     ; leg_l : float
@@ -15,7 +15,7 @@ module Config = struct
     ; body_thickness : float
     }
 
-  let a3144 =
+  let default =
     { leg_w = 0.5
     ; leg_thickness = 0.4
     ; leg_l = 20.
@@ -28,7 +28,7 @@ module Config = struct
     ; body_thickness = 1.5
     }
 
-  let a3144_print =
+  let default_print =
     { leg_w = 0.6
     ; leg_thickness = 0.85
     ; leg_l = 20.
@@ -40,16 +40,14 @@ module Config = struct
     ; body_l = 3.2
     ; body_thickness = 1.5
     }
-end
 
-type t =
-  { config : Config.t
-  ; scad : Scad.d3
-  }
+  type t =
+    { config : config
+    ; scad : Scad.d3
+    }
 
-let make
-    ( Config.
-        { leg_w
+  let of_config
+      ( { leg_w
         ; leg_thickness
         ; leg_l
         ; leg_spacing
@@ -59,39 +57,41 @@ let make
         ; body_w
         ; body_l
         ; body_thickness
-        } as config )
-  =
-  let bent_leg =
-    let start =
-      Scad.cube ~center:true (leg_w, leg_bend, leg_thickness)
-      |> Scad.translate (0., (leg_bend +. body_l) /. 2., 0.)
-    and rest =
-      Scad.cube ~center:true (leg_w, leg_thickness, leg_l -. leg_bend)
-      |> Scad.translate
-           ( 0.
-           , leg_bend +. ((body_l -. leg_w) /. 2.)
-           , (leg_l -. leg_bend -. leg_thickness) /. -2. )
+        } as config ) =
+    let bent_leg =
+      let start =
+        Scad.cube ~center:true (leg_w, leg_bend, leg_thickness)
+        |> Scad.translate (0., (leg_bend +. body_l) /. 2., 0.)
+      and rest =
+        Scad.cube ~center:true (leg_w, leg_thickness, leg_l -. leg_bend)
+        |> Scad.translate
+             ( 0.
+             , leg_bend +. ((body_l -. leg_w) /. 2.)
+             , (leg_l -. leg_bend -. leg_thickness) /. -2. )
+      in
+      Scad.union [ start; rest ] |> Scad.translate (0., 0., leg_z_offset)
     in
-    Scad.union [ start; rest ] |> Scad.translate (0., 0., leg_z_offset)
-  in
-  let legs =
-    let side_offset = leg_spacing +. (leg_w /. 2.) in
-    if not merge_legs
-    then
-      Scad.union
-        [ bent_leg
-        ; Scad.translate (-.side_offset, 0., 0.) bent_leg
-        ; Scad.translate (side_offset, 0., 0.) bent_leg
-        ]
-    else Scad.scale ((2. *. side_offset /. leg_w) +. 1., 1., 1.) bent_leg
-  and body = Scad.cube ~center:true (body_w, body_l +. 0.001, body_thickness) in
-  { config
-  ; scad = Scad.union [ body; legs ] |> Scad.translate (0., -0.0005, body_thickness /. 2.)
-  }
+    let legs =
+      let side_offset = leg_spacing +. (leg_w /. 2.) in
+      if not merge_legs then
+        Scad.union
+          [ bent_leg
+          ; Scad.translate (-.side_offset, 0., 0.) bent_leg
+          ; Scad.translate (side_offset, 0., 0.) bent_leg
+          ]
+      else Scad.scale ((2. *. side_offset /. leg_w) +. 1., 1., 1.) bent_leg
+    and body = Scad.cube ~center:true (body_w, body_l +. 0.001, body_thickness) in
+    { config
+    ; scad =
+        Scad.union [ body; legs ] |> Scad.translate (0., -0.0005, body_thickness /. 2.)
+    }
 
-let sink ?z { config; scad } depth =
-  let scad =
-    Option.value_map ~default:scad ~f:(fun z -> Scad.translate (0., 0., z) scad) z
-  in
-  let f i = Scad.translate (0., 0., Float.of_int i *. config.leg_thickness /. -2.) scad in
-  Scad.union @@ List.init (Int.of_float (depth /. config.leg_w *. 2.) + 1) ~f
+  let sink ?z { config; scad } depth =
+    let scad =
+      Option.value_map ~default:scad ~f:(fun z -> Scad.translate (0., 0., z) scad) z
+    in
+    let f i =
+      Scad.translate (0., 0., Float.of_int i *. config.leg_thickness /. -2.) scad
+    in
+    Scad.union @@ List.init (Int.of_float (depth /. config.leg_w *. 2.) + 1) ~f
+end
