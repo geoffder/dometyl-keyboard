@@ -52,7 +52,8 @@ let wall_builder plate =
     { body =
         auto_body
           ~n_steps:(`Flat 3)
-          ~n_facets:5
+          ~n_facets:3
+          ~north_lookup:(fun i -> if i % 2 = 0 then Eye else Yes)
           ~north_clearance:1.5
           ~south_clearance:1.5
           ~side_clearance:1.5
@@ -60,7 +61,7 @@ let wall_builder plate =
           plate
     ; thumb =
         auto_thumb
-          ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
+          ~south_lookup:(fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)
           ~north_clearance:0.5
@@ -69,7 +70,7 @@ let wall_builder plate =
           ~d1:4.
           ~d2:4.75
           ~n_steps:(`PerZ 5.)
-          ~n_facets:2
+          ~n_facets:3
           ~eyelet_config
           plate
     }
@@ -77,6 +78,7 @@ let wall_builder plate =
 let base_connector =
   Connect.skeleton
     ~height:5.
+    ~index_height:14.
     ~thumb_height:9.
     ~east_link:(Connect.snake ~height:9. ~n_facets:3 ~scale:1.4 ~d:1. ())
     ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
@@ -87,7 +89,7 @@ let base_connector =
     ~fudge_factor:8.
     ~close_thumb:false
 
-let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~y_off:(-1.5) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~y_off:(-1.5) ~z_off:4. (make ()))
 
 let build ?right_hand ?hotswap () =
   let keyhole = Choc.make_hole ~clearance:0. ?hotswap () in
