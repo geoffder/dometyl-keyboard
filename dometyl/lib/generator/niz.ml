@@ -91,7 +91,7 @@ module Config = struct
       ?(dome_waist_clip = 1.)
       ?(dome_thickness = 1.6)
       ?(base_thickness = 3.)
-      ?(sensor_depth = 1.)
+      ?(sensor_depth = 1.4)
       ?(sensor_config = Sensor.ThroughHole.default_print)
       () =
     { outer_w
@@ -128,8 +128,10 @@ end
    - 2x1 magnets actuate the AH3572 sensor at ~2.4mm travel, deactivation
     occurs by the top of the return with Niz rings.
 
-   - recommended: 2x1 magnet with sensor_depth = 1, to reduce actuation distance.
-    (easier to attach magnet size) *)
+   - recommended: 2x1 magnet with sensor_depth = 1.4. Easier to attach magnet
+     size, and should be no worries about hysteresis within FDM and gluing
+     tolerances with the stock Niz silencing rings. Thinner rings (or no rings)
+     will increase the travel, so keep that in mind. *)
 
 (* TODO: better magnet / sensor break down notes *)
 
