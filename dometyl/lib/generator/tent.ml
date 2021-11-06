@@ -11,6 +11,7 @@ let find_bump_wall (walls : Walls.t) = function
 
 let default_bumps =
   [ Thumb (First, `W)
+  ; Thumb (Last, `S)
   ; Body (First, `N)
   ; Body (Idx 3, `N)
   ; Body (Last, `N)
@@ -58,7 +59,7 @@ let make
     ?(foot_thickness = 2.4)
     ?(foot_rad = 6.)
     ?(bumpon_rad = 5.5)
-    ?(bumpon_inset = 0.6)
+    ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
     (case : _ Case.t) =
   let bb_index, bb_pinky, rot_sign =

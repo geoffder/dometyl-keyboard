@@ -19,7 +19,8 @@ let locate_bump (plate : _ Plate.t) = function
   | Point p      -> Some p
 
 let default_bumps =
-  [ Thumb (Last, Last)
+  [ Thumb (Last, First)
+  ; Thumb (Last, Last)
   ; Body (First, Last)
   ; Body (Idx 3, Last)
   ; Body (Last, Last)
@@ -30,7 +31,7 @@ let make
     ?(thickness = 1.65)
     ?fastener
     ?(bumpon_rad = 5.5)
-    ?(bumpon_inset = 0.5)
+    ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
     case =
   let screws = Walls.collect_screws case.Case.walls in

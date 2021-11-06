@@ -112,6 +112,6 @@ let bottom case =
      Bottom.make will default to the same magnet used for the case.
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
   let fastener = Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
-  Bottom.make ~fastener ~bumpon_inset:0.8 case
+  Bottom.make ~fastener case
 
 let tent case = Tent.make ~degrees:30. case
