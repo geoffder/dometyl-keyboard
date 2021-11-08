@@ -51,7 +51,7 @@ let plate_builder =
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 let wall_builder plate =
-  let eyelet_config = Eyelet.m4_config in
+  let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
         auto_body
@@ -106,9 +106,14 @@ let build ?right_hand ?hotswap () =
     ~ports_cutter
     (Mx.make_hole ?hotswap ~clearance:2. ())
 
-let fastener = Eyelet.m4_countersunk_fastener
-let bottom case = Bottom.make ~fastener case
-let tent case = Tent.make ~fastener ~degrees:30. case
+let bottom case =
+  (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
+     Bottom.make will default to the same magnet used for the case.
+     NOTE: this behaviour does not apply if the case has through-hole eyelets *)
+  let fastener = Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  Bottom.make ~fastener case
+
+let tent case = Tent.make ~degrees:30. case
 
 let bastard_compare () =
   Scad.union
