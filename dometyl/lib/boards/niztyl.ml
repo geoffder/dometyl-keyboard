@@ -55,7 +55,9 @@ let plate_builder =
     ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
-  let eyelet_config = Eyelet.magnet_6x3_config in
+  (* NOTE: It is strongly advised to use screws with heatset inserts rather than
+     magnets when doing a hall-effect rubber dome build to avoid interference. *)
+  let eyelet_config = Eyelet.m4_config in
   Walls.
     { body =
         auto_body
@@ -107,11 +109,6 @@ let build ?right_hand ?(empty = false) () =
     ~ports_cutter
     hole
 
-let bottom case =
-  (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
-     Bottom.make will default to the same magnet used for the case.
-     NOTE: this behaviour does not apply if the case has through-hole eyelets *)
-  let fastener = Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
-  Bottom.make ~fastener case
-
-let tent case = Tent.make ~degrees:30. case
+let fastener = Eyelet.m4_countersunk_fastener
+let bottom case = Bottom.make ~fastener case
+let tent case = Tent.make ~fastener ~degrees:30. case
