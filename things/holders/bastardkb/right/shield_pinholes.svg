@@ -6,7 +6,7 @@
    version="1.1"
    id="svg1121"
    sodipodi:docname="shield_pinholes.svg"
-   inkscape:version="1.1 (c4e8f9ed74, 2021-05-24)"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -27,13 +27,13 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="3.2336957"
-     inkscape:cx="44.376471"
-     inkscape:cy="51.952941"
-     inkscape:window-width="1920"
-     inkscape:window-height="1060"
-     inkscape:window-x="1920"
-     inkscape:window-y="20"
+     inkscape:zoom="6.4673914"
+     inkscape:cx="64.631932"
+     inkscape:cy="24.584874"
+     inkscape:window-width="942"
+     inkscape:window-height="1030"
+     inkscape:window-x="1932"
+     inkscape:window-y="32"
      inkscape:window-maximized="1"
      inkscape:current-layer="surface1" />
   <g
@@ -103,6 +103,10 @@
        style="fill:#7373de;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="m 34.981456,20.333401 c 0,-3.3125 -4.96875,-3.3125 -4.96875,0 0,3.3125 4.96875,3.3125 4.96875,0"
        id="path904-7" />
+    <path
+       style="fill:#7373de;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       d="m 34.981456,0.833401 c 0,-3.3125 -4.96875,-3.3125 -4.96875,0 0,3.3125 4.96875,3.3125 4.96875,0"
+       id="path904-7-3" />
     <path
        style="fill:#7373de;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="m 57.085938,14.425781 c 0,-3.308593 -4.96875,-3.308593 -4.96875,0 0,3.3125 4.96875,3.3125 4.96875,0"

@@ -9,30 +9,24 @@ type t =
   }
 [@@deriving scad]
 
-val print_pcb : float -> Scad.d3
+val print_pcb : ?right_hand:bool -> float -> Scad.d3
 val pcb : float -> Scad.d3
 val make : ?inset_depth:float -> ?thickness:float -> unit -> t
 val screws : t -> Scad.d3
 
-val place
-  :  ?x_off:float
-  -> ?y_off:float
-  -> ?z_off:float
-  -> ?z_rot:float
-  -> Walls.t
-  -> t
-  -> t
+val place :
+  ?x_off:float -> ?y_off:float -> ?z_off:float -> ?z_rot:float -> Walls.t -> t -> t
 
-val eyelets
-  :  ?width:float
+val eyelets :
+     ?width:float
   -> ?z_off:float
   -> ?eyelet_config:Eyelet.config
   -> Connect.t
   -> t
   -> Scad.d3
 
-val cutter
-  :  ?eye_width:float
+val cutter :
+     ?eye_width:float
   -> ?eye_z_off:float
   -> ?eyelet_config:Eyelet.config
   -> ?x_off:float

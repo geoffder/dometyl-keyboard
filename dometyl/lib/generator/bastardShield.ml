@@ -20,8 +20,11 @@ let screws t =
 let to_scad ?(show_screws = false) t =
   if show_screws then Scad.union [ t.scad; screws t ] else t.scad
 
-let print_pcb thickness =
-  let import n = Scad.import_2d (Printf.sprintf "../things/holders/bastardkb/%s.svg" n) in
+let print_pcb ?(right_hand = true) thickness =
+  let import n =
+    let hand = if right_hand then "right" else "left" in
+    Scad.import_2d (Printf.sprintf "../things/holders/bastardkb/%s/%s.svg" hand n)
+  in
   Scad.difference
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]
