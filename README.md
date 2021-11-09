@@ -1,8 +1,9 @@
-# Dometyl - Another Dactyl inspired keyboard (eventually supporting rubber domes)
+# Dometyl - Another Dactyl inspired keyboard, this time with rubber domes.
 ![Splaytyl Build](things/boards/splaytyl/images/splaytyl_both.jpeg)
+
 ## About
-This is a library (currently under construction) for generation of paramaterized
-split-hand, concave, columnar, ergonomic keyboards in the spirit of the
+This is a library for generating paramaterized split-hand, concave, columnar,
+ergonomic keyboards in the spirit of the
 [Dactyl](https://github.com/adereth/dactyl-keyboard), but written from the
 ground up in [ocaml](https://ocaml.org/), rather than
 [clojure](https://clojure.org). **Dometyl** also takes inspiration from a
@@ -13,20 +14,29 @@ features, and the [Skeletyl](https://github.com/Bastardkb/Skeletyl), a sleak,
 low-profile, open-case design built in
 [Fusion360](https://www.autodesk.ca/en/products/fusion-360/overview).
 
-The name **Dometyl** comes from my original mission of creating a
-**dactyl/skeletyl-like** board that can be built with rubber dome switches like
-[Topre](https://deskthority.net/wiki/Topre_switch) (or
-[Niz](https://www.nizkeyboard.com/products/2019-new-niz-ec-switch), whose top
-switch housings are available to purchase). The planned switching mechanism
-using magnets and cheap hall-effect sensors rather than the typical capacitive
-sensor PCBs works as expected in hand (images and video of prototype assembly to
-come), however a sturdy enough and reliable mounting scheme for dome and sensor
-platform to the bottom of the plate is yet to be worked out (WIP parts can be
-found in the [Niz module](dometyl/lib/generator/niz.ml)).
+The name **(rubber) dometyl** comes from the fact this this library introduces a
+means of building split-hand concave keyboards with rubber domes. Taking
+advantage of the readily available [Niz housing and
+sliders](https://www.nizkeyboard.com/products/2019-new-niz-ec-switch), and
+third-party non-sheet rubber domes (e.g. [DES BKE
+DOMES](https://www.apexkeyboards.ca/products/des-domes-bke-tactile)), we can
+build dome-with-slider switches of our own without canabilizing an existing
+Topre or Niz board. You may be thinking that we still need expensive to obtain
+conical springs, and difficult to design (and *very* difficult to make use of
+inside a curved case) electro capacitive sensing PCBs to complete the picture,
+but then you would be wrong! One need simply glue magnets to sliders, and glue
+[hall-effect sensors](https://www.diodes.com/assets/Datasheets/AH3572.pdf) into
+a case, and *voila* the rubber dometyl is born.
 
-In the meantime, the generator works fine for Mx and Choc style switches, so I
-am working to improve the documentation and make it a bit more user friendly so
-that others can begin to tool around with it.
+![niztyl - gone topless](things/boards/niztyl/images/topless.jpg)
+
+The relevant code for generating the required keyhole can be found in the [Niz
+module](dometyl/lib/generator/niz.ml), the first example of a board
+configuration using them [here](dometyl/lib/boards/niztyl.ml), and the build
+showcase for it [here](things/boards/niztyl).
+
+Of course, if you aren't an insane person, the dometyl generator also supports
+more civilized Mx and Choc switch options.
 
 ## Setup
 This generator is written in the [ocaml](https://ocaml.org/) language, so you'll
@@ -72,8 +82,9 @@ be filling in over time.
    export and `.stl` using the OpenSCAD cli. You can also pass your generated
    `Case.t` to tent and bottom plate generation functions while you're there and
    write those to `.scad` as well.
-2. Make a new `.ml` file in the [boards library](dometyl/lib/boards), or
-   modify and existing one to suit your preferences / fit your hand.
+2. Make a new `.ml` file in the [boards library](dometyl/lib/boards), maybe
+   starting with a copy of and existing one and and modifying it to suit your
+   preferences / fit your hand.
 3. Generate scads/stls by running `dune exec dometyl` from the [dometyl](dometyl)
    project folder. Files will be output to the [things](things) directory.
    Alteratively, if you have/install `fswatch` (cross-platform) or `inotify`
@@ -82,45 +93,27 @@ be filling in over time.
 4. Open generated `.scad` files in OpenSCAD where they can be
    previewed/rendered/exported to `.stl`. If a viewed `.scad` is overwritten by
    compiling and running the generator, the changes will be visible in the GUI.
-5. Once you've had success building your own unique board, and have found your
-   design to be comfortable (e.g. cool new thumb cluster, tailored splays,
-   column tilts, a new look squeezed out of this jank library, etc), consider
-   making a PR for your addition to the [boards library](dometyl/lib/boards). It
-   would be nice to accumulate a zoo of configurations that can serve as jumping
-   off points / inspiration for others.
-6. PRs for added/improved functionality in the rest of the library that go
-   beyond new combinations of the existing tools are welcomed as well. I know
-   that it might be overly optimistic, but I think accumulating improvements and
-   variations here rather than having them strewn over countless forks would be
-   make for a nice resource!
 
 ## Example Output
 * An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
   [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
-  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png)
-* This mimic configuration can serve as a nice place to start if you like the
-  skeletyl, but would like to tweak the column offsets, or would like to (at the
-  price of it being a bit taller) use kailh hotswap sockets:
-  ![skeletyl hotswap](images/skeletyl_hotswap.png)
-* (Mostly) closed [configuration](dometyl/lib/boards/deractyl.ml) with thumb and
-  plate based off of the
-  [Compactyl](https://github.com/dereknheiley/dactyl-manuform-tight), but with
-  the addition of aggressive secondary column tilt. ![deractyl
-  prototype](images/deractyl_prototype.png)
-* Configurable heat-set insert screw holes (visible in other examples) or
+  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png). This configuration
+  can be a good place to start if what you are looking for is minor tweaks to
+  the "standard" curvatures and offsets (or you want hotswap sockets).
+* Configurable heat-set insert screw hole or
   bumpon feet can be placed at the base of walls of your choosing
   ![splaytyl bumpon view](images/splaytyl_bumpon.png)
-* Base plate and configurable tent can be generated to fit your case.
+* Base plates and configurable tents can be generated to fit your case, using
+  either screws (into brass insets in the case), or magnets.
   ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
   ![splaytyl tent](images/splaytyl_tent.png)
-  ![splaytyl tent underside](images/splaytyl_tent_underside.png)
 
-## STLs
-Check out  for some example STLs [here](things/boards), including a low profile choc
-version of the [Skeletyl](https://github.com/Bastardkb/Skeletyl), and prototypes
-of the [splaytyl](dometyl/lib/boards/splaytyl.ml) pictured at the top of this
-readme. Please note that they may not be fully up-to-date representations of the
-their respective configurations.
+## Builds / STLs
+There is a showcase of finished builds and some example STLs [here](things/boards), including some
+pictures, bills of materials, and notes. If you've designed and built a board
+with the dometyl generator, and you are happy with it, please consider contributing the
+configuration to the [boards library](dometyl/lib/boards), and adding a folder
+to the [boards showcase](things/boards).
 
 ## MCU / TRRS jack holders
 * A few solutions for MCU (elite-C and pro-micro currently) and TRRS jack
@@ -146,7 +139,7 @@ their respective configurations.
   Some time ago, I ordered way too many of these off of JLCPCB, so if you are in
   NA, something could likely be arranged! Alternatively, if would like to use
   this mounting method rather than one of the trays, and you don't want get PCBs
-  made, there is an [stl](things/holders/bastardkb/printable_shield.stl)
+  made, there is an [stl](things/holders/bastardkb/printable_shield_right.stl)
   available which you can print and solder your components around / glue to.
 * When using one of the trays, be mindful that the rails/slots are cut nicely in
   the wall, and for an option that cuts ports into the wall, be sure that they
@@ -199,6 +192,14 @@ For the perimeter connections, you'll want to look at the various `d` and
 One day, some of these worries may be alleviated as I revisit/improve the
 solutions for polyhedron generation that are presently in use, for now, my
 apologies if they cause you any grief!
+
+## Contributing
+Contributions extending the functionality of the library (in addition to board
+configurations as mentioned above) are welcome. If you plan to make a PR, please
+have autoformatting working with your editor working (using the `.ocamlformat`
+profile included in this repo) beforehand, and ammend/write doc comments in the
+relevant interface files (I know my own coverage is still now 100% in that
+respect, but I'll get there).
 
 ## License
 Copyright © 2021 Geoff deRosenroll

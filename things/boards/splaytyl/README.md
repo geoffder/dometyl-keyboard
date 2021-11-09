@@ -4,9 +4,9 @@
 
 ### Bill of Materials
 | Part name                                            | Amount |
-| -----------------------------------------------| ------|
+| -----------------------------------------------------|--------|
 | MX switches of your choice                           | 36     |
-| Ideally MT3 caps (see [below](#switches--caps))     |        |
+| Ideally MT3 caps (see [below](#switches--caps))      |        |
 | Kailh Hotswap Socket (if applicable)                 | 36     |
 | Elite-C                                              | 2      |
 | Elite-C adapter PCB (>= V1.3)                        | 2      |
