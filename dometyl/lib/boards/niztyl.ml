@@ -109,6 +109,7 @@ let build ?right_hand ?(empty = false) () =
     ~ports_cutter
     hole
 
-let fastener = Eyelet.m4_countersunk_fastener
+let fastener = Eyelet.screw_fastener ~clearance:7. () (* countersunk M4 *)
+
 let bottom case = Bottom.make ~fastener case
-let tent case = Tent.make ~fastener ~degrees:30. case
+let tent ?(degrees = 30.) case = Tent.make ~fastener ~degrees case
