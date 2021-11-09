@@ -52,6 +52,16 @@ layer of glue) by using your iron to heat up the glue, then press down on the
 sensor with some tweezers.
 2. Melt a bit of more a hole into the stem to glue the magnet in deeper there
 
+### MCU mounting
+![teensy shield](images/teensy_shield.png) M4 heatset eyelets and case cutouts
+are included to fit the printable BastardKB shield. As this build is using the
+Teensy, which has a bit different dimensions, I attached it to the shield with
+the first pins off the end of the board. This way the USB port is able to reach
+through the case along with the TRS jack. To line things up, first I soldered
+headers into the second set of pins, dabbed glue down in the middle (you can see
+where), then placed it down while inserting the pins into the first holes on the
+shield.
+
 ### Wiring
 Wiring should be done using a direct pin scheme, rather than a row/column
 matrix.
@@ -81,13 +91,6 @@ strongly recommend that you do as I say, and not as I do, and use screws (the
 STLs here have eyelets/holes for inserts and countersunk M4s). These can be a
 bit tough to access in the included 30 degree tent, but personally succeeded
 after some frustration when I build my first **splaytyl**.
-
-### MCU mounting
-M4 heatset eyelets and case cutouts are included to fit the printable BastardKB
-shield. As this build is using the Teensy, which has a bit different dimensions,
-I attached it to the shield with the first pins off the end of the board. This
-way the USB port is able to reach through the case along with the TRS jack.
-![teensy shield](images/teensy_shield.png)
 
 ### Caps
 The column curvatures of this configuration are made with Niz housings and MT3
