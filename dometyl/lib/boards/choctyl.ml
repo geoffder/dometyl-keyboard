@@ -51,10 +51,7 @@ let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
 let wall_builder plate =
-  (* 6x2 magnet *)
-  let eyelet_config =
-    Eyelet.{ outer_rad = 4.; inner_rad = 3.; thickness = 3.; hole = Inset 2. }
-  in
+  let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
         auto_body
@@ -112,3 +109,12 @@ let build ?right_hand ?hotswap () =
     ~base_connector
     ~ports_cutter
     (Choc.make_hole ?hotswap ~outer_h:17. ())
+
+let bottom ?(chonk = false) case =
+  (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
+     Bottom.make will default to the same magnet used for the case.
+     NOTE: this behaviour does not apply if the case has through-hole eyelets *)
+  let fastener = Option.some_if chonk @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  Bottom.make ?fastener case
+
+let tent case = Tent.make ~degrees:30. case

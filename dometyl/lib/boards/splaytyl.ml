@@ -106,12 +106,12 @@ let build ?right_hand ?hotswap () =
     ~ports_cutter
     (Mx.make_hole ?hotswap ~clearance:2. ())
 
-let bottom case =
+let bottom ?(chonk = false) case =
   (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
      Bottom.make will default to the same magnet used for the case.
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
-  let fastener = Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
-  Bottom.make ~fastener case
+  let fastener = Option.some_if chonk @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  Bottom.make ?fastener case
 
 let tent case = Tent.make ~degrees:30. case
 
