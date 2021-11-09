@@ -53,14 +53,15 @@ sensor with some tweezers.
 2. Melt a bit of more a hole into the stem to glue the magnet in deeper there
 
 ### MCU mounting
-![teensy shield](images/teensy_shield.png) M4 heatset eyelets and case cutouts
-are included to fit the printable BastardKB shield. As this build is using the
-Teensy, which has a bit different dimensions, I attached it to the shield with
-the first pins off the end of the board. This way the USB port is able to reach
-through the case along with the TRS jack. To line things up, first I soldered
-headers into the second set of pins, dabbed glue down in the middle (you can see
-where), then placed it down while inserting the pins into the first holes on the
-shield.
+![teensy shield](images/teensy_shield.png)
+
+M4 heatset eyelets and case cutouts are included to fit the printable BastardKB
+shield. As this build is using the Teensy, which has a bit different dimensions,
+I attached it to the shield with the first pins off the end of the board. This
+way the USB port is able to reach through the case along with the TRS jack. To
+line things up, first I soldered headers into the second set of pins, dabbed
+glue down in the middle (you can see where), then placed it down while inserting
+the pins into the first holes on the shield.
 
 ### Wiring
 Wiring should be done using a direct pin scheme, rather than a row/column
