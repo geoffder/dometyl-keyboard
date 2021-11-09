@@ -14,9 +14,9 @@ features, and the [Skeletyl](https://github.com/Bastardkb/Skeletyl), a sleak,
 low-profile, open-case design built in
 [Fusion360](https://www.autodesk.ca/en/products/fusion-360/overview).
 
-The name **(rubber) dometyl** comes from the fact this this library introduces a
-means of building split-hand concave keyboards with rubber domes. Taking
-advantage of the readily available [Niz housing and
+The name **(rubber) dometyl** comes from this library's introduction of a means
+of building split-hand concave keyboards with rubber domes. Taking advantage of
+the readily available [Niz housing and
 sliders](https://www.nizkeyboard.com/products/2019-new-niz-ec-switch), and
 third-party non-sheet rubber domes (e.g. [DES BKE
 DOMES](https://www.apexkeyboards.ca/products/des-domes-bke-tactile)), we can
