@@ -29,7 +29,7 @@ let thumb_lookups =
   let curve _ =
     Curvature.(
       curve
-        ~fan:{ angle = Float.pi /. 9.5; radius = 70.; tilt = Float.pi /. 48. }
+        ~fan:{ angle = Float.pi /. 9.6; radius = 70.; tilt = Float.pi /. 48. }
         ~well:{ angle = Float.pi /. 7.; radius = 47.; tilt = 0. }
         ())
   in
@@ -40,8 +40,8 @@ let plate_builder =
     ~n_body_cols:5
     ~spacing:0.5
     ~tent:(Float.pi /. 16.)
-    ~thumb_offset:(-12., -39., 14.)
-    ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
+    ~thumb_offset:(-14., -39., 9.)
+    ~thumb_angle:Float.(pi /. 60., pi /. -14., pi /. 12.)
     ~rotate_thumb_clips:true
     ~body_lookups
     ~thumb_lookups
@@ -83,7 +83,7 @@ let wall_builder plate =
 
 let base_connector =
   Connect.skeleton
-    ~height:7.
+    ~height:9.
     ~index_height:15.
     ~thumb_height:17.
     ~east_link:(Connect.snake ~scale:1.3 ~d:1.4 ())
@@ -114,7 +114,9 @@ let bottom ?(chonk = false) case =
   (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
      Bottom.make will default to the same magnet used for the case.
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
-  let fastener = Option.some_if chonk @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  let fastener =
+    Option.some_if (not chonk) @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 }
+  in
   Bottom.make ?fastener case
 
 let tent case = Tent.make ~degrees:30. case
