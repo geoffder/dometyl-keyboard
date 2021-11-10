@@ -110,7 +110,9 @@ let bottom ?(chonk = false) case =
   (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
      Bottom.make will default to the same magnet used for the case.
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
-  let fastener = Option.some_if chonk @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 } in
+  let fastener =
+    Option.some_if (not chonk) @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 }
+  in
   Bottom.make ?fastener case
 
 let tent case = Tent.make ~degrees:30. case
