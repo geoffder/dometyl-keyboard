@@ -53,7 +53,8 @@ let body_lookups =
     | 3 -> -1.66, -4.5, 0. (* ring *)
     | i when i >= 4 -> -3.5, -19., 6.5 (* pinky *)
     | 0 -> -0.85, -3.5, 13. (* inside *)
-    | _ -> -1.66, -2., 5. (* index *)
+    | _ -> -1.66, -2., 5.
+  (* index *)
   and curve = function
     | 0 ->
       Curvature.(
@@ -73,24 +74,29 @@ let body_lookups =
   and rows _ = 3 in
   Plate.Lookups.body ~offset ~curve ~splay ~swing ~rows ()
 
-
 let thumb_lookups =
   let curve _ =
-    Curvature.(curve 
-      ~fan:{ angle = Float.pi /. 10.2; radius = 75.; tilt = Float.pi /. 48. } 
-      ~well:{ angle = Float.pi /. 7.5; radius = 59.; tilt = 0. } ())
+    Curvature.(
+      curve
+        ~fan:{ angle = Float.pi /. 10.2; radius = 75.; tilt = Float.pi /. 48. }
+        ~well:{ angle = Float.pi /. 7.5; radius = 59.; tilt = 0. }
+        ())
   and rows _ = 2 in
   Plate.Lookups.thumb ~curve ~rows ()
-
 
 let plate_welder = Plate.skeleton_bridges
 
 let ports_cutter =
-  Ports.reversible_holder ~reset_button:true ~x_off:(-1.5) ~y_off:(-2.9) ~z_rot:0.09 ~rail_w:1.15 ()
+  Ports.reversible_holder
+    ~reset_button:true
+    ~x_off:(-1.5)
+    ~y_off:(-2.9)
+    ~z_rot:0.09
+    ~rail_w:1.15
+    ()
 
 let build ?hotswap () =
   let keyhole = Choc.make_hole ?hotswap ~outer_h:18. ~thickness:2.8 () in
-
   let plate_builder =
     Plate.make
       ~n_body_cols:5
@@ -111,5 +117,3 @@ let build ?hotswap () =
     ~plate_builder
     keyhole
     ~right_hand:true
-
-
