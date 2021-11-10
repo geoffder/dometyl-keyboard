@@ -85,18 +85,6 @@ type 'k t =
   }
 [@@deriving scad]
 
-(* let make_thumb ~n_keys ~centre_idx ~curve ~caps ~rotate_clips keyhole =
- *   Column.(
- *     make
- *       ~join_ax:`EW
- *       ~n_keys
- *       ~curve:(Curvature.apply ~centre_idx curve)
- *       ~caps:(if rotate_clips then caps >> Scad.rotate (0., 0., Float.pi /. 2.) else caps)
- *       ( if rotate_clips then KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole
- *       else KeyHole.cycle_faces keyhole )
- *     (\* orient along x-axis *\)
- *     |> rotate (0., 0., Float.pi /. -2.)) *)
-
 let make
     ?(n_body_cols = 5)
     ?(centre_col = 2)

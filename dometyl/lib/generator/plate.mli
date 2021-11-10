@@ -87,24 +87,6 @@ type 'k t =
   }
 [@@deriving scad]
 
-(* val make_thumb :
- *      n_keys:int
- *   -> centre_idx:float
- *   -> curve:'k Curvature.t
- *   -> caps:(int -> Scad.d3)
- *   -> rotate_clips:bool
- *   -> 'k KeyHole.t
- *   -> 'k Column.t
- * (\** [make_thumb ~n_keys ~centre_idx ~curve ~rotate_clips ~caps keyhole]
- *
- *     Factored out helper function for creation of the thumb cluster, using the distribution
- *     specification [curve] to place [n_keys] [keyhole]s, around the [centre_idx] key, with
- *     caps according to the lookup [caps]. [rotate_clips] flags whether to rotate the
- *     switch-clips / sockets / etc by 90 degrees. Non-rotated, the clips will be however
- *     they are on a usual column(e.g. oriented top to bottom). You may want to set this
- *     according to orientation you would like to have your caps in, since Mx stems are not
- *     necessarily radially symmetric. *\) *)
-
 val make :
      ?n_body_cols:int
   -> ?centre_col:int
@@ -120,9 +102,9 @@ val make :
   -> ?thumb_caps:(int -> Scad.d3)
   -> 'k KeyHole.t
   -> 'k t
-(** [make ?n_rows ?centre_row ?n_cols ?centre_col ?spacing ?tent ?n_thumb_keys ?thumb_centre
-      ?thumb_curve ?rotate_thumb_clips ?thumb_offset ?thumb_angle ?lookups ?caps ?thum_caps
-      keyhole]
+(** [make ?n_rows ?centre_row ?n_cols ?centre_col ?spacing ?tent
+    ?rotate_thumb_clips ?thumb_offset ?thumb_angle ?body_lookups ?thumb_lookups
+    ?caps ?thum_caps keyhole]
 
     Create a switch plate, with provided optional parameters and defaults. The default
     parameters are used by the {!module:Splaytyl} and {!module:Closed} configurations, and
@@ -130,20 +112,19 @@ val make :
     other examples with divergent parameters are provided in the modules within the
     [boards] sub-directory.
 
-    - [n_cols] specifies number of columns on the main body of the switch plate
+    - [n_body_cols] specifies number of columns on the main body of the switch plate
     - [centre_col] specifies the column around which the others are positioned (typically
       2, the middle finger) on the main body of the switch plate
     - [spacing] gives the distance in mm between each column by default. Further
       adjustment can of course be done with {!Lookups.offset}.
     - [tent] angle in radians that the entire plate (including thumb) will be y-rotated
-    - [n_thumb_keys], [thumb_centre], [thumb_curve] and [rotate_thumb_clips]: see
-      {!val:make_thumb}
     - [thumb_offset] directs the translation used for thumb cluster placement (starting
       point if zero origin).
     - [thumb_angle] sets the euler (x -> y -> z) rotation used to orient the thumb before
       translating to its destination (rotation is about 0., oriented along x to start).
-    - [lookups] provides various per-column key/column-placement and orientation
-      functions. See {!module:Lookups}.
+    - [body_lookups] and [thumb_lookups] provide various per-column key/column-placement
+      and orientation functions for the construction of the body and thumb respectively.
+      See {!module:Lookups}.
     - [caps] is a lookup from row number to a {!Scad.d3} representing a keycap. This will
       be used to provide caps to {!KeyHole.t}s before they are distributed in
       {!Column.make}.
@@ -154,7 +135,7 @@ val make :
       along with them to their new homes. *)
 
 val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.d3
-(** [column_joins ?d1 ?d2 t]
+(** [column_joins ?in_d ?out_d1 ?out_d2 t]
 
     Returns a {!Scad.d3} scad which joins together all columns of the main plate by
     hulling the {!KeyHole.Face.scad}s of the {!KeyHole.t}s together, for a closed
@@ -166,7 +147,7 @@ val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad
     be used to thicken the generated supports. *)
 
 val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.d3
-(** [skeleton_bridges ?d1 ?d2 t]
+(** [skeleton_bridges ?in_d ?out_d1 ?out_d2 t]
 
     Returns a {!Scad.d3} scad with "bridges" between the bottom row keys from index to
     middle, and the top keys for the remaining columns. Similar to the BastardKB skeletyl.
