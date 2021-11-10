@@ -9,8 +9,6 @@ type t =
   }
 [@@deriving scad]
 
-let centre (top, right, bot, left) = (left +. right) /. 2., (top +. bot) /. 2.
-
 (* Assumes lists are lead with the outer (top) line along the xy plane. *)
 let prism_connection bezs steps =
   let n_steps =
@@ -429,15 +427,6 @@ let join_walls
       ; Vec3.(add (mul dir2 (-.overlap, -.overlap, 0.)) w2.foot.bot_left)
       ]
   }
-
-let joiner ~get ~join ~key:_ ~data (last, scads) =
-  let next = get data in
-  let scads' =
-    match Option.map2 ~f:join last next with
-    | Some j -> j :: scads
-    | None   -> scads
-  in
-  Option.first_some next last, scads'
 
 type config =
   | Straight of

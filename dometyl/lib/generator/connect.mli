@@ -1,6 +1,8 @@
 open! Base
 open! Scad_ml
 
+(** Shape(s) connecting walls together, and the points along the outside and inside of the
+    foot. *)
 type t =
   { scad : Scad.d3
   ; outline : Vec3.t list
@@ -8,133 +10,25 @@ type t =
   }
 [@@deriving scad]
 
-val centre : float * float * float * float -> float * float
-
-val prism_connection
-  :  (float -> Vec3.t) list
-  -> [< `Ragged of int list | `Uniform of int ]
-  -> t
+type config
 
 val clockwise_union : t list -> t
+(** [clockwise_union ts] Create a union of [ts]. They should be provided in clockwise
+    order, such that the outline and inline of the resulting {!t} are continous and in the
+    clockwise direction. *)
+
 val outline_2d : t -> (float * float) list
+(** [outline_2d t]
+
+    Retrieve the outline points of [t] and project them to 2d vectors. *)
+
 val inline_2d : t -> (float * float) list
+(** [inline_2d t]
 
-val facet_points
-  :  ?rev:bool
-  -> ?n_facets:int
-  -> ?init:Vec3.t list
-  -> height:float
-  -> Wall.Edge.t
-  -> Vec3.t list
+    Retrieve the inline points of [t] and project them to 2d vectors. *)
 
-val base_endpoints
-  :  ?n_facets:int
-  -> height:float
-  -> [< `Left | `Right ]
-  -> Wall.t
-  -> Vec3.t list
-
-val base_steps : n_steps:int -> Vec3.t list -> Vec3.t list -> [> `Ragged of int list ]
-val bez_base : ?n_facets:int -> ?height:float -> ?n_steps:int -> Wall.t -> Wall.t -> t
-
-val cubic_base
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?scale:float
-  -> ?d:float
-  -> ?n_steps:int
-  -> ?bow_out:bool
-  -> Wall.t
-  -> Wall.t
-  -> t
-
-val snake_base
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?scale:float
-  -> ?d:float
-  -> ?n_steps:int
-  -> Wall.t
-  -> Wall.t
-  -> t
-
-val inward_elbow_base
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?n_steps:int
-  -> ?d:float
-  -> Wall.t
-  -> Wall.t
-  -> t
-
-val straight_base
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> ?min_width:float
-  -> Wall.t
-  -> Wall.t
-  -> t
-
-val join_walls
-  :  ?n_steps:Wall.Steps.t
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> Wall.t
-  -> Wall.t
-  -> t
-
-val joiner
-  :  get:('a -> Wall.t option)
-  -> join:(Wall.t -> Wall.t -> t)
-  -> key:_
-  -> data:'a
-  -> Wall.t option * t list
-  -> Wall.t option * t list
-
-type config =
-  | Straight of
-      { n_facets : int option
-      ; height : float option
-      ; fudge_factor : float option
-      ; overlap_factor : float option
-      ; min_width : float option
-      }
-  | Bez of
-      { n_facets : int option
-      ; height : float option
-      ; n_steps : int option
-      }
-  | Cubic of
-      { n_facets : int option
-      ; height : float option
-      ; scale : float option
-      ; d : float option
-      ; n_steps : int option
-      ; bow_out : bool option
-      }
-  | Snake of
-      { n_facets : int option
-      ; height : float option
-      ; scale : float option
-      ; d : float option
-      ; n_steps : int option
-      }
-  | FullJoin of
-      { n_steps : Wall.Steps.t option
-      ; fudge_factor : float option
-      ; overlap_factor : float option
-      }
-  | InwardElbow of
-      { n_facets : int option
-      ; height : float option
-      ; n_steps : int option
-      ; d : float option
-      }
-
-val straight
-  :  ?n_facets:int
+val straight :
+     ?n_facets:int
   -> ?height:float
   -> ?fudge_factor:float
   -> ?overlap_factor:float
@@ -144,8 +38,8 @@ val straight
 
 val bez : ?n_facets:int -> ?height:float -> ?n_steps:int -> unit -> config
 
-val cubic
-  :  ?n_facets:int
+val cubic :
+     ?n_facets:int
   -> ?height:float
   -> ?scale:float
   -> ?d:float
@@ -154,8 +48,8 @@ val cubic
   -> unit
   -> config
 
-val snake
-  :  ?n_facets:int
+val snake :
+     ?n_facets:int
   -> ?height:float
   -> ?scale:float
   -> ?d:float
@@ -163,18 +57,13 @@ val snake
   -> unit
   -> config
 
-val full_join
-  :  ?n_steps:Wall.Steps.t
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> unit
-  -> config
+val full_join :
+  ?n_steps:Wall.Steps.t -> ?fudge_factor:float -> ?overlap_factor:float -> unit -> config
 
 val elbow : ?n_facets:int -> ?height:float -> ?n_steps:int -> ?d:float -> unit -> config
-val connect : config -> Wall.t -> Wall.t -> t
 
-val manual
-  :  ?west:(int -> config)
+val manual :
+     ?west:(int -> config)
   -> ?north:(int -> config)
   -> ?south:(int -> config)
   -> ?east:(int -> config)
@@ -187,8 +76,8 @@ val manual
   -> Walls.t
   -> t
 
-val skeleton
-  :  ?n_facets:int
+val skeleton :
+     ?n_facets:int
   -> ?index_height:float
   -> ?height:float
   -> ?min_straight_width:float
@@ -211,8 +100,8 @@ val skeleton
   -> Walls.t
   -> t
 
-val closed
-  :  ?body_steps:Wall.Steps.t
+val closed :
+     ?body_steps:Wall.Steps.t
   -> ?thumb_steps:Wall.Steps.t
   -> ?fudge_factor:float
   -> ?overlap_factor:float
