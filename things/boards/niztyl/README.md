@@ -19,6 +19,7 @@
 | TRRS / male-male audio cable                         | 1      |
 | Adhesive steel wheel weights (optional)              |        |
 | Bumpons / Bumper feet (10x2mm)                       | 12 for plates, 14 for tents |
+| Lube (205 G0?) recommended (dome topouts / rattle)   |        |
 
 ### Switches
 Some assembly is required for our switches of course. First you will need to
@@ -47,10 +48,16 @@ you find that a key has it's deactivation point too close to the top of the stem
 travel range, leading to slow key release or failures to release, there are a
 couple fixes you can readily try:
 
-1. Check that your sensor is all the way seated into it's inset (not on a thick
+1. Check that your sensor is all the way seated into its inset (not on a thick
 layer of glue) by using your iron to heat up the glue, then press down on the
 sensor with some tweezers.
 2. Melt a bit of more a hole into the stem to glue the magnet in deeper there
+
+### MCU
+I personally used Teensy 2.0s, as noted in the BOM above, though other controllers
+that also have enough pins (more than the Pro Micro) should be fine. An Elite-C
+would fit best and allow you to use a genuine BastardKB Shield rather than the
+printable version subbed in here.
 
 ### MCU mounting
 ![teensy shield](images/teensy_shield.png)
@@ -91,7 +98,7 @@ bias the sensors and mess with actuation distances and hysteresis. Thus, I
 strongly recommend that you do as I say, and not as I do, and use screws (the
 STLs here have eyelets/holes for inserts and countersunk M4s). These can be a
 bit tough to access in the included 30 degree tent, but personally succeeded
-after some frustration when I build my first **splaytyl**.
+after some frustration when I built my first **splaytyl**.
 
 ### Caps
 The column curvatures of this configuration are made with Niz housings and MT3

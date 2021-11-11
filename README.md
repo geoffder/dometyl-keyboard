@@ -39,8 +39,8 @@ Of course, if you aren't an insane person, the dometyl generator also supports
 more civilized Mx and Choc switch options.
 
 ## Setup
-This generator is written in the [ocaml](https://ocaml.org/) language, so you'll
-need to get an environment set up, including the package manager
+This generator is written in [ocaml](https://ocaml.org/), so you'll need to get
+an environment set up, including the package manager
 [opam](https://opam.ocaml.org/) and the build system
 [dune](https://github.com/ocaml/dune) (which we'll install through opam). You'll
 of course also want [OpenSCAD](https://openscad.org/) to preview/render/export
@@ -97,14 +97,15 @@ be filling in over time.
 ## Example Output
 * An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
   [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
-  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png). This configuration
-  can be a good place to start if what you are looking for is minor tweaks to
-  the "standard" curvatures and offsets (or you want hotswap sockets).
-* Configurable heat-set insert screw hole or
-  bumpon feet can be placed at the base of walls of your choosing
-  ![splaytyl bumpon view](images/splaytyl_bumpon.png)
+  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png)
+  This configuration can be a good place to start if what you are looking for is
+  minor tweaks to the "standard" curvatures and offsets (or you want hotswap
+  sockets).
+* Configurable heat-set insert screw holes, magnet insets, or bumpon feet can be
+  placed at the base of walls of your choosing ![splaytyl bumpon
+  view](images/splaytyl_bumpon.png)
 * Base plates and configurable tents can be generated to fit your case, using
-  either screws (into brass insets in the case), or magnets.
+  either screws (into brass insets in the case), or magnets for mounting.
   ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
   ![splaytyl tent](images/splaytyl_tent.png)
 
