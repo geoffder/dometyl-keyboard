@@ -1,6 +1,15 @@
 ![Niztyl - Both Halves](images/niztyl_both.jpg)
 ![Niztyl - Topless](images/topless.jpg)
 
+### Overview
+This is the first functional full build of a rubber dometyl. Here, magnets are
+attached to the bottom of Niz stems, and brought down over omnipolar
+(non-linear) hall-effect sensors directly wired to a Teensy 2.0. This
+arrangement was chosen for the first build as it does not require any custom
+scanning / matrix code in QMK. When I foray into my second build, I will
+probably put in the work to figure out the multiplexing and custom scanning
+required to use linear sensors with configurable thresholds.
+
 ### Bill of Materials
 | Part name                                            | Amount |
 | -----------------------------------------------------|--------|
