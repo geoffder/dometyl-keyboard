@@ -10,6 +10,23 @@ scanning / matrix code in QMK. When I foray into my second build, I will
 probably put in the work to figure out the multiplexing and custom scanning
 required to use linear sensors with configurable thresholds.
 
+### Alternate omnipolar switch and magnet combo
+The listed sensor and magnet size are what I used in this build, however, the
+[AH3574](https://www.diodes.com/assets/Datasheets/AH3574.pdf) with 3x1mm magnets
+should also work, with a shorter possible actuation distance according to my
+testing. I just went ahead with what I did out of convenience and impatience to
+get the build off the ground at the time. Of key importance is that the sensor
+is able to deactuate reliably before the stem tops out. The hyseresis of these
+less sensitive sensors is lower relative to it's operation point than the
+[AH3572](https://www.diodes.com/assets/Datasheets/AH3572.pdf), thus deactuation
+can be achieved over a shorter travel distance. I believe this pairing could be
+dropped in in place without modification to the case configuration and give a
+better end product. Though consistent seating of the larger magnet into the
+bottom of the stem will require widening out the stem dimple with your soldering
+iron a bit, trading a slightly longer actuation distance for greater consistency
+across your keys. If you do build a board with the AH3574s I would love to hear
+how it goes.
+
 ### Bill of Materials
 | Part name                                            | Amount |
 | -----------------------------------------------------|--------|
