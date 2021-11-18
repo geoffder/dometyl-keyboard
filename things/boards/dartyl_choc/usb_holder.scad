@@ -138,8 +138,14 @@ module resetCutout() {
 
 module eliteC() {
     x_offset = ( (usb_holder_center_x - (usb_elite_c_x / 2)) - usb_holder_border);
-    y_offset = (-(usb_holder_center_y - (usb_elite_c_y / 2)) + usb_holder_border);
+    y_offset = (-(usb_holder_center_y - (usb_elite_c_y / 2)) + usb_holder_border)-0.5;
     z_offset = usb_holder_border;
+    
+    
+    
+    
+    
+    
     translate ([x_offset, y_offset, z_offset]) {
         cube ([usb_elite_c_x, usb_elite_c_y, usb_holder_z], center=true);
     }
@@ -217,10 +223,10 @@ module usb_holder() {
             if (reset_holder) {
                 resetCutout();
             }
-            translate([0.9, 0, 2.5])
-                cube([1, 20, 5]);
-            translate([7, 0, 2.5])
-                cube([1, 20, 5]);
+            // translate([0.9, 0, 2.5])
+            //     cube([1, 20, 5]);
+            // translate([7, 0, 2.5])
+            //     cube([1, 20, 5]);
             translate([-25, 0, 7])
                 cube([100, 50, 50]);
         }
