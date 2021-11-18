@@ -16,10 +16,10 @@ then
 fi
 
 # install project dependencies
-$opam_exec install ./dometyl --deps-only --with-doc
+$opam_exec install ./dometyl.opam --deps-only --with-doc
 
 # install opam dev depenencies
-$opam_exec --yes install \
+$opam_exec install \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
 # make user copy of main.ml from example
