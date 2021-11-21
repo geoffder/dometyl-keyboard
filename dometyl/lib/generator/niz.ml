@@ -75,7 +75,7 @@ module Config = struct
     ; dome_thickness : float
     ; base_thickness : float
     ; sensor_depth : float
-    ; sensor_config : Sensor.ThroughHole.config
+    ; sensor_cutter : Sensor.cutter
     }
 
   let make
@@ -92,7 +92,7 @@ module Config = struct
       ?(dome_thickness = 1.6)
       ?(base_thickness = 3.)
       ?(sensor_depth = 1.4)
-      ?(sensor_config = Sensor.ThroughHole.default_print)
+      ?(sensor_cutter = Sensor.ThroughHole.bulk_cutout ())
       () =
     { outer_w
     ; outer_h
@@ -107,7 +107,7 @@ module Config = struct
     ; dome_thickness
     ; base_thickness
     ; sensor_depth
-    ; sensor_config
+    ; sensor_cutter
     }
 
   let default = make ()
@@ -151,7 +151,7 @@ let hole_of_config
       ; dome_thickness
       ; base_thickness
       ; sensor_depth
-      ; sensor_config
+      ; sensor_cutter
       } =
   let thickness = Float.max thickness (Bottom.thickness +. dome_thickness) in
   let clearance = Float.max clearance (base_thickness +. 0.5)
@@ -180,9 +180,7 @@ let hole_of_config
       Scad.cube (outer_w, outer_h, base_thickness +. 0.001)
       |> Scad.translate (outer_w /. -2., outer_h /. -2., dome_z -. base_thickness)
     in
-    Scad.difference
-      slab
-      [ Sensor.ThroughHole.(sink ~z:dome_z (of_config sensor_config) sensor_depth) ]
+    Scad.difference slab [ sensor_cutter ~z:dome_z sensor_depth ]
   and pillars =
     let cyl = Scad.linear_extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(
@@ -236,7 +234,7 @@ let make_hole
     ?dome_thickness
     ?base_thickness
     ?sensor_depth
-    ?sensor_config
+    ?sensor_cutter
     () =
   hole_of_config
     ?cap
@@ -254,7 +252,7 @@ let make_hole
        ?dome_thickness
        ?base_thickness
        ?sensor_depth
-       ?sensor_config
+       ?sensor_cutter
        () )
 
 let empty_hole_of_config

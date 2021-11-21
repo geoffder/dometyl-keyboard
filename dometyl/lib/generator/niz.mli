@@ -35,7 +35,7 @@ module Config : sig
     ; dome_thickness : float
     ; base_thickness : float
     ; sensor_depth : float
-    ; sensor_config : Sensor.ThroughHole.config
+    ; sensor_cutter : Sensor.cutter
     }
 
   val make :
@@ -52,7 +52,7 @@ module Config : sig
     -> ?dome_thickness:float
     -> ?base_thickness:float
     -> ?sensor_depth:float
-    -> ?sensor_config:Sensor.ThroughHole.config
+    -> ?sensor_cutter:Sensor.cutter
     -> unit
     -> t
 
@@ -76,7 +76,7 @@ val make_hole :
   -> ?dome_thickness:float
   -> ?base_thickness:float
   -> ?sensor_depth:float
-  -> ?sensor_config:Sensor.ThroughHole.config
+  -> ?sensor_cutter:Sensor.cutter
   -> unit
   -> KeyHole.Kind.key KeyHole.t
 
