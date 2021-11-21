@@ -23,5 +23,31 @@ module ThroughHole : sig
   val default : config
   val default_print : config
   val of_config : config -> t
+
+  val make :
+       ?leg_w:float
+    -> ?leg_thickness:float
+    -> ?leg_l:float
+    -> ?leg_spacing:float
+    -> ?leg_bend:float
+    -> ?leg_z_offset:float
+    -> ?merge_legs:bool
+    -> ?body_w:float
+    -> ?body_l:float
+    -> ?body_thickness:float
+    -> unit
+    -> Scad.three_d Scad.t
+
   val sink : ?z:float -> t -> Float.t -> Scad.d3
+
+  val cutout :
+       ?body_w:float
+    -> ?body_l:float
+    -> ?legs_w:float
+    -> ?legs_l:float
+    -> ?legs_z_offset:float
+    -> ?slot_l:float
+    -> ?z:float
+    -> float
+    -> Scad.three_d Scad.t
 end
