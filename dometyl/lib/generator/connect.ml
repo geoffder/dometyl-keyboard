@@ -526,7 +526,9 @@ let manual
     Walls.{ body; thumb } =
   let southeast = Option.map ~f:snd (Map.max_elt body.south) in
   let west =
-    let northwest = Map.find body.north 0
+    let northwest =
+      let%map.Option _, nw = Map.min_elt body.north in
+      nw
     and last_idx, last, side =
       let f = manual_joiner ~join:west in
       Map.fold ~init:(0, None, []) ~f body.west
@@ -585,7 +587,9 @@ let manual
         let first_west = Option.map ~f:snd (Map.max_elt thumb.west) in
         Option.map2 ~f:(connect (thumb_south last_idx)) last_thumb_south first_west
       in
-      let northwest = Map.find thumb.north 0
+      let northwest =
+        let%map.Option _, nw = Map.min_elt thumb.north in
+        nw
       and last_idx, last, side =
         let f = manual_joiner ~join:thumb_west in
         Map.fold_right ~init:(0, None, Util.prepend_opt sw swoop) ~f thumb.west
