@@ -86,12 +86,17 @@ let place_tray
     ?(z_rot = 0.)
     Walls.{ body = { north; _ }; _ }
     scad =
-  let left_foot = (Map.find_exn north 0).foot
-  and right_foot = (Map.find_exn north 1).foot in
-  let x = Vec3.get_x left_foot.bot_left +. x_off
+  let left = Map.find north 0 and right = Map.find north 1 in
+  let x =
+    match Option.first_some left right with
+    | Some w -> Vec3.get_x w.foot.bot_left +. x_off
+    | None   -> 0.
   and y =
-    let outer (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
-    y_off +. ((outer left_foot +. outer right_foot) /. 2.)
+    let outer =
+      let f (ps : Points.t) = Vec3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
+      Option.value_map ~default:0. ~f:(fun w -> f w.Wall.foot)
+    in
+    y_off +. ((outer left +. outer right) /. 2.)
   in
   Scad.rotate (0., 0., z_rot) scad |> Scad.translate (x, y, 0.)
 
