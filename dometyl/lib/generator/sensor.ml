@@ -60,4 +60,31 @@ module ThroughHole = struct
       |> Scad.translate (0., legs_l +. ((body_l -. slot_l) /. 2.), -2.)
     in
     Scad.union [ body; legs; slot ] |> Scad.translate (0., 0., z +. (depth /. -2.))
+
+  let tape_cutout
+      ?(body_w = 4.2)
+      ?(body_l = 3.2)
+      ?(legs_w1 = 3.8)
+      ?(legs_w2 = 6.)
+      ?(legs_l1 = 1.2)
+      ?(legs_l2 = 2.8)
+      ?(legs_z_offset = 0.4)
+      ?(slot_l = 0.85)
+      ()
+      ?(z = 0.)
+      depth =
+    let body = Scad.cube ~center:true (body_w, body_l +. 0.001, depth)
+    and legs =
+      let thickness = depth -. legs_z_offset in
+      Scad.union
+        [ Scad.cube ~center:true (legs_w1, legs_l1, thickness)
+        ; Scad.cube ~center:true (legs_w2, legs_l2, thickness)
+          |> Scad.translate (0., legs_l2 /. 2., 0.)
+        ]
+      |> Scad.translate (0., (legs_l1 +. body_l) /. 2., legs_z_offset /. 2.)
+    and slot =
+      Scad.cube ~center:true (legs_w2, slot_l, depth +. 4.)
+      |> Scad.translate (0., legs_l1 +. legs_l2 +. ((body_l -. slot_l) /. 2.), -2.)
+    in
+    Scad.union [ body; legs; slot ] |> Scad.translate (0., 0., z +. (depth /. -2.))
 end

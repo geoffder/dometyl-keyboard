@@ -92,7 +92,7 @@ module Config = struct
       ?(dome_thickness = 1.6)
       ?(base_thickness = 3.)
       ?(sensor_depth = 1.4)
-      ?(sensor_cutter = Sensor.ThroughHole.bulk_cutout ())
+      ?(sensor_cutter = Sensor.ThroughHole.tape_cutout ())
       () =
     { outer_w
     ; outer_h

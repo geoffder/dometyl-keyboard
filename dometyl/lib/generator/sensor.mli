@@ -29,4 +29,18 @@ module ThroughHole : sig
     -> ?z:float
     -> float
     -> Scad.d3
+
+  val tape_cutout :
+       ?body_w:float
+    -> ?body_l:float
+    -> ?legs_w1:float
+    -> ?legs_w2:float
+    -> ?legs_l1:float
+    -> ?legs_l2:float
+    -> ?legs_z_offset:float
+    -> ?slot_l:float
+    -> unit
+    -> ?z:float
+    -> float
+    -> Scad.three_d Scad.t
 end
