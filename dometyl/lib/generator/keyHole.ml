@@ -119,20 +119,21 @@ let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
   { t with faces = { north = west; south = east; east = north; west = south } }
 
 let make
+    ?(render = true)
     ?cap
     ?cutout
     ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
   let hole =
     let outer = Scad.cube ~center:true (outer_w, outer_h, thickness) in
     let inner = Scad.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
-    Scad.difference outer [ inner ]
+    clip @@ Scad.difference outer [ inner ]
   in
   { config
-  ; scad = clip hole
+  ; scad = (if render then Scad.render hole else hole)
   ; origin = 0., 0., 0.
   ; faces = Faces.make outer_w outer_h thickness
   ; cap = Option.map ~f:(Scad.translate (0., 0., cap_height +. (thickness /. 2.))) cap
-  ; cutout
+  ; cutout = (if render then Option.map ~f:Scad.render cutout else cutout)
   }
 
 let mirror_internals t =

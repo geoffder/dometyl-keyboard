@@ -97,6 +97,7 @@ let teeth ~inner_h ~thickness hole =
   Scad.difference hole [ north; south ]
 
 let make_hole
+    ?render
     ?cap
     ?hotswap
     ?(outer_w = 19.)
@@ -127,6 +128,7 @@ let make_hole
   in
   KeyHole.(
     make
+      ?render
       ?cap
       ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
       { spec = Kind.Key

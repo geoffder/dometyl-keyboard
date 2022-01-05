@@ -62,6 +62,6 @@ val quaternion_about_origin : float -> 'k t -> 'k t
 val cycle_faces : 'k t -> 'k t
 val orthogonal : 'k t -> [< `East | `North | `South | `West ] -> Vec3.t
 val normal : 'k t -> Vec3.t
-val make : ?cap:Scad.d3 -> ?cutout:Scad.d3 -> 'k config -> 'k t
+val make : ?render:bool -> ?cap:Scad.d3 -> ?cutout:Scad.d3 -> 'k config -> 'k t
 val mirror_internals : 'k t -> 'k t
 val cutout_scad : 'k t -> Scad.d3

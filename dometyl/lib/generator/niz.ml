@@ -136,6 +136,7 @@ end
 (* TODO: better magnet / sensor break down notes *)
 
 let hole_of_config
+    ?render
     ?cap
     Config.
       { outer_w
@@ -206,6 +207,7 @@ let hole_of_config
   and clip hole = Scad.union [ base; hole; pillars ] in
   KeyHole.(
     make
+      ?render
       ?cap
       ~cutout
       { spec = Kind.Key
@@ -220,6 +222,7 @@ let hole_of_config
       })
 
 let make_hole
+    ?render
     ?cap
     ?outer_w
     ?outer_h
@@ -237,6 +240,7 @@ let make_hole
     ?sensor_cutter
     () =
   hole_of_config
+    ?render
     ?cap
     (Config.make
        ?outer_w
@@ -256,6 +260,7 @@ let make_hole
        () )
 
 let empty_hole_of_config
+    ?render
     ?cap
     Config.
       { outer_w
@@ -269,6 +274,7 @@ let empty_hole_of_config
       ; _
       } =
   Mx.make_hole
+    ?render
     ?cap
     ~outer_w
     ~outer_h
@@ -281,6 +287,7 @@ let empty_hole_of_config
     ()
 
 let make_empty_hole
+    ?render
     ?cap
     ?outer_w
     ?outer_h
@@ -292,6 +299,7 @@ let make_empty_hole
     ?clearance
     () =
   empty_hole_of_config
+    ?render
     ?cap
     (Config.make
        ?outer_w

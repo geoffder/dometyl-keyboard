@@ -59,10 +59,12 @@ module Config : sig
   val default : t
 end
 
-val hole_of_config : ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+val hole_of_config :
+  ?render:bool -> ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
 
 val make_hole :
-     ?cap:Scad.d3
+     ?render:bool
+  -> ?cap:Scad.d3
   -> ?outer_w:float
   -> ?outer_h:float
   -> ?inner_w:float
@@ -80,10 +82,12 @@ val make_hole :
   -> unit
   -> KeyHole.Kind.key KeyHole.t
 
-val empty_hole_of_config : ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+val empty_hole_of_config :
+  ?render:bool -> ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
 
 val make_empty_hole :
-     ?cap:Scad.d3
+     ?render:bool
+  -> ?cap:Scad.d3
   -> ?outer_w:float
   -> ?outer_h:float
   -> ?inner_w:float
