@@ -17,31 +17,26 @@ let rad_to_deg r = r *. 180. /. Float.pi
  * position. This means that the vertices in `b` should be counter-clockwise. *)
 let prism_exn a b =
   let n = List.length a in
-  if n < 3
-  then failwith "At least three vertices are required."
-  else if n = List.length b
-  then (
-    let pts = a @ b in
-    let sides =
+  if n < 3 then failwith "At least three vertices are required."
+  else if n = List.length b then
+    let pts = a @ b
+    and sides =
       let wrap i = if i > n - 1 then i - n else i in
       List.init n ~f:(fun i -> [ i; i + n; n + wrap (i + 1); wrap (i + 1) ])
     in
     let faces =
       List.range 0 n :: List.range ~stride:(-1) ((n * 2) - 1) (n - 1) :: sides
     in
-    Scad.polyhedron pts faces )
+    Scad.polyhedron pts faces
   else failwith "Faces must have equal number of vertices."
 
 let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
   let rec loop i a b =
     let c = (a +. b) /. 2. in
     let res = f c in
-    if Float.(res = 0. || (b -. a) /. 2. < tolerance)
-    then c
-    else if i < max_iter
-    then
-      if Float.(Sign.equal (sign_exn res) (sign_exn (f a)))
-      then loop (i + 1) c b
+    if Float.(res = 0. || (b -. a) /. 2. < tolerance) then c
+    else if i < max_iter then
+      if Float.(Sign.equal (sign_exn res) (sign_exn (f a))) then loop (i + 1) c b
       else loop (i + 1) a c
     else failwith "Maximum iterations reached in bisection search."
   in
@@ -58,17 +53,15 @@ let prepend_opt_map ~f opt l =
   | None   -> l
 
 let fill_points ?(init = []) ~n a b =
-  if n < 1
-  then b :: a :: init
-  else (
+  if n < 1 then b :: a :: init
+  else
     let n' = n + 1 in
     let step = Vec3.(map (fun p -> p /. Float.of_int n') (sub b a)) in
     let rec loop acc i =
-      if i < n'
-      then loop (Vec3.(a <+> map (( *. ) (Float.of_int i)) step) :: acc) (i + 1)
+      if i < n' then loop (Vec3.(a <+> map (( *. ) (Float.of_int i)) step) :: acc) (i + 1)
       else b :: acc
     in
-    loop (a :: init) 1 )
+    loop (a :: init) 1
 
 let bounding_box poly =
   let f (top, right, bot, left) (x, y, _) =
@@ -83,16 +76,16 @@ let bounding_box poly =
 let point_in_polygon (x, y, _) poly =
   let open Float in
   let top, right, bot, left = bounding_box poly in
-  if x < left || x > right || y < bot || y > top
-  then false
-  else (
+  if x < left || x > right || y < bot || y > top then false
+  else
     let f (inside, (bx, by, _)) ((ax, ay, _) as a) =
-      if (not (Bool.equal (ay > y) (by > y)))
-         && x < ((bx - ax) * (y - ay) /. (by - ay)) + ax
+      if
+        (not (Bool.equal (ay > y) (by > y)))
+        && x < ((bx - ax) * (y - ay) /. (by - ay)) + ax
       then not inside, a
       else inside, a
     in
-    fst @@ List.fold ~init:(false, List.last_exn poly) ~f poly )
+    fst @@ List.fold ~init:(false, List.last_exn poly) ~f poly
 
 let idx_to_find = function
   | First -> Map.min_elt >> Option.map ~f:snd
