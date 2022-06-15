@@ -5,7 +5,7 @@ set -e
 
 # move to location of this script
 base_dir="$( dirname "${BASH_SOURCE[0]}" )"
-cd "$base_dir"
+cd "$base_dir/dometyl"
 
 # auto-confirm opam prompts unless operating under cygwin
 os=$(uname -s)
@@ -25,9 +25,10 @@ $opam_exec install \
 # make user copy of main.ml from example
 if [ ! -f dometyl/bin/main.ml ]
 then
-    cp dometyl/bin/main.ml.example dometyl/bin/main.ml
+    cp bin/main.ml.example bin/main.ml
 fi
+
+dune build
 
 # return to dometyl and build
 cd "$base_dir"
-dune build
