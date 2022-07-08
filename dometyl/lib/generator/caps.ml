@@ -126,23 +126,23 @@ module DES = struct
   let r4 = Scad.import_3d (path "standard/DES-R4") |> color
   let r5 = Scad.import_3d (path "standard/DES-R5") |> color
 
-  let keyria_thumb_r1t0 =
-    Scad.import_3d (path "thumb/DES-keyria-R1T0")
+  let kyria_thumb_r1t0 =
+    Scad.import_3d (path "thumb/DES-kyria-R1T0")
     |> Scad.rotate (0., 0., Float.pi /. 2.)
     |> color
 
-  let keyria_thumb_r1t1 =
-    Scad.import_3d (path "thumb/DES-keyria-R1T1")
+  let kyria_thumb_r1t1 =
+    Scad.import_3d (path "thumb/DES-kyria-R1T1")
     |> Scad.rotate (0., 0., Float.pi /. 2.)
     |> color
 
-  let keyria_thumb_r1t2 =
-    Scad.import_3d (path "thumb/DES-keyria-R1T2")
+  let kyria_thumb_r1t2 =
+    Scad.import_3d (path "thumb/DES-kyria-R1T2")
     |> Scad.rotate (0., 0., Float.pi /. 2.)
     |> color
 
-  let keyria_thumb_r1t3 =
-    Scad.import_3d (path "thumb/DES-keyria-R1T3")
+  let kyria_thumb_r1t3 =
+    Scad.import_3d (path "thumb/DES-kyria-R1T3")
     |> Scad.rotate (0., 0., Float.pi /. 2.)
     |> color
 
@@ -159,10 +159,10 @@ module DES = struct
     | _ -> r2
 
   let thumb = function
-    | 0 -> keyria_thumb_r1t1
-    | 1 -> keyria_thumb_r1t0
-    | 2 -> keyria_thumb_r1t2
-    | _ -> keyria_thumb_r1t3
+    | 0 -> kyria_thumb_r1t1
+    | 1 -> kyria_thumb_r1t0
+    | 2 -> kyria_thumb_r1t2
+    | _ -> kyria_thumb_r1t3
 end
 
 module Chicago = struct
