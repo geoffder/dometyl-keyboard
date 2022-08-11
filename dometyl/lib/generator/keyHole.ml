@@ -8,7 +8,7 @@ module Face = struct
     }
   [@@deriving scad]
 
-  let make (Vec3.{ x; y; _ } as size) =
+  let make (V3.{ x; y; _ } as size) =
     let points =
       Points.
         { top_left = v3 (x /. -2.) (y /. 2.) 0.
@@ -21,7 +21,7 @@ module Face = struct
     { scad = Scad.cube ~center:true size; points }
 
   let direction { points = { top_left; top_right; _ }; _ } =
-    Vec3.normalize Vec3.(top_left -@ top_right)
+    V3.normalize V3.(top_left -@ top_right)
 end
 
 module Faces = struct
@@ -83,7 +83,7 @@ type 'k config =
 type 'k t =
   { config : 'k config [@scad.ignore]
   ; scad : Scad.d3
-  ; origin : Vec3.t
+  ; origin : V3.t
   ; faces : Faces.t
   ; cap : Scad.d3 option
   ; cutout : Scad.d3 option
@@ -91,14 +91,14 @@ type 'k t =
 [@@deriving scad]
 
 let orthogonal t side =
-  Vec3.(normalize ((Faces.face t.faces side).points.centre -@ t.origin))
+  V3.(normalize ((Faces.face t.faces side).points.centre -@ t.origin))
 
 let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
-  Vec3.(normalize (top_left -@ bot_left))
+  V3.(normalize (top_left -@ bot_left))
 
 let rotate_about_origin r t =
-  let about = Vec3.negate t.origin in
+  let about = V3.negate t.origin in
   { t with
     scad = Scad.rotate ~about r t.scad
   ; faces = Faces.rotate ~about r t.faces
@@ -107,7 +107,8 @@ let rotate_about_origin r t =
   }
 
 let quaternion_about_origin angle t =
-  let about = Vec3.negate t.origin and q = Quaternion.make (normal t) angle in
+  let about = V3.negate t.origin
+  and q = Quaternion.make (normal t) angle in
   { t with
     scad = Scad.quaternion ~about q t.scad
   ; faces = Faces.quaternion ~about q t.faces
@@ -122,7 +123,8 @@ let make
     ?(render = true)
     ?cap
     ?cutout
-    ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
+    ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config)
+  =
   let hole =
     let outer = Scad.cube ~center:true (v3 outer_w outer_h thickness) in
     let inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in

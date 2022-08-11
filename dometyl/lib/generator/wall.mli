@@ -11,32 +11,32 @@ module Steps : sig
     | `PerZ of float
     ]
 
-  val to_int : [< `Flat of int | `PerZ of float ] -> float -> int
   (** [to_int t z]
 
       Converts to a discrete number of steps. In the case of `Flat, it is simply the
       contained integer and the z value will be ignored. For `PerZ, the resulting number
       of steps will be how many times the wrapped float fits into the provided z value. *)
+  val to_int : [< `Flat of int | `PerZ of float ] -> float -> int
 end
 
 (** Bezier curve wall edge type and helpers. *)
 module Edge : sig
   (** Bezier function, returns position along curve, from 0. to 1. *)
-  type t = float -> Vec3.t [@@deriving scad]
+  type t = float -> V3.t [@@deriving scad]
 
-  val point_at_z : ?max_iter:int -> ?tolerance:float -> t -> float -> Vec3.t
   (** [point_at_z ?max_iter ?tolerance t z]
 
-      Use {!Util.bisection_exn} to search for the {!Vec3.t} in [t] closest to [z].
+      Use {!Util.bisection_exn} to search for the {!V3.t} in [t] closest to [z].
       [max_iter] and [tolerance] provide maximum iterations and tolerance (accuracy)
       bounds to the search function. *)
+  val point_at_z : ?max_iter:int -> ?tolerance:float -> t -> float -> V3.t
 end
 
 (** Functions that find the point along the top and bottom edges of the start position of
     the wall closest to the given xy position, and provides a bezier edge to the ground
     starting from there. *)
 module EdgeDrawer : sig
-  type drawer = Vec3.t -> Edge.t
+  type drawer = V3.t -> Edge.t
 
   type t =
     { top : drawer [@scad.d3]
@@ -44,10 +44,10 @@ module EdgeDrawer : sig
     }
   [@@deriving scad]
 
-  val make :
-       ?max_iter:int
+  val make
+    :  ?max_iter:int
     -> ?tolerance:float
-    -> get_bez:(bool -> Vec3.t -> Edge.t)
+    -> get_bez:(bool -> V3.t -> Edge.t)
     -> Points.t
     -> t
 
@@ -69,17 +69,17 @@ module Edges : sig
 
   val map : f:(Edge.t -> Edge.t) -> t -> t
 
-  val of_clockwise_list_exn : Edge.t list -> t
   (** [of_clockwise_list_exn l] Convert a four element list into a [t]. The ordering
       actually shouldn't just be clockwise, but is assumed to literally be: TL, TR, BR,
       BL. *)
+  val of_clockwise_list_exn : Edge.t list -> t
 
   val of_clockwise_list : Edge.t list -> (t, string) Result.t
 
-  val get : t -> [< `BL | `BR | `TL | `TR ] -> Edge.t
   (** [get t corner]
 
       Access fields from record [t] according to provided [corner] tag. *)
+  val get : t -> [< `BL | `BR | `TL | `TR ] -> Edge.t
 end
 
 type config =
@@ -97,40 +97,26 @@ val default : config
 
 (** Record representing a wall extending from a {!KeyHole.Face.t} to the ground. *)
 type t =
-  { scad : Scad.d3  (** Aggregate scad, including screw outshoot if included *)
-  ; start : Points.t  (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
-  ; foot : Points.t  (** Terminal points where the wall meets the XY plane. *)
+  { scad : Scad.d3 (** Aggregate scad, including screw outshoot if included *)
+  ; start : Points.t (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
+  ; foot : Points.t (** Terminal points where the wall meets the XY plane. *)
   ; edge_drawer : EdgeDrawer.t
         (** Generate {!Edge.t}'s emerging from point along top and bottom starting edges
-            of the wall closest to the provided {!Vec3.t} on the XY plane. *)
-  ; edges : Edges.t  (** Bezier curves that specify the edge vertices. *)
+            of the wall closest to the provided {!V3.t} on the XY plane. *)
+  ; edges : Edges.t (** Bezier curves that specify the edge vertices. *)
   ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }
 [@@deriving scad]
 
-val swing_face : ?step:float -> Vec3.t -> KeyHole.Face.t -> KeyHole.Face.t * Vec3.t
 (** [swing_face ?step key_orgin face]
 
     Iteratively find a rotation around [face]s bottom or top axis, depending on which way
     it is pointing in z (determined with [key_origin]), that brings [face] to a more
     vertical orientation, returning a pivoted {!KeyHole.Face.t} and it's new orthogonal
-    {!Vec3.t}. *)
+    {!V3.t}. *)
+val swing_face : ?step:float -> V3.t -> KeyHole.Face.t -> KeyHole.Face.t * V3.t
 
-val poly_siding :
-     ?x_off:float
-  -> ?y_off:float
-  -> ?z_off:float
-  -> ?clearance:float
-  -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?n_facets:int
-  -> ?d1:float
-  -> ?d2:float
-  -> ?thickness:float
-  -> ?eyelet_config:Eyelet.config
-  -> [< `East | `North | `South | `West ]
-  -> 'a KeyHole.t
-  -> t
 (** [poly_siding ?x_off ?y_off ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
       ?eyelet_config side keyhole]
 
@@ -160,17 +146,40 @@ val poly_siding :
     - [thickness] influences the thickness of the wall (from inside to outside face)
     - If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
       to the bottom of the generated wall. *)
+val poly_siding
+  :  ?x_off:float
+  -> ?y_off:float
+  -> ?z_off:float
+  -> ?clearance:float
+  -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+  -> ?n_facets:int
+  -> ?d1:float
+  -> ?d2:float
+  -> ?thickness:float
+  -> ?eyelet_config:Eyelet.config
+  -> [< `East | `North | `South | `West ]
+  -> 'a KeyHole.t
+  -> t
 
-val poly_of_config :
-     ?x_off:float
+val poly_of_config
+  :  ?x_off:float
   -> ?y_off:float
   -> config
   -> [< `East | `North | `South | `West ]
   -> 'a KeyHole.t
   -> t
 
-val column_drop :
-     ?z_off:float
+(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
+      ~spacing ~columns idx]
+
+    Wrapper function for {!val:poly_siding} specifically for (north and south) column end
+    walls. Unlike {!val:poly_siding}, which takes a {!KeyHole.t}, this takes the map
+    [columns], and an [idx] specifying the column to generate the wall for. Overhang over
+    the next column (to the right) that may have been introduced by tenting is checked
+    for, and an x offset that will reclaim the desired column [spacing] is calculated and
+    passed along to {!val:poly_siding}. *)
+val column_drop
+  :  ?z_off:float
   -> ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
   -> ?n_facets:int
@@ -183,27 +192,23 @@ val column_drop :
   -> [< `North | `South ]
   -> int
   -> t
-(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
-      ~spacing ~columns idx]
 
-    Wrapper function for {!val:poly_siding} specifically for (north and south) column end
-    walls. Unlike {!val:poly_siding}, which takes a {!KeyHole.t}, this takes the map
-    [columns], and an [idx] specifying the column to generate the wall for. Overhang over
-    the next column (to the right) that may have been introduced by tenting is checked
-    for, and an x offset that will reclaim the desired column [spacing] is calculated and
-    passed along to {!val:poly_siding}. *)
+val drop_of_config
+  :  spacing:float
+  -> config
+  -> columns:'k Columns.t
+  -> [< `North | `South ]
+  -> int
+  -> t
 
-val drop_of_config :
-  spacing:float -> config -> columns:'k Columns.t -> [< `North | `South ] -> int -> t
-
-val start_direction : t -> Vec3.t
 (** [start_direction t]
 
     Direction vector from right to left of the wall start points. *)
+val start_direction : t -> V3.t
 
-val foot_direction : t -> Vec3.t
 (** [foot_direction t]
 
     Direction vector from right to left of the wall foot points. *)
+val foot_direction : t -> V3.t
 
 val to_scad : t -> Scad.d3

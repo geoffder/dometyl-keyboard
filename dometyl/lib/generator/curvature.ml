@@ -41,7 +41,7 @@ let place ?well ?fan ~centre_idx i key =
   match well, fan with
   | Some spec, None ->
     let r = well_theta' spec i in
-    KeyHole.rotate (v3 0. spec.tilt (Vec3.get_x r *. spec.tilt /. -2.)) key
+    KeyHole.rotate (v3 0. spec.tilt (V3.get_x r *. spec.tilt /. -2.)) key
     |> KeyHole.rotate ~about:(well_point spec) r
   | None, Some spec ->
     KeyHole.yrot spec.tilt key
@@ -49,7 +49,7 @@ let place ?well ?fan ~centre_idx i key =
   | Some w, Some f  ->
     let welled =
       let r = well_theta' w i in
-      KeyHole.rotate (v3 0. w.tilt (Vec3.get_x r *. w.tilt /. -2.)) key
+      KeyHole.rotate (v3 0. w.tilt (V3.get_x r *. w.tilt /. -2.)) key
       |> KeyHole.rotate ~about:(well_point w) r
     in
     KeyHole.ytrans (welled.origin.y *. -1.) welled

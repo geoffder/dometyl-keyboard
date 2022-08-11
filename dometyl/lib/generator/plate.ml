@@ -4,7 +4,7 @@ open Infix
 
 module Lookups = struct
   type 'k t =
-    { offset : int -> Vec3.t
+    { offset : int -> V3.t
     ; curve : int -> 'k Curvature.t
     ; swing : int -> float
     ; splay : int -> float
@@ -52,7 +52,7 @@ module Lookups = struct
     { offset; curve; swing; splay; rows; centre }
 
   let thumb
-      ?(offset = fun _ -> Vec3.zero)
+      ?(offset = fun _ -> V3.zero)
       ?(curve =
         fun _ ->
           Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ()))
@@ -75,8 +75,8 @@ type 'k config =
   ; n_thumb_rows : int -> int
   ; thumb_centres : int -> float
   ; n_thumb_cols : int
-  ; thumb_offset : Vec3.t
-  ; thumb_angle : Vec3.t
+  ; thumb_offset : V3.t
+  ; thumb_angle : V3.t
   }
 
 type 'k t =
@@ -113,7 +113,7 @@ let make
   let body_offsets, thumb_offsets =
     let space = keyhole.config.outer_w +. spacing in
     let f (lookups : _ Lookups.t) m i =
-      let data = Vec3.xtrans (space *. Float.of_int i) (lookups.offset i) in
+      let data = V3.xtrans (space *. Float.of_int i) (lookups.offset i) in
       Map.add_exn ~key:i ~data m
     and init = Map.empty (module Int) in
     ( List.fold ~f:(f body_lookups) ~init (List.range 0 n_body_cols)
@@ -126,7 +126,7 @@ let make
         let tented =
           Column.(
             yrot
-              ~about:Vec3.(centre_offset -@ off)
+              ~about:V3.(centre_offset -@ off)
               tent
               (curve_column ~join_ax:`NS ~caps body_lookups i keyhole))
         in
@@ -165,12 +165,12 @@ let make
         let col = Map.find_exn placed 0 in
         (Map.find_exn col.keys (Int.of_float @@ thumb_lookups.centre 0)).origin
       in
-      Columns.(yrot ~about:Vec3.(centre_offset -@ origin) tent placed)
+      Columns.(yrot ~about:V3.(centre_offset -@ origin) tent placed)
     in
     let lift =
       let lowest_z =
         let face_low ({ points = ps; _ } : KeyHole.Face.t) =
-          Points.fold ~f:(fun m p -> Float.min m (Vec3.get_z p)) ~init:Float.max_value ps
+          Points.fold ~f:(fun m p -> Float.min m (V3.get_z p)) ~init:Float.max_value ps
         in
         let key_low ({ faces = fs; _ } : _ KeyHole.t) =
           KeyHole.Faces.fold
@@ -234,7 +234,7 @@ let skeleton_bridges
     | Some ({ origin = o1; _ } as k1) ->
       let%bind.Option next_col = Map.find body (c + 1) in
       let f ~key:_ ~data:(KeyHole.{ origin = o2; _ } as k2) (m, closest) =
-        let dist = Vec3.distance o1 o2 in
+        let dist = V3.distance o1 o2 in
         if Float.(dist < m) then dist, Some k2 else m, closest
       in
       let _, k2 = Map.fold ~init:(Float.max_value, None) ~f next_col.keys in

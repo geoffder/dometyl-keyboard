@@ -41,7 +41,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
     let cap =
       let p =
-        Vec3.(
+        V3.(
           (KeyHole.normal key *$ (key.config.cap_height +. (key.config.thickness /. 2.)))
           +@ key.origin)
       in
@@ -66,7 +66,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       match Map.find keys (key + 1) with
       | None    -> m
       | Some k2 ->
-        let open Vec3 in
+        let open V3 in
         let face1 = get_start k1
         and face2 = get_dest k2 in
         let scad = join_keys k1 k2

@@ -21,29 +21,28 @@ let default_bumps =
 
 let bumpon ?(fn = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =
-    Points.map ~f:(Vec3.mul (v3 1. 1. 0.)) foot
+    Points.map ~f:(V3.mul (v3 1. 1. 0.)) foot
   in
-  let normal = Vec2.(normalize @@ of_vec3 Vec3.(centre -@ mid top_left top_right)) in
-  let base_centre = Vec3.(to_vec2 @@ mid top_left top_right)
-  and hole_offset = Vec2.smul normal outer_rad in
-  let centre = Vec2.add base_centre hole_offset in
+  let normal = V2.(normalize @@ of_v3 V3.(centre -@ mid top_left top_right)) in
+  let base_centre = V3.(to_v2 @@ mid top_left top_right)
+  and hole_offset = V2.smul normal outer_rad in
+  let centre = V2.add base_centre hole_offset in
   let circ = Scad.circle ~fn:32 outer_rad |> Scad.translate centre
   and swoop p =
-    let rad_offset = Vec2.(normalize (p -@ base_centre) *$ outer_rad) in
+    let rad_offset = V2.(normalize (p -@ base_centre) *$ outer_rad) in
     centre
     :: base_centre
     :: p
     :: Bezier2.curve
          ~fn
-         (Bezier2.make
-            Vec2.[ p; mid (base_centre +@ rad_offset) p; centre +@ rad_offset ] )
+         (Bezier2.make V2.[ p; mid (base_centre +@ rad_offset) p; centre +@ rad_offset ])
     |> Scad.polygon
   in
   let bump =
-    Scad.union [ circ; swoop (Vec3.to_vec2 bot_left); swoop (Vec3.to_vec2 bot_right) ]
+    Scad.union [ circ; swoop (V3.to_v2 bot_left); swoop (V3.to_v2 bot_right) ]
     |> Scad.linear_extrude ~height:thickness
   and inset_cut =
-    Scad.cylinder ~fn:16 ~height:inset inner_rad |> Scad.translate (Vec3.of_vec2 centre)
+    Scad.cylinder ~fn:16 ~height:inset inner_rad |> Scad.translate (V3.of_v2 centre)
   in
   bump, inset_cut
 
@@ -56,9 +55,10 @@ let make
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
-    (case : _ Case.t) =
+    (case : _ Case.t)
+  =
   let bb_index, bb_pinky, rot_sign =
-    let Vec3.{ min = { x = bb_left; _ }; max = { x = bb_right; _ } } =
+    let V3.{ min = { x = bb_left; _ }; max = { x = bb_right; _ } } =
       Path3.bbox case.connections.outline
     and pinky_home =
       let n = case.plate.config.n_body_cols - 1 in
@@ -68,10 +68,9 @@ let make
          (Int.of_float @@ case.plate.config.body_centres n) )
         .origin
     in
-    if
-      Float.(
-        Vec3.(norm (pinky_home -@ v3 bb_right 0. 0.))
-        < Vec3.(norm (pinky_home -@ v3 bb_left 0. 0.)))
+    if Float.(
+         V3.(norm (pinky_home -@ v3 bb_right 0. 0.))
+         < V3.(norm (pinky_home -@ v3 bb_left 0. 0.)))
     then bb_left, bb_right, 1.
     else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
@@ -83,8 +82,8 @@ let make
   let eyelet_config = (List.hd_exn screws).config in
   let fastener =
     match fastener with
-    | None          -> (
-      match eyelet_config with
+    | None          ->
+      ( match eyelet_config with
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
       | _                     -> SameMagnet )
     | Some fastener -> fastener
@@ -98,13 +97,13 @@ let make
           match hole with
           | Inset _ -> proj
           | Through ->
-            Scad.union
-              [ Scad.translate (Vec2.of_vec3 centre) (Scad.circle inner_rad); proj ] )
+            Scad.union [ Scad.translate (V2.of_v3 centre) (Scad.circle inner_rad); proj ]
+          )
         screws
     in
     Scad.union (perimeter :: eyelets)
   and trans s = Scad.rotate ~about rot s |> Scad.translate (v3 0. 0. z_offset)
-  and base_height = Vec3.(get_z (rotate ~about rot (v3 bb_index 0. 0.))) in
+  and base_height = V3.(get_z (rotate ~about rot (v3 bb_index 0. 0.))) in
   let hole, top_height, clearances =
     let magnetize rad h thickness =
       let hole =

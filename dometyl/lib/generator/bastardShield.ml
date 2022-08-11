@@ -4,8 +4,8 @@ open! Scad_ml
 type t =
   { scad : Scad.d3
   ; thickness : float [@scad.ignore]
-  ; screw_l : Vec3.t
-  ; screw_r : Vec3.t
+  ; screw_l : V3.t
+  ; screw_r : V3.t
   }
 [@@deriving scad]
 
@@ -105,8 +105,8 @@ let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
   let t =
     { scad = pcb thickness
     ; thickness
-    ; screw_l = Vec3.of_vec2 screw_l_start
-    ; screw_r = Vec3.of_vec2 screw_r_start
+    ; screw_l = V3.of_v2 screw_l_start
+    ; screw_r = V3.of_v2 screw_r_start
     }
   in
   { t with scad = Scad.union [ t.scad; jack; usb; inset ] }
@@ -121,9 +121,9 @@ let place
   =
   let left_foot = (Map.find_exn north 0).foot
   and right_foot = (Map.find_exn north 1).foot in
-  let x = Vec3.get_x left_foot.bot_left +. x_off
+  let x = V3.get_x left_foot.bot_left +. x_off
   and y =
-    let inner (ps : Points.t) = Vec3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
+    let inner (ps : Points.t) = V3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
     y_off +. ((inner left_foot +. inner right_foot) /. 2.)
   in
   zrot z_rot t |> translate (v3 x y z_off)
@@ -140,20 +140,20 @@ let eyelets
     Option.value_map ~default:(eyelet_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
   in
   let n_pts = Array.length perim in
-  let dist a b = Vec3.(norm (a -@ b)) in
+  let dist a b = V3.(norm (a -@ b)) in
   let find a =
     let f i (m, idx, closest) b =
       let m' = dist a b in
       if Float.(m' < m) then m', i, b else m, idx, closest
     in
-    let _, idx, closest = Array.foldi ~init:(Float.max_value, 0, Vec3.zero) ~f perim in
+    let _, idx, closest = Array.foldi ~init:(Float.max_value, 0, V3.zero) ~f perim in
     idx, closest
   in
   let wrap i = if i < 0 then n_pts + i else if i >= n_pts then n_pts - i else i in
   let build loc =
     let idx, closest = find loc in
     let cw, neighbour =
-      let budge p = Vec3.(add (map (( *. ) 0.1) (sub p closest)) closest)
+      let budge p = V3.(add (map (( *. ) 0.1) (sub p closest)) closest)
       and ccw_idx = wrap (idx - 1)
       and cw_idx = wrap (idx + 1) in
       let ccw = budge perim.(ccw_idx)
@@ -161,10 +161,10 @@ let eyelets
       if Float.(dist loc cw < dist loc ccw) then true, cw else false, ccw
     in
     let centre =
-      let diff = Vec3.sub neighbour closest
+      let diff = V3.sub neighbour closest
       and step = 0.05 in
       let rec loop last_dist last frac =
-        let next = Vec3.((diff *$ frac) +@ closest) in
+        let next = V3.((diff *$ frac) +@ closest) in
         let next_dist = dist loc next in
         if Float.(next_dist > last_dist) then last else loop next_dist next (frac +. step)
       in
@@ -178,25 +178,25 @@ let eyelets
         if Float.(acc_dist' < half_width)
         then loop acc_dist' pos (step i)
         else (
-          let vec = Vec3.(normalize (pos -@ last_pos)) in
-          Vec3.((vec *$ (half_width -. acc_dist)) +@ last_pos) )
+          let vec = V3.(normalize (pos -@ last_pos)) in
+          V3.((vec *$ (half_width -. acc_dist)) +@ last_pos) )
       in
       (* Check that we aren't too far from the original closest point before
            stepping over it. *)
-      let drift = Vec3.sub perim.(idx) centre in
-      if (not neighbour_wise) && Float.(Vec3.norm drift > half_width)
-      then Vec2.of_vec3 Vec3.(centre +@ (Vec3.normalize drift *$ half_width))
-      else Vec2.of_vec3 @@ loop 0. centre (step idx)
+      let drift = V3.sub perim.(idx) centre in
+      if (not neighbour_wise) && Float.(V3.norm drift > half_width)
+      then V2.of_v3 V3.(centre +@ (V3.normalize drift *$ half_width))
+      else V2.of_v3 @@ loop 0. centre (step idx)
     in
     Scad.union
       [ Eyelet.(
           make
-            ~placement:(Point (Vec2.of_vec3 loc))
+            ~placement:(Point (V2.of_v3 loc))
             eyelet_config
             (side_point false)
             (side_point true)
           |> to_scad)
-        |> Scad.ztrans (Vec3.get_z screw_l +. thickness +. z_off)
+        |> Scad.ztrans (V3.get_z screw_l +. thickness +. z_off)
       ]
   in
   Scad.union [ build screw_l; build screw_r ]

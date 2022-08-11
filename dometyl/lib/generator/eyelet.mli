@@ -24,8 +24,8 @@ type fastener =
       }
 
 type placement =
-  | Normal of Vec2.t
-  | Point of Vec2.t
+  | Normal of V2.t
+  | Point of V2.t
 
 type config =
   { outer_rad : float
@@ -37,13 +37,13 @@ type config =
 type t =
   { scad : Scad.d3
   ; cut : Scad.d3 option
-  ; centre : Vec3.t
+  ; centre : V3.t
   ; config : config
   }
 [@@deriving scad]
 
-val screw_fastener :
-     ?head_rad:float
+val screw_fastener
+  :  ?head_rad:float
   -> ?shaft_rad:float
   -> ?sink:sink
   -> ?height:float
@@ -56,5 +56,5 @@ val m4_config : config
 val bumpon_config : config
 val magnet_6x3_config : config
 val m4_countersunk_fastener : fastener
-val make : ?fn:int -> placement:placement -> config -> Vec2.t -> Vec2.t -> t
+val make : ?fn:int -> placement:placement -> config -> V2.t -> V2.t -> t
 val to_scad : t -> Scad.d3

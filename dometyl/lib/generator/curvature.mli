@@ -25,10 +25,10 @@ val curve : ?well:spec -> ?fan:spec -> unit -> 'k t
 val custom : 'k custom -> 'k t
 val pre_tweak : ?well:spec -> ?fan:spec -> 'k custom -> 'k t
 val post_tweak : ?well:spec -> ?fan:spec -> 'k custom -> 'k t
-val well_point : spec -> Vec3.t
-val fan_point : spec -> Vec3.t
-val well_theta : float -> spec -> int -> Vec3.t
-val fan_theta : float -> spec -> int -> Vec3.t
+val well_point : spec -> V3.t
+val fan_point : spec -> V3.t
+val well_theta : float -> spec -> int -> V3.t
+val fan_theta : float -> spec -> int -> V3.t
 
 val place
   :  ?well:spec

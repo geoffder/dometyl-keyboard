@@ -4,10 +4,10 @@ open! Scad_ml
 module Bone = struct
   type t =
     { scad : Scad.d3
-    ; base : Vec3.t
-    ; tip : Vec3.t
-    ; joint : Vec3.t [@scad.unit]
-    ; normal : Vec3.t [@scad.unit]
+    ; base : V3.t
+    ; tip : V3.t
+    ; joint : V3.t [@scad.unit]
+    ; normal : V3.t [@scad.unit]
     }
   [@@deriving scad]
 
@@ -15,16 +15,16 @@ module Bone = struct
     let q = Quaternion.make t.joint a in
     { t with
       scad = Scad.quaternion ~about:t.base q t.scad
-    ; tip = Vec3.quaternion ~about:t.base q t.tip
-    ; normal = Vec3.quaternion q t.normal
+    ; tip = V3.quaternion ~about:t.base q t.tip
+    ; normal = V3.quaternion q t.normal
     }
 
   let splay a t =
     let q = Quaternion.make t.normal a in
     { t with
       scad = Scad.quaternion ~about:t.base q t.scad
-    ; tip = Vec3.quaternion ~about:t.base q t.tip
-    ; joint = Vec3.quaternion q t.joint
+    ; tip = V3.quaternion ~about:t.base q t.tip
+    ; joint = V3.quaternion q t.joint
     }
 
   let make ?(fn = 5) ?alpha ?colour ?(angle = 0.) ~rad len =
@@ -53,7 +53,7 @@ module Finger = struct
   [@@deriving scad]
 
   type config =
-    { offset : Vec3.t option
+    { offset : V3.t option
     ; lengths : float * float * float
     ; radii : (float * float * float) option
     ; splay : float option
@@ -76,14 +76,14 @@ module Finger = struct
 
   let flex ?mult a = extend ?mult (-.a)
 
-  let make ?splay ?(offset = Vec3.zero) ?radii (lp, lm, ld) =
+  let make ?splay ?(offset = V3.zero) ?radii (lp, lm, ld) =
     let rp, rm, rd = Option.value ~default:(6., 5., 4.) radii in
     let prox = Bone.make ?angle:splay ~rad:rp lp
     and mid = Bone.make ?angle:splay ~rad:rm lm
     and dist = Bone.make ?angle:splay ~rad:rd ld in
     { prox
     ; mid = Bone.translate prox.tip mid
-    ; dist = Bone.translate (Vec3.add prox.tip mid.tip) dist
+    ; dist = Bone.translate (V3.add prox.tip mid.tip) dist
     }
     |> translate offset
 
@@ -132,7 +132,7 @@ end
 module Thumb = struct
   type t =
     { bones : Finger.t
-    ; duct : Vec3.t
+    ; duct : V3.t
     }
   [@@deriving scad]
 
@@ -141,7 +141,7 @@ module Thumb = struct
     { bones =
         Finger.quaternion
           ~about:bones.prox.base
-          (Quaternion.make (Vec3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
+          (Quaternion.make (V3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
           bones
     ; duct = v3 0. 1. 0.
     }
@@ -178,10 +178,10 @@ type t =
   ; thumb : Thumb.t
   ; carpals : Scad.d3
   ; knuckle_rad : float [@scad.ignore]
-  ; origin : Vec3.t
-  ; wrist : Vec3.t [@scad.unit]
-  ; heading : Vec3.t [@scad.unit]
-  ; normal : Vec3.t [@scad.unit]
+  ; origin : V3.t
+  ; wrist : V3.t [@scad.unit]
+  ; heading : V3.t [@scad.unit]
+  ; normal : V3.t [@scad.unit]
   }
 [@@deriving scad]
 
@@ -220,11 +220,11 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
   let { x = mid_x; y = mid_y; z = _ } = fingers.middle.prox.base
   and z =
     Fingers.fold
-      ~init:(Vec3.get_z thumb.bones.prox.base)
-      ~f:(fun m a -> Float.min m (Vec3.get_z a.prox.base))
+      ~init:(V3.get_z thumb.bones.prox.base)
+      ~f:(fun m a -> Float.min m (V3.get_z a.prox.base))
       fingers
   in
-  let heading = Vec3.normalize (v3 0. mid_y (-.z))
+  let heading = V3.normalize (v3 0. mid_y (-.z))
   and origin = v3 mid_x thumb.bones.prox.base.y z in
   { fingers
   ; thumb
@@ -233,9 +233,9 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
   ; origin
   ; wrist = v3 1. 0. 0.
   ; heading
-  ; normal = Vec3.rotate (v3 (Float.pi /. 2.) 0. 0.) heading
+  ; normal = V3.rotate (v3 (Float.pi /. 2.) 0. 0.) heading
   }
-  |> translate (Vec3.negate origin)
+  |> translate (V3.negate origin)
 
 let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
   let fingers = Fingers.of_configs ~index ~middle ~ring ~pinky
@@ -264,10 +264,10 @@ let to_scad
 let home ?(hover = 18.) Plate.{ body; config; _ } t =
   let centre_row = config.body_centres config.centre_col in
   let key = Columns.key_exn body config.centre_col (Int.of_float centre_row) in
-  let pos = Vec3.(key.origin +@ (KeyHole.normal key *$ hover))
+  let pos = V3.(key.origin +@ (KeyHole.normal key *$ hover))
   and aligned =
     let column_vec =
-      Vec3.(
+      V3.(
         normalize
           (mul
              ( (Columns.key_exn
@@ -281,10 +281,10 @@ let home ?(hover = 18.) Plate.{ body; config; _ } t =
     let tented = suppinate config.tent t in
     quaternion
       ~about:tented.origin
-      (Quaternion.align Vec3.(normalize @@ (tented.heading *@ v3 1. 1. 0.)) column_vec)
+      (Quaternion.align V3.(normalize @@ (tented.heading *@ v3 1. 1. 0.)) column_vec)
       tented
   in
-  translate (Vec3.sub pos aligned.fingers.middle.dist.tip) aligned
+  translate (V3.sub pos aligned.fingers.middle.dist.tip) aligned
 
 (* TODO: obviously the flex_fingers start isn't super great if I need to adjust almost
    all the fingers. Should I bother with the two steps? *)

@@ -24,8 +24,8 @@ type fastener =
       }
 
 type placement =
-  | Normal of Vec2.t
-  | Point of Vec2.t
+  | Normal of V2.t
+  | Point of V2.t
 
 type config =
   { outer_rad : float
@@ -37,19 +37,16 @@ type config =
 type t =
   { scad : Scad.d3
   ; cut : Scad.d3 option
-  ; centre : Vec3.t
+  ; centre : V3.t
   ; config : config [@scad.ignore]
   }
 [@@deriving scad]
 
-let translate p t =
-  { t with scad = Scad.translate p t.scad; centre = Vec3.add p t.centre }
-
-let mirror ax t =
-  { t with scad = Scad.mirror ax t.scad; centre = Vec3.mirror ax t.centre }
+let translate p t = { t with scad = Scad.translate p t.scad; centre = V3.add p t.centre }
+let mirror ax t = { t with scad = Scad.mirror ax t.scad; centre = V3.mirror ax t.centre }
 
 let rotate ?about r t =
-  { t with scad = Scad.rotate ?about r t.scad; centre = Vec3.rotate ?about r t.centre }
+  { t with scad = Scad.rotate ?about r t.scad; centre = V3.rotate ?about r t.centre }
 
 let screw_fastener
     ?(head_rad = 4.5)
@@ -57,7 +54,8 @@ let screw_fastener
     ?(sink = Counter)
     ?(height = 2.)
     ?(clearance = 0.)
-    () =
+    ()
+  =
   Screw { head_rad; shaft_rad; sink; height; clearance }
 
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
@@ -69,29 +67,27 @@ let magnet_6x3_config =
 
 let m4_countersunk_fastener = screw_fastener ()
 
-let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2
-    =
-  let base_centre = Vec2.mid p1 p2 in
+let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2 =
+  let base_centre = V2.mid p1 p2 in
   let hole_offset, foot_offset =
     match placement with
-    | Normal n -> Vec2.smul n outer_rad, Vec2.smul n (-0.1)
+    | Normal n -> V2.smul n outer_rad, V2.smul n (-0.1)
     | Point p  ->
-      let diff = Vec2.(p -@ base_centre) in
-      diff, Vec2.smul (Vec2.normalize diff) (-0.1)
+      let diff = V2.(p -@ base_centre) in
+      diff, V2.smul (V2.normalize diff) (-0.1)
   in
-  let hole_centre = Vec2.(base_centre +@ hole_offset) in
+  let hole_centre = V2.(base_centre +@ hole_offset) in
   let outer = Scad.circle ~fn:16 outer_rad |> Scad.translate hole_centre
   and inner = Scad.circle ~fn:16 inner_rad |> Scad.translate hole_centre
   and swoop p =
-    let rad_offset = Vec2.(normalize (p -@ base_centre) *$ outer_rad) in
+    let rad_offset = V2.(normalize (p -@ base_centre) *$ outer_rad) in
     hole_centre
     :: base_centre
-    :: Vec2.add p foot_offset
+    :: V2.add p foot_offset
     :: Bezier2.(
          curve
            ~fn
-           (make
-              Vec2.[ p; mid (base_centre +@ rad_offset) p; hole_centre +@ rad_offset ] ))
+           (make V2.[ p; mid (base_centre +@ rad_offset) p; hole_centre +@ rad_offset ]))
     |> Scad.polygon
   in
   let outline = Scad.union [ outer; swoop p1; swoop p2 ] in
@@ -104,11 +100,11 @@ let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as conf
         Scad.union
           [ Scad.linear_extrude ~height:depth inner
           ; Scad.cylinder ~fn:16 ~height:(thickness -. depth) (inner_rad /. 2.)
-            |> Scad.translate (Vec3.of_vec2 ~z:depth hole_centre)
+            |> Scad.translate (V3.of_v2 ~z:depth hole_centre)
           ]
       and foot = Scad.linear_extrude ~height:thickness outline in
       Scad.difference foot [ inset ], Some inset
   in
-  { scad; cut; centre = Vec3.of_vec2 hole_centre; config }
+  { scad; cut; centre = V3.of_v2 hole_centre; config }
 
 let to_scad t = t.scad

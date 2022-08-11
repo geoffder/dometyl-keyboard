@@ -2,11 +2,11 @@ open Base
 open Scad_ml
 
 type t =
-  { top_left : Vec3.t
-  ; top_right : Vec3.t
-  ; bot_left : Vec3.t
-  ; bot_right : Vec3.t
-  ; centre : Vec3.t
+  { top_left : V3.t
+  ; top_right : V3.t
+  ; bot_left : V3.t
+  ; bot_right : V3.t
+  ; centre : V3.t
   }
 [@@deriving scad]
 
@@ -38,24 +38,28 @@ let of_clockwise_list_exn = function
     ; top_right
     ; bot_left
     ; bot_right
-    ; centre = Vec3.mean [ top_left; top_right; bot_left; bot_right ]
+    ; centre = V3.mean [ top_left; top_right; bot_left; bot_right ]
     }
   | _ -> failwith "Expect list of length 4, with corner points in clockwise order."
 
-let of_clockwise_list l = try Ok (of_clockwise_list_exn l) with Failure e -> Error e
+let of_clockwise_list l =
+  try Ok (of_clockwise_list_exn l) with
+  | Failure e -> Error e
 
 let overlapping_bounds a b =
-  let a = Path3.bbox (to_clockwise_list a) and b = Path3.bbox (to_clockwise_list b) in
+  let a = Path3.bbox (to_clockwise_list a)
+  and b = Path3.bbox (to_clockwise_list b) in
   (* intersection rectangle *)
   let top = Float.min a.max.y b.max.y
   and right = Float.min a.max.x b.max.x
   and bot = Float.max a.min.y b.min.y
   and left = Float.max a.min.x b.min.x in
-  if not Float.(right < left || top < bot) then
+  if not Float.(right < left || top < bot)
+  then (
     let intersect = (right -. left) *. (top -. bot)
     and area_a = (a.max.x -. a.min.x) *. (a.max.y -. a.min.y)
     and area_b = (b.max.x -. b.min.x) *. (b.max.y -. b.min.y) in
-    intersect /. (area_a +. area_b -. intersect)
+    intersect /. (area_a +. area_b -. intersect) )
   else 0.
 
 let get t = function
