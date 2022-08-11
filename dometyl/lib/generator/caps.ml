@@ -128,22 +128,22 @@ module DES = struct
 
   let kyria_thumb_r1t0 =
     Scad.import_3d (path "thumb/DES-kyria-R1T0")
-    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> Scad.rotate (v3 0. 0. (Float.pi /. 2.))
     |> color
 
   let kyria_thumb_r1t1 =
     Scad.import_3d (path "thumb/DES-kyria-R1T1")
-    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> Scad.rotate (v3 0. 0. (Float.pi /. 2.))
     |> color
 
   let kyria_thumb_r1t2 =
     Scad.import_3d (path "thumb/DES-kyria-R1T2")
-    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> Scad.rotate (v3 0. 0. (Float.pi /. 2.))
     |> color
 
   let kyria_thumb_r1t3 =
     Scad.import_3d (path "thumb/DES-kyria-R1T3")
-    |> Scad.rotate (0., 0., Float.pi /. 2.)
+    |> Scad.rotate (v3 0. 0. (Float.pi /. 2.))
     |> color
 
   let row = function
@@ -155,7 +155,7 @@ module DES = struct
   let pseudo_scooped = function
     | 0 -> r1
     | 1 -> r5
-    | 2 -> Scad.rotate (0., 0., Float.pi) r2
+    | 2 -> Scad.rotate (v3 0. 0. Float.pi) r2
     | _ -> r2
 
   let thumb = function
@@ -169,7 +169,7 @@ module Chicago = struct
   (* Generated with https://github.com/pseudoku/PseudoMakeMeKeyCapProfiles *)
   let path n = path (Printf.sprintf "Pseudoku_Chicago/Chicago-%s.stl" n)
   let r2 = Scad.import_3d (path "R2-R4") |> color
-  let r4 = Scad.rotate (0., 0., Float.pi) r2
+  let r4 = Scad.rotate (v3 0. 0. Float.pi) r2
   let r3_flat = Scad.import_3d (path "R3-flat") |> color
   let r3_chord = Scad.import_3d (path "R3-chord") |> color
   let thumb_1u = Scad.import_3d (path "thumb-1u") |> color
@@ -181,6 +181,6 @@ module Chicago = struct
     | _ -> r4
 
   let thumb = function
-    | 0 -> Scad.rotate (0., 0., Float.pi) thumb_1u
+    | 0 -> Scad.rotate (v3 0. 0. Float.pi) thumb_1u
     | _ -> thumb_1u
 end

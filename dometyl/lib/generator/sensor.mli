@@ -16,7 +16,7 @@ module ThroughHole : sig
     -> ?body_l:float
     -> ?body_thickness:float
     -> unit
-    -> Scad.three_d Scad.t
+    -> Scad.d3
 
   val bulk_cutout :
        ?body_w:float
@@ -42,5 +42,5 @@ module ThroughHole : sig
     -> unit
     -> ?z:float
     -> float
-    -> Scad.three_d Scad.t
+    -> Scad.d3
 end

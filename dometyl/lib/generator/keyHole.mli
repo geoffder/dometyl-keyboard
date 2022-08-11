@@ -17,7 +17,7 @@ end
 module Faces : sig
   (** The four outer faces of a keyhole. *)
   type t =
-    { north : Face.t
+    { north : Face.t [@scad.d3]
     ; south : Face.t
     ; east : Face.t
     ; west : Face.t

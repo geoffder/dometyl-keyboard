@@ -8,25 +8,25 @@ module Face = struct
     }
   [@@deriving scad]
 
-  let make ((x, y, _) as size) =
+  let make (Vec3.{ x; y; _ } as size) =
     let points =
       Points.
-        { top_left = x /. -2., y /. 2., 0.
-        ; top_right = x /. 2., y /. 2., 0.
-        ; bot_left = x /. -2., y /. -2., 0.
-        ; bot_right = x /. 2., y /. -2., 0.
-        ; centre = 0., 0., 0.
+        { top_left = v3 (x /. -2.) (y /. 2.) 0.
+        ; top_right = v3 (x /. 2.) (y /. 2.) 0.
+        ; bot_left = v3 (x /. -2.) (y /. -2.) 0.
+        ; bot_right = v3 (x /. 2.) (y /. -2.) 0.
+        ; centre = v3 0. 0. 0.
         }
     in
     { scad = Scad.cube ~center:true size; points }
 
   let direction { points = { top_left; top_right; _ }; _ } =
-    Vec3.normalize Vec3.(top_left <-> top_right)
+    Vec3.normalize Vec3.(top_left -@ top_right)
 end
 
 module Faces = struct
   type t =
-    { north : Face.t
+    { north : Face.t [@scad.d3]
     ; south : Face.t
     ; east : Face.t
     ; west : Face.t
@@ -43,17 +43,17 @@ module Faces = struct
   let make w h depth =
     let vert north =
       Face.rotate
-        Float.(pi /. 2., 0., if north then 0. else pi)
-        (Face.make (w, depth, 0.1))
+        Float.(v3 (pi /. 2.) 0. (if north then 0. else pi))
+        (Face.make (v3 w depth 0.1))
     and lat west =
       Face.rotate
-        Float.(pi /. 2., 0., pi /. if west then 2. else -2.)
-        (Face.make (h, depth, 0.1))
+        Float.(v3 (pi /. 2.) 0. (pi /. if west then 2. else -2.))
+        (Face.make (v3 h depth 0.1))
     in
-    { north = Face.translate (0., h /. 2., 0.) (vert true)
-    ; south = Face.translate (0., h /. -2., 0.) (vert false)
-    ; west = Face.translate (w /. -2., 0., 0.) (lat true)
-    ; east = Face.translate (w /. 2., 0., 0.) (lat false)
+    { north = Face.translate (v3 0. (h /. 2.) 0.) (vert true)
+    ; south = Face.translate (v3 0. (h /. -2.) 0.) (vert false)
+    ; west = Face.translate (v3 (w /. -2.) 0. 0.) (lat true)
+    ; east = Face.translate (v3 (w /. 2.) 0. 0.) (lat false)
     }
 
   let face t = function
@@ -91,28 +91,28 @@ type 'k t =
 [@@deriving scad]
 
 let orthogonal t side =
-  Vec3.(normalize ((Faces.face t.faces side).points.centre <-> t.origin))
+  Vec3.(normalize ((Faces.face t.faces side).points.centre -@ t.origin))
 
 let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
-  Vec3.(normalize (top_left <-> bot_left))
+  Vec3.(normalize (top_left -@ bot_left))
 
 let rotate_about_origin r t =
-  let p = Vec3.negate t.origin in
+  let about = Vec3.negate t.origin in
   { t with
-    scad = Scad.rotate_about_pt r p t.scad
-  ; faces = Faces.rotate_about_pt r p t.faces
-  ; cap = Option.map ~f:(Scad.rotate_about_pt r p) t.cap
-  ; cutout = Option.map ~f:(Scad.rotate_about_pt r p) t.cutout
+    scad = Scad.rotate ~about r t.scad
+  ; faces = Faces.rotate ~about r t.faces
+  ; cap = Option.map ~f:(Scad.rotate ~about r) t.cap
+  ; cutout = Option.map ~f:(Scad.rotate ~about r) t.cutout
   }
 
 let quaternion_about_origin angle t =
-  let p = Vec3.negate t.origin and q = Quaternion.make (normal t) angle in
+  let about = Vec3.negate t.origin and q = Quaternion.make (normal t) angle in
   { t with
-    scad = Scad.quaternion_about_pt q p t.scad
-  ; faces = Faces.quaternion_about_pt q p t.faces
-  ; cap = Option.map ~f:(Scad.quaternion_about_pt q p) t.cap
-  ; cutout = Option.map ~f:(Scad.quaternion_about_pt q p) t.cutout
+    scad = Scad.quaternion ~about q t.scad
+  ; faces = Faces.quaternion ~about q t.faces
+  ; cap = Option.map ~f:(Scad.quaternion ~about q) t.cap
+  ; cutout = Option.map ~f:(Scad.quaternion ~about q) t.cutout
   }
 
 let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
@@ -124,22 +124,22 @@ let make
     ?cutout
     ({ outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; _ } as config) =
   let hole =
-    let outer = Scad.cube ~center:true (outer_w, outer_h, thickness) in
-    let inner = Scad.cube ~center:true (inner_w, inner_h, thickness +. 0.1) in
+    let outer = Scad.cube ~center:true (v3 outer_w outer_h thickness) in
+    let inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
     clip @@ Scad.difference outer [ inner ]
   in
   { config
   ; scad = (if render then Scad.render hole else hole)
-  ; origin = 0., 0., 0.
+  ; origin = v3 0. 0. 0.
   ; faces = Faces.make outer_w outer_h thickness
-  ; cap = Option.map ~f:(Scad.translate (0., 0., cap_height +. (thickness /. 2.))) cap
+  ; cap = Option.map ~f:(Scad.translate (v3 0. 0. (cap_height +. (thickness /. 2.)))) cap
   ; cutout = (if render then Option.map ~f:Scad.render cutout else cutout)
   }
 
 let mirror_internals t =
   { t with
-    scad = Scad.mirror (1., 0., 0.) t.scad
-  ; cutout = Option.map ~f:(Scad.mirror (1., 0., 0.)) t.cutout
+    scad = Scad.mirror (v3 1. 0. 0.) t.scad
+  ; cutout = Option.map ~f:(Scad.mirror (v3 1. 0. 0.)) t.cutout
   }
 
 let cutout_scad = function

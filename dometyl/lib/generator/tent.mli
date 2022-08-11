@@ -9,7 +9,7 @@ val default_bumps : bump_loc list
 val find_bump_wall : Walls.t -> bump_loc -> Wall.t option
 
 val bumpon :
-     ?n_steps:int
+     ?fn:int
   -> outer_rad:float
   -> inner_rad:float
   -> thickness:float

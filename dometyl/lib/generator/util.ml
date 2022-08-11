@@ -58,34 +58,10 @@ let fill_points ?(init = []) ~n a b =
     let n' = n + 1 in
     let step = Vec3.(map (fun p -> p /. Float.of_int n') (sub b a)) in
     let rec loop acc i =
-      if i < n' then loop (Vec3.(a <+> map (( *. ) (Float.of_int i)) step) :: acc) (i + 1)
+      if i < n' then loop (Vec3.(a +@ (step *$ Float.of_int i)) :: acc) (i + 1)
       else b :: acc
     in
     loop (a :: init) 1
-
-let bounding_box poly =
-  let f (top, right, bot, left) (x, y, _) =
-    let top' = Float.max top y
-    and right' = Float.max right x
-    and bot' = Float.min bot y
-    and left' = Float.min left x in
-    top', right', bot', left'
-  in
-  List.fold ~f ~init:Float.(min_value, min_value, max_value, max_value) poly
-
-let point_in_polygon (x, y, _) poly =
-  let open Float in
-  let top, right, bot, left = bounding_box poly in
-  if x < left || x > right || y < bot || y > top then false
-  else
-    let f (inside, (bx, by, _)) ((ax, ay, _) as a) =
-      if
-        (not (Bool.equal (ay > y) (by > y)))
-        && x < ((bx - ax) * (y - ay) /. (by - ay)) + ax
-      then not inside, a
-      else inside, a
-    in
-    fst @@ List.fold ~init:(false, List.last_exn poly) ~f poly
 
 let idx_to_find = function
   | First -> Map.min_elt >> Option.map ~f:snd

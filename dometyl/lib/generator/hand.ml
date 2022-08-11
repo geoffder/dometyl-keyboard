@@ -46,7 +46,7 @@ end
 
 module Finger = struct
   type t =
-    { prox : Bone.t
+    { prox : Bone.t [@scad.d3]
     ; mid : Bone.t
     ; dist : Bone.t
     }
@@ -104,7 +104,7 @@ end
 
 module Fingers = struct
   type t =
-    { index : Finger.t
+    { index : Finger.t [@scad.d3]
     ; middle : Finger.t
     ; ring : Finger.t
     ; pinky : Finger.t

@@ -5,8 +5,8 @@ open! Scad_ml
     foot. *)
 type t =
   { scad : Scad.d3
-  ; outline : Vec3.t list
-  ; inline : Vec3.t list
+  ; outline : Path3.t
+  ; inline : Path3.t
   }
 [@@deriving scad]
 
@@ -17,12 +17,12 @@ val clockwise_union : t list -> t
     order, such that the outline and inline of the resulting {!t} are continous and in the
     clockwise direction. *)
 
-val outline_2d : t -> (float * float) list
+val outline_2d : t -> Path2.t
 (** [outline_2d t]
 
     Retrieve the outline points of [t] and project them to 2d vectors. *)
 
-val inline_2d : t -> (float * float) list
+val inline_2d : t -> Path2.t
 (** [inline_2d t]
 
     Retrieve the inline points of [t] and project them to 2d vectors. *)

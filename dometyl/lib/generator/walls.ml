@@ -7,13 +7,13 @@ type presence =
   | Eye
 
 module Side = struct
-  type t = Wall.t Map.M(Int).t [@@deriving scad_jane]
+  type t = (Wall.t Map.M(Int).t[@scad.d3]) [@@deriving scad_jane]
   type config = int -> Wall.config option
 end
 
 module Sides = struct
   type t =
-    { west : Side.t
+    { west : Side.t [@scad.d3]
     ; north : Side.t
     ; east : Side.t
     ; south : Side.t
@@ -251,7 +251,7 @@ let auto_thumb
     thumb
 
 type t =
-  { body : Sides.t
+  { body : Sides.t [@scad.d3]
   ; thumb : Sides.t
   }
 [@@deriving scad]

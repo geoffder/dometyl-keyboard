@@ -11,7 +11,7 @@ type presence =
 module Side : sig
   (** Maps from index/position to {!Wall.t}, representing a side of the body or thumb of a
       plate. *)
-  type t = Wall.t Map.M(Int).t [@@deriving scad]
+  type t = (Wall.t Map.M(Int).t[@scad.d3]) [@@deriving scad]
 
   (** A function taking a index/position along a side of the body or thumb of a plate, and
       returning some {!Wall.config} if there should be a {!Wall.t} made at that location,
@@ -22,7 +22,7 @@ end
 module Sides : sig
   (** Four cardinal {!Side.t}s for a body/thumb. *)
   type t =
-    { west : Side.t
+    { west : Side.t [@scad.d3]
     ; north : Side.t
     ; east : Side.t
     ; south : Side.t
@@ -145,7 +145,7 @@ val auto_thumb :
 (** Use {!Sides.auto} to generate a {!Sides.t} from the thumb of the provided {!Plate.t}. *)
 
 type t =
-  { body : Sides.t
+  { body : Sides.t [@scad.d3]
   ; thumb : Sides.t
   }
 [@@deriving scad]

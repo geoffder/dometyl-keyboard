@@ -19,37 +19,32 @@ let default_bumps =
   ; Body (Idx 2, `S)
   ]
 
-let bumpon ?(n_steps = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
+let bumpon ?(fn = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =
-    Points.map ~f:(Vec3.mul (1., 1., 0.)) foot
+    Points.map ~f:(Vec3.mul (v3 1. 1. 0.)) foot
   in
-  let normal = Vec3.(centre <-> mean [ top_left; top_right ] |> normalize) in
-  let base_centre = Vec3.(map (( *. ) 0.5) (top_left <+> top_right) |> mul (1., 1., 0.))
-  and hole_offset = Vec3.map (( *. ) outer_rad) normal in
-  let centre = Vec3.(base_centre <+> hole_offset) in
+  let normal = Vec2.(normalize @@ of_vec3 Vec3.(centre -@ mid top_left top_right)) in
+  let base_centre = Vec3.(to_vec2 @@ mid top_left top_right)
+  and hole_offset = Vec2.smul normal outer_rad in
+  let centre = Vec2.add base_centre hole_offset in
   let circ = Scad.circle ~fn:32 outer_rad |> Scad.translate centre
   and swoop p =
-    let rad_offset = Vec3.(map (( *. ) outer_rad) (normalize (p <-> base_centre))) in
+    let rad_offset = Vec2.(normalize (p -@ base_centre) *$ outer_rad) in
     centre
     :: base_centre
     :: p
-    :: Bezier.curve
-         ~n_steps
-         (Bezier.quad_vec3
-            ~p1:p
-            ~p2:Vec3.(mean [ base_centre <+> rad_offset; p ])
-            ~p3:Vec3.(centre <+> rad_offset) )
-    |> List.map ~f:Vec3.to_vec2
+    :: Bezier2.curve
+         ~fn
+         (Bezier2.make
+            Vec2.[ p; mid (base_centre +@ rad_offset) p; centre +@ rad_offset ] )
     |> Scad.polygon
   in
   let bump =
-    Scad.union
-      [ circ
-      ; swoop (Vec3.mul bot_left (1., 1., 0.))
-      ; swoop (Vec3.mul bot_right (1., 1., 0.))
-      ]
+    Scad.union [ circ; swoop (Vec3.to_vec2 bot_left); swoop (Vec3.to_vec2 bot_right) ]
     |> Scad.linear_extrude ~height:thickness
-  and inset_cut = Scad.cylinder ~fn:16 inner_rad inset |> Scad.translate centre in
+  and inset_cut =
+    Scad.cylinder ~fn:16 ~height:inset inner_rad |> Scad.translate (Vec3.of_vec2 centre)
+  in
   bump, inset_cut
 
 let make
@@ -63,7 +58,8 @@ let make
     ?(bump_locs = default_bumps)
     (case : _ Case.t) =
   let bb_index, bb_pinky, rot_sign =
-    let _, bb_right, _, bb_left = Util.bounding_box case.connections.outline
+    let Vec3.{ min = { x = bb_left; _ }; max = { x = bb_right; _ } } =
+      Path3.bbox case.connections.outline
     and pinky_home =
       let n = case.plate.config.n_body_cols - 1 in
       (Columns.key_exn
@@ -74,8 +70,8 @@ let make
     in
     if
       Float.(
-        Vec3.(norm (pinky_home <-> (bb_right, 0., 0.)))
-        < Vec3.(norm (pinky_home <-> (bb_left, 0., 0.))))
+        Vec3.(norm (pinky_home -@ v3 bb_right 0. 0.))
+        < Vec3.(norm (pinky_home -@ v3 bb_left 0. 0.)))
     then bb_left, bb_right, 1.
     else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
@@ -92,8 +88,8 @@ let make
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
       | _                     -> SameMagnet )
     | Some fastener -> fastener
-  and rot = 0., Util.deg_to_rad degrees *. rot_sign, 0.
-  and pivot_pt = -.bb_pinky, 0., 0. in
+  and rot = v3 0. (Util.deg_to_rad degrees *. rot_sign) 0.
+  and about = v3 (-.bb_pinky) 0. 0. in
   let filled_top =
     let eyelets =
       List.map
@@ -101,19 +97,21 @@ let make
           let proj = Scad.projection scad in
           match hole with
           | Inset _ -> proj
-          | Through -> Scad.union [ Scad.translate centre (Scad.circle inner_rad); proj ]
-          )
+          | Through ->
+            Scad.union
+              [ Scad.translate (Vec2.of_vec3 centre) (Scad.circle inner_rad); proj ] )
         screws
     in
     Scad.union (perimeter :: eyelets)
-  and trans s = Scad.rotate_about_pt rot pivot_pt s |> Scad.translate (0., 0., z_offset)
-  and base_height = Vec3.(get_z (rotate_about_pt rot pivot_pt (bb_index, 0., 0.))) in
+  and trans s = Scad.rotate ~about rot s |> Scad.translate (v3 0. 0. z_offset)
+  and base_height = Vec3.(get_z (rotate ~about rot (v3 bb_index 0. 0.))) in
   let hole, top_height, clearances =
     let magnetize rad h thickness =
       let hole =
         Scad.union
-          [ Scad.translate (0., 0., thickness -. h) @@ Scad.cylinder ~fn:32 rad h
-          ; Scad.cylinder ~fn:32 (rad /. 2.) (thickness -. h)
+          [ Scad.translate (v3 0. 0. (thickness -. h))
+            @@ Scad.cylinder ~fn:32 ~height:h rad
+          ; Scad.cylinder ~fn:32 ~height:(thickness -. h) (rad /. 2.)
           ]
       in
       hole, thickness, []
@@ -125,16 +123,16 @@ let make
         match sink with
         | Counter   ->
           let s = shaft_rad /. head_rad in
-          Scad.linear_extrude ~height ~scale:(s, s) head_disc
+          Scad.linear_extrude ~height ~scale:(v2 s s) head_disc
         | Pan inset ->
           Scad.union
             [ Scad.linear_extrude ~height:inset head_disc
-            ; Scad.cylinder ~fn:32 shaft_rad height
+            ; Scad.cylinder ~fn:32 ~height shaft_rad
             ]
       and clearances =
         let cyl =
           Scad.linear_extrude ~height:clearance head_disc
-          |> Scad.translate (0., 0., -.clearance)
+          |> Scad.translate (v3 0. 0. (-.clearance))
         in
         List.map
           ~f:(fun Eyelet.{ centre; _ } -> trans @@ Scad.translate centre cyl)
@@ -163,16 +161,12 @@ let make
   in
   let cut =
     let bulked_top =
-      Scad.offset (`Delta 2.) filled_top
-      |> Scad.linear_extrude ~height:top_height
-      |> trans
+      Scad.offset 2. filled_top |> Scad.linear_extrude ~height:top_height |> trans
     in
-    Scad.hull [ bulked_top; Scad.translate (0., 0., base_height) bulked_top ]
+    Scad.hull [ bulked_top; Scad.translate (v3 0. 0. base_height) bulked_top ]
   in
   let feet, final_cuts =
-    let tilted =
-      Case.rotate_about_pt rot pivot_pt case |> Case.translate (0., 0., z_offset)
-    in
+    let tilted = Case.rotate ~about rot case |> Case.translate (v3 0. 0. z_offset) in
     let f (bumps, insets) loc =
       match find_bump_wall tilted.walls loc with
       | Some Wall.{ foot; _ } ->
@@ -194,10 +188,10 @@ let make
        ( Scad.difference
            top
            [ Scad.projection top
-             |> Scad.offset (`Delta 2.)
+             |> Scad.offset 2.
              |> Scad.linear_extrude ~height:10.
-             |> Scad.translate (0., 0., -10.)
+             |> Scad.translate (v3 0. 0. (-10.))
            ]
-       :: Scad.difference shell [ Scad.translate (0., 0., -0.00001) cut ]
+       :: Scad.difference shell [ Scad.translate (v3 0. 0. (-0.00001)) cut ]
        :: feet ) )
     final_cuts

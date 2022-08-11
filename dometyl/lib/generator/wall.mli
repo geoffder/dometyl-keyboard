@@ -39,8 +39,8 @@ module EdgeDrawer : sig
   type drawer = Vec3.t -> Edge.t
 
   type t =
-    { top: drawer
-    ; bot: drawer
+    { top : drawer [@scad.d3]
+    ; bot : drawer
     }
   [@@deriving scad]
 
@@ -60,10 +60,10 @@ module Edges : sig
   (** Record containting an {!Edge.t} running from the corners of {!KeyHole.Face.points}
       down to the floor, where the terminal points are used for {!Wall.foot}. *)
   type t =
-    { top_left: Edge.t
-    ; top_right: Edge.t
-    ; bot_left: Edge.t
-    ; bot_right: Edge.t
+    { top_left : Edge.t [@scad.d3]
+    ; top_right : Edge.t
+    ; bot_left : Edge.t
+    ; bot_right : Edge.t
     }
   [@@deriving scad]
 
@@ -83,28 +83,28 @@ module Edges : sig
 end
 
 type config =
-  { d1: float
-  ; d2: float
-  ; z_off: float
-  ; thickness: float
-  ; clearance: float
-  ; n_steps: Steps.t
-  ; n_facets: int
-  ; eyelet_config: Eyelet.config option
+  { d1 : float
+  ; d2 : float
+  ; z_off : float
+  ; thickness : float
+  ; clearance : float
+  ; n_steps : Steps.t
+  ; n_facets : int
+  ; eyelet_config : Eyelet.config option
   }
 
 val default : config
 
 (** Record representing a wall extending from a {!KeyHole.Face.t} to the ground. *)
 type t =
-  { scad: Scad.d3  (** Aggregate scad, including screw outshoot if included *)
-  ; start: Points.t  (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
-  ; foot: Points.t  (** Terminal points where the wall meets the XY plane. *)
-  ; edge_drawer: EdgeDrawer.t
+  { scad : Scad.d3  (** Aggregate scad, including screw outshoot if included *)
+  ; start : Points.t  (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
+  ; foot : Points.t  (** Terminal points where the wall meets the XY plane. *)
+  ; edge_drawer : EdgeDrawer.t
         (** Generate {!Edge.t}'s emerging from point along top and bottom starting edges
             of the wall closest to the provided {!Vec3.t} on the XY plane. *)
-  ; edges: Edges.t  (** Bezier curves that specify the edge vertices. *)
-  ; screw: Eyelet.t option
+  ; edges : Edges.t  (** Bezier curves that specify the edge vertices. *)
+  ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }
 [@@deriving scad]
