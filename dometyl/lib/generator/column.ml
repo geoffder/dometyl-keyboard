@@ -42,11 +42,8 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     let cap =
       let p =
         Vec3.(
-          add
-            (mul_scalar
-               (KeyHole.normal key)
-               (key.config.cap_height +. (key.config.thickness /. 2.)) )
-            key.origin)
+          (KeyHole.normal key *$ (key.config.cap_height +. (key.config.thickness /. 2.)))
+          +@ key.origin)
       in
       Option.some @@ Scad.translate p (caps i)
     in
@@ -70,7 +67,8 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       | None    -> m
       | Some k2 ->
         let open Vec3 in
-        let face1 = get_start k1 and face2 = get_dest k2 in
+        let face1 = get_start k1
+        and face2 = get_dest k2 in
         let scad = join_keys k1 k2
         and dir1 = KeyHole.Face.direction face1
         and dir2 = KeyHole.Face.direction face2 in
@@ -81,10 +79,10 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
             ; face2.points.bot_right
             ; face2.points.top_right
             ]
-            [ face1.points.top_left <+> mul_scalar dir1 (-0.01)
-            ; face1.points.bot_left <+> mul_scalar dir1 (-0.01)
-            ; face2.points.bot_right <+> mul_scalar dir2 0.01
-            ; face2.points.top_right <+> mul_scalar dir2 0.01
+            [ face1.points.top_left +@ (dir1 *$ -0.01)
+            ; face1.points.bot_left +@ (dir1 *$ -0.01)
+            ; face2.points.bot_right +@ (dir2 *$ 0.01)
+            ; face2.points.top_right +@ (dir2 *$ 0.01)
             ]
         and east =
           Util.prism_exn
@@ -93,10 +91,10 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
             ; face2.points.bot_left
             ; face2.points.top_left
             ]
-            [ face1.points.top_right <+> mul_scalar dir1 0.01
-            ; face1.points.bot_right <+> mul_scalar dir1 0.01
-            ; face2.points.bot_left <+> mul_scalar dir2 (-0.01)
-            ; face2.points.top_left <+> mul_scalar dir2 (-0.01)
+            [ face1.points.top_right +@ (dir1 *$ 0.01)
+            ; face1.points.bot_right +@ (dir1 *$ 0.01)
+            ; face2.points.bot_left +@ (dir2 *$ -0.01)
+            ; face2.points.top_left +@ (dir2 *$ -0.01)
             ]
         in
         Map.add_exn m ~key ~data:Join.{ scad; faces = { west; east } }

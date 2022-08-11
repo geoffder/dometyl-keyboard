@@ -16,41 +16,42 @@ module Bottom = struct
   let corner_cut_off = 1.
 
   let ellipse =
-    Scad.scale (1., ellipse_inset_y_scale, 1.) (Scad.circle ~fn:32 ellipse_inset_x_rad)
+    Scad.scale (v2 1. ellipse_inset_y_scale) (Scad.circle ~fn:32 ellipse_inset_x_rad)
 
-  let bulge = Scad.square ~center:true (bulge_length, bulge_thickness +. 0.1)
+  let bulge = Scad.square ~center:true (v2 bulge_length (bulge_thickness +. 0.1))
   let cutter = Scad.circle ~fn:64 corner_cut_rad
 
   let corner x_sign y_sign =
-    let x = (w /. 2.) +. corner_cut_off and y = (h /. 2.) +. corner_cut_off in
-    Scad.translate (x *. x_sign, y *. y_sign, 0.) cutter
+    let x = (w /. 2.) +. corner_cut_off
+    and y = (h /. 2.) +. corner_cut_off in
+    Scad.translate (v2 (x *. x_sign) (y *. y_sign)) cutter
 
   let shadow =
     Scad.union
       [ Scad.difference
-          (Scad.square ~center:true (w, h))
-          [ Scad.translate (ellipse_x, 0., 0.) ellipse
-          ; Scad.translate (ellipse_x *. -1., 0., 0.) ellipse
+          (Scad.square ~center:true (v2 w h))
+          [ Scad.translate (v2 ellipse_x 0.) ellipse
+          ; Scad.translate (v2 (ellipse_x *. -1.) 0.) ellipse
           ; corner 1. 1.
           ; corner 1. (-1.)
           ; corner (-1.) 1.
           ; corner (-1.) (-1.)
           ]
-      ; Scad.translate (0., (h /. 2.) +. (bulge_thickness /. 2.) -. 0.001, 0.) bulge
-      ; Scad.translate (0., (h /. -2.) -. (bulge_thickness /. 2.) +. 0.001, 0.) bulge
+      ; Scad.ytrans ((h /. 2.) +. (bulge_thickness /. 2.)) bulge
+      ; Scad.ytrans ((h /. -2.) -. (bulge_thickness /. 2.) +. 0.001) bulge
       ]
 
   let scad =
     let bulges =
       let b = Scad.linear_extrude ~height:bulge_height bulge in
-      [ Scad.translate (bulge_length /. -2., (h /. 2.) -. 0.1, 0.) b
-      ; Scad.translate (bulge_length /. -2., (h /. -2.) +. 0.1, 0.) b
+      [ Scad.translate (v3 (bulge_length /. -2.) ((h /. 2.) -. 0.1) 0.) b
+      ; Scad.translate (v3 (bulge_length /. -2.) ((h /. -2.) +. 0.1) 0.) b
       ]
     in
     Scad.difference
-      (Scad.square ~center:true (w, h))
-      [ Scad.translate (ellipse_x, 0., 0.) ellipse
-      ; Scad.translate (ellipse_x *. -1., 0., 0.) ellipse
+      (Scad.square ~center:true (v2 w h))
+      [ Scad.xtrans ellipse_x ellipse
+      ; Scad.xtrans (ellipse_x *. -1.) ellipse
       ; corner 1. 1.
       ; corner 1. (-1.)
       ; corner (-1.) 1.
@@ -93,7 +94,8 @@ module Config = struct
       ?(base_thickness = 3.)
       ?(sensor_depth = 1.4)
       ?(sensor_cutter = Sensor.ThroughHole.tape_cutout ())
-      () =
+      ()
+    =
     { outer_w
     ; outer_h
     ; inner_w
@@ -153,7 +155,8 @@ let hole_of_config
       ; base_thickness
       ; sensor_depth
       ; sensor_cutter
-      } =
+      }
+  =
   let thickness = Float.max thickness (Bottom.thickness +. dome_thickness) in
   let clearance = Float.max clearance (base_thickness +. 0.5)
   and bottom_z = (thickness /. 2.) -. Bottom.thickness
@@ -165,42 +168,43 @@ let hole_of_config
         Bottom.ellipse
         [ Scad.square
             ~center:true
-            ( dome_waist_clip *. 2.
-            , Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2. )
-          |> Scad.translate (Bottom.ellipse_inset_x_rad *. -.sign, 0., 0.)
+            (v2
+               (dome_waist_clip *. 2.)
+               (Bottom.ellipse_inset_x_rad *. Bottom.ellipse_inset_y_scale *. 2.) )
+          |> Scad.translate (v2 (Bottom.ellipse_inset_x_rad *. -.sign) 0.)
         ]
-      |> Scad.translate (Bottom.ellipse_x *. sign, 0., 0.)
+      |> Scad.translate (v2 (Bottom.ellipse_x *. sign) 0.)
     in
     Scad.difference
-      (Scad.square ~center:true (dome_w, dome_w))
+      (Scad.square ~center:true (v2 dome_w dome_w))
       [ waist_clip 1.; waist_clip (-1.) ]
     |> Scad.linear_extrude ~height:(dome_thickness +. 0.001)
-    |> Scad.translate (0., 0., dome_z)
+    |> Scad.translate (v3 0. 0. dome_z)
   and base =
     let slab =
-      Scad.cube (outer_w, outer_h, base_thickness +. 0.001)
-      |> Scad.translate (outer_w /. -2., outer_h /. -2., dome_z -. base_thickness)
+      Scad.cube (v3 outer_w outer_h (base_thickness +. 0.001))
+      |> Scad.translate (v3 (outer_w /. -2.) (outer_h /. -2.) (dome_z -. base_thickness))
     in
     Scad.difference slab [ sensor_cutter ~z:dome_z sensor_depth ]
   and pillars =
     let cyl = Scad.linear_extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(
       union
-        [ translate (Bottom.ellipse_x, 0., 0.) cyl
-        ; translate (Bottom.ellipse_x *. -1., 0., 0.) cyl
+        [ translate (v3 Bottom.ellipse_x 0. 0.) cyl
+        ; translate (v3 (Bottom.ellipse_x *. -1.) 0. 0.) cyl
         ]
-      |> translate (0., 0., bottom_z -. dome_thickness))
+      |> translate (v3 0. 0. (bottom_z -. dome_thickness)))
   in
   let cutout =
     let internals =
-      Scad.union [ Scad.translate (0., 0., bottom_z) bottom_cut; dome_cut ]
+      Scad.union [ Scad.translate (v3 0. 0. bottom_z) bottom_cut; dome_cut ]
     in
     match cap_cutout_height with
     | Some h ->
       Scad.union
-        [ Scad.translate
-            (0., 0., 2.5 +. h +. (thickness /. 2.))
-            (Scad.cube ~center:true (20., 20., 7.))
+        [ Scad.ztrans
+            (2.5 +. h +. (thickness /. 2.))
+            (Scad.cube ~center:true (v3 20. 20. 7.))
         ; internals
         ]
     | None   -> internals
@@ -238,7 +242,8 @@ let make_hole
     ?base_thickness
     ?sensor_depth
     ?sensor_cutter
-    () =
+    ()
+  =
   hole_of_config
     ?render
     ?cap
@@ -272,7 +277,8 @@ let empty_hole_of_config
       ; cap_cutout_height
       ; clearance
       ; _
-      } =
+      }
+  =
   Mx.make_hole
     ?render
     ?cap
@@ -297,7 +303,8 @@ let make_empty_hole
     ?cap_height
     ?cap_cutout_height
     ?clearance
-    () =
+    ()
+  =
   empty_hole_of_config
     ?render
     ?cap

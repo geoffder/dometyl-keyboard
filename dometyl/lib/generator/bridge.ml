@@ -4,8 +4,8 @@ open Scad_ml
 type t = Scad.d3
 
 let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
-  let a = Scad.translate (Vec3.map (( *. ) d1) ortho) scad
-  and b = Scad.translate (Vec3.map (( *. ) d2) ortho) scad in
+  let a = Scad.translate (Vec3.smul ortho d1) scad
+  and b = Scad.translate (Vec3.smul ortho d2) scad in
   Scad.hull [ scad; a ], Scad.hull [ a; b ]
 
 (* NOTE: changed to in_d and out_d params (out from lower, and in to upper). Need to
@@ -20,7 +20,8 @@ let keys
     ?out_d1
     ?out_d2
     (k1 : _ KeyHole.t)
-    (k2 : _ KeyHole.t) =
+    (k2 : _ KeyHole.t)
+  =
   let aux (in_side, (inney : _ KeyHole.t)) (out_side, outey) =
     let out_a, out_b =
       slide
@@ -39,8 +40,8 @@ let keys
     Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
   and face1 = KeyHole.Faces.face k1.faces start
   and face2 = KeyHole.Faces.face k2.faces dest in
-  if Float.(Vec3.get_z face1.points.centre > Vec3.get_z face2.points.centre) then
-    aux (start, k1) (dest, k2)
+  if Float.(Vec3.get_z face1.points.centre > Vec3.get_z face2.points.centre)
+  then aux (start, k1) (dest, k2)
   else aux (dest, k2) (start, k1)
 
 let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
@@ -59,7 +60,7 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
   and join_folder ~key ~data hulls =
     let huller ~low_west (out_last, out_next, out_join) (in_last, in_next, in_join) =
       let mean_ortho side last next =
-        Vec3.(normalize (KeyHole.orthogonal last side <+> KeyHole.orthogonal next side))
+        Vec3.(normalize (KeyHole.orthogonal last side +@ KeyHole.orthogonal next side))
       and in_side, out_side = if low_west then dest, start else start, dest in
       let out_ortho = mean_ortho out_side out_last out_next
       and in_ortho = mean_ortho in_side in_last in_next in
@@ -69,7 +70,8 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
     in
     match data with
     | `Both ((w_join : Column.Join.t), (e_join : Column.Join.t)) ->
-      let w_last, w_next = bookends a.keys key and e_last, e_next = bookends b.keys key in
+      let w_last, w_next = bookends a.keys key
+      and e_last, e_next = bookends b.keys key in
       let w_set =
         ( w_last
         , w_next
@@ -100,7 +102,8 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
                  ; (face e_next.faces dest).points.centre
                  ])
       in
-      if Float.(w_z > e_z) then huller ~low_west:false e_set w_set :: hulls
+      if Float.(w_z > e_z)
+      then huller ~low_west:false e_set w_set :: hulls
       else huller ~low_west:true w_set e_set :: hulls
     | _ -> hulls
   in

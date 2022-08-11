@@ -12,31 +12,31 @@ module Bone = struct
   [@@deriving scad]
 
   let bend a t =
-    let q = Quaternion.make t.joint a and p = Vec3.negate t.base in
+    let q = Quaternion.make t.joint a in
     { t with
-      scad = Scad.quaternion_about_pt q p t.scad
-    ; tip = Vec3.quaternion_about_pt q p t.tip
+      scad = Scad.quaternion ~about:t.base q t.scad
+    ; tip = Vec3.quaternion ~about:t.base q t.tip
     ; normal = Vec3.quaternion q t.normal
     }
 
   let splay a t =
-    let q = Quaternion.make t.normal a and p = Vec3.negate t.base in
+    let q = Quaternion.make t.normal a in
     { t with
-      scad = Scad.quaternion_about_pt q p t.scad
-    ; tip = Vec3.quaternion_about_pt q p t.tip
+      scad = Scad.quaternion ~about:t.base q t.scad
+    ; tip = Vec3.quaternion ~about:t.base q t.tip
     ; joint = Vec3.quaternion q t.joint
     }
 
   let make ?(fn = 5) ?alpha ?colour ?(angle = 0.) ~rad len =
     let scad =
-      Scad.cylinder ~fn rad len
+      Scad.cylinder ~fn ~height:len rad
       |> Option.value_map ~default:Fn.id ~f:(Scad.color ?alpha) colour
     in
     { scad
-    ; base = 0., 0., 0.
-    ; tip = 0., 0., len
-    ; joint = 1., 0., 0.
-    ; normal = 0., -1., 0.
+    ; base = v3 0. 0. 0.
+    ; tip = v3 0. 0. len
+    ; joint = v3 1. 0. 0.
+    ; normal = v3 0. (-1.) 0.
     }
     |> bend (Float.pi /. -2.)
     |> splay angle
@@ -61,22 +61,13 @@ module Finger = struct
 
   let config ?offset ?radii ?splay lengths = { offset; lengths; radii; splay }
   let map ~f t = { prox = f t.prox; mid = f t.mid; dist = f t.dist }
-
-  let splay a t =
-    quaternion_about_pt (Quaternion.make t.prox.normal a) (Vec3.negate t.prox.base) t
+  let splay a t = quaternion ~about:t.prox.base (Quaternion.make t.prox.normal a) t
 
   let extend ?mult a t =
     let p, m, d = Option.value ~default:(1., 1., 1.) mult in
-    let t' =
-      quaternion_about_pt
-        (Quaternion.make t.prox.joint (a *. p))
-        (Vec3.negate t.prox.base)
-        t
-    in
+    let t' = quaternion ~about:t.prox.base (Quaternion.make t.prox.joint (a *. p)) t in
     let mid_bend =
-      Bone.quaternion_about_pt
-        (Quaternion.make t'.mid.joint (a *. m))
-        (Vec3.negate t'.mid.base)
+      Bone.quaternion ~about:t'.mid.base (Quaternion.make t'.mid.joint (a *. m))
     in
     { prox = t'.prox
     ; mid = mid_bend t'.mid
@@ -148,11 +139,11 @@ module Thumb = struct
   let make ?splay ?offset ?(radii = 9., 8., 7.) lengths =
     let bones = Finger.make ?splay ?offset ~radii lengths in
     { bones =
-        Finger.quaternion_about_pt
+        Finger.quaternion
+          ~about:bones.prox.base
           (Quaternion.make (Vec3.sub bones.prox.base bones.prox.tip) (Float.pi /. 2.))
-          (Vec3.negate bones.prox.base)
           bones
-    ; duct = 0., 1., 0.
+    ; duct = v3 0. 1. 0.
     }
 
   let of_config Finger.{ offset; lengths; radii; splay } =
@@ -165,10 +156,7 @@ module Thumb = struct
   let adduction a t =
     { t with
       bones =
-        Finger.quaternion_about_pt
-          (Quaternion.make t.duct a)
-          (Vec3.negate t.bones.prox.base)
-          t.bones
+        Finger.quaternion ~about:t.bones.prox.base (Quaternion.make t.duct a) t.bones
     }
 
   let abduction a = adduction (-.a)
@@ -201,19 +189,13 @@ let flex_fingers ?mult a t = { t with fingers = Fingers.flex ?mult a t.fingers }
 let extend_fingers ?mult a t = { t with fingers = Fingers.extend ?mult a t.fingers }
 let flex_thumb ?mult a t = { t with thumb = Thumb.flex ?mult a t.thumb }
 let extend_thumb ?mult a t = { t with thumb = Thumb.extend ?mult a t.thumb }
-let extend a t = quaternion_about_pt (Quaternion.make t.wrist a) (Vec3.negate t.origin) t
+let extend a t = quaternion ~about:t.origin (Quaternion.make t.wrist a) t
 let flex a = extend (-.a)
 let adduction a t = { t with thumb = Thumb.adduction a t.thumb }
 let abduction a = adduction (-.a)
-
-let suppinate a t =
-  quaternion_about_pt (Quaternion.make t.heading a) (Vec3.negate t.origin) t
-
+let suppinate a t = quaternion ~about:t.origin (Quaternion.make t.heading a) t
 let pronate a = suppinate (-.a)
-
-let radial_dev a t =
-  quaternion_about_pt (Quaternion.make t.normal a) (Vec3.negate t.origin) t
-
+let radial_dev a t = quaternion ~about:t.origin (Quaternion.make t.normal a) t
 let ulnar_dev a = radial_dev (-.a)
 
 let update_digits
@@ -222,7 +204,8 @@ let update_digits
     ?(middle = Fn.id)
     ?(pinky = Fn.id)
     ?(thumb = Fn.id)
-    t =
+    t
+  =
   { t with
     fingers = Fingers.update ~index ~ring ~middle ~pinky t.fingers
   ; thumb = { t.thumb with bones = thumb t.thumb.bones }
@@ -230,27 +213,27 @@ let update_digits
 
 let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : Thumb.t) =
   let carpals =
-    Scad.cylinder knuckle_rad carpal_len
-    |> Scad.rotate (0., Float.pi /. 2., 0.)
+    Scad.cylinder ~height:carpal_len knuckle_rad
+    |> Scad.rotate (v3 0. (Float.pi /. 2.) 0.)
     |> Scad.translate thumb.bones.prox.base
   in
-  let mid_x, mid_y, _ = fingers.middle.prox.base
-  and _, y, _ = thumb.bones.prox.base
+  let { x = mid_x; y = mid_y; z = _ } = fingers.middle.prox.base
   and z =
     Fingers.fold
       ~init:(Vec3.get_z thumb.bones.prox.base)
       ~f:(fun m a -> Float.min m (Vec3.get_z a.prox.base))
       fingers
   in
-  let heading = Vec3.normalize (0., mid_y, -.z) and origin = mid_x, y, z in
+  let heading = Vec3.normalize (v3 0. mid_y (-.z))
+  and origin = v3 mid_x thumb.bones.prox.base.y z in
   { fingers
   ; thumb
   ; carpals
   ; knuckle_rad
   ; origin
-  ; wrist = 1., 0., 0.
+  ; wrist = v3 1. 0. 0.
   ; heading
-  ; normal = Vec3.rotate (Float.pi /. 2., 0., 0.) heading
+  ; normal = Vec3.rotate (v3 (Float.pi /. 2.) 0. 0.) heading
   }
   |> translate (Vec3.negate origin)
 
@@ -262,7 +245,8 @@ let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
 let to_scad
     ?(alpha = 0.5)
     ?(color = Color.Pink)
-    { fingers; thumb; carpals; knuckle_rad; _ } =
+    { fingers; thumb; carpals; knuckle_rad; _ }
+  =
   let palm =
     Scad.hull
       [ carpals
@@ -280,7 +264,7 @@ let to_scad
 let home ?(hover = 18.) Plate.{ body; config; _ } t =
   let centre_row = config.body_centres config.centre_col in
   let key = Columns.key_exn body config.centre_col (Int.of_float centre_row) in
-  let pos = Vec3.(add key.origin (mul_scalar (KeyHole.normal key) hover))
+  let pos = Vec3.(key.origin +@ (KeyHole.normal key *$ hover))
   and aligned =
     let column_vec =
       Vec3.(
@@ -291,15 +275,13 @@ let home ?(hover = 18.) Plate.{ body; config; _ } t =
                   config.centre_col
                   (Int.of_float @@ (centre_row +. 1.)) )
                  .origin
-             <-> key.origin )
-             (1., 1., 0.) ))
+             -@ key.origin )
+             (v3 1. 1. 0.) ))
     in
     let tented = suppinate config.tent t in
-    quaternion_about_pt
-      (Quaternion.alignment
-         Vec3.(normalize @@ tented.heading <*> (1., 1., 0.))
-         column_vec )
-      (Vec3.negate tented.origin)
+    quaternion
+      ~about:tented.origin
+      (Quaternion.align Vec3.(normalize @@ (tented.heading *@ v3 1. 1. 0.)) column_vec)
       tented
   in
   translate (Vec3.sub pos aligned.fingers.middle.dist.tip) aligned
@@ -319,11 +301,13 @@ let home_curl t =
   |> flex_thumb ~mult:(-0.4, 1.0, 0.2) (Float.pi /. 8.)
 
 let default_config =
-  { index = Finger.config ~offset:(21., 60., 0.) (47.5, 27., 21.)
-  ; middle = Finger.config ~offset:(41., 62., 0.) (55., 31., 27.)
-  ; ring = Finger.config ~offset:(55., 60., 0.) ~splay:(Float.pi /. -25.) (50., 31., 24.)
-  ; pinky = Finger.config ~offset:(70., 52., 0.) ~splay:(Float.pi /. -11.) (37.5, 26., 22.)
-  ; thumb = Finger.config ~offset:(15., 0., -25.) ~splay:(Float.pi /. 8.) (52., 30., 28.8)
+  { index = Finger.config ~offset:(v3 21. 60. 0.) (47.5, 27., 21.)
+  ; middle = Finger.config ~offset:(v3 41. 62. 0.) (55., 31., 27.)
+  ; ring = Finger.config ~offset:(v3 55. 60. 0.) ~splay:(Float.pi /. -25.) (50., 31., 24.)
+  ; pinky =
+      Finger.config ~offset:(v3 70. 52. 0.) ~splay:(Float.pi /. -11.) (37.5, 26., 22.)
+  ; thumb =
+      Finger.config ~offset:(v3 15. 0. (-25.)) ~splay:(Float.pi /. 8.) (52., 30., 28.8)
   ; carpal_len = None
   ; knuckle_rad = None
   }

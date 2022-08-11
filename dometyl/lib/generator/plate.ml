@@ -13,11 +13,11 @@ module Lookups = struct
     }
 
   let default_offset = function
-    | 2 -> 0., 3.5, -6. (* middle *)
-    | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 1., -22., 9.5 (* pinky *)
-    | 0 -> -2., 0., 7.
-    | _ -> 0., 0., 1.5
+    | 2 -> v3 0. 3.5 (-6.) (* middle *)
+    | 3 -> v3 1. (-2.5) 0.5 (* ring *)
+    | i when i >= 4 -> v3 1. (-22.) 9.5 (* pinky *)
+    | 0 -> v3 (-2.) 0. 7.
+    | _ -> v3 0. 0. 1.5
 
   let default_curve = function
     | i when i = 3 ->
@@ -47,11 +47,12 @@ module Lookups = struct
       ?(splay = default_splay)
       ?(rows = default_rows)
       ?(centre = default_centre)
-      () =
+      ()
+    =
     { offset; curve; swing; splay; rows; centre }
 
   let thumb
-      ?(offset = fun _ -> 0., 0., 0.)
+      ?(offset = fun _ -> Vec3.zero)
       ?(curve =
         fun _ ->
           Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ()))
@@ -59,7 +60,8 @@ module Lookups = struct
       ?(splay = fun _ -> 0.)
       ?(rows = fun _ -> 3)
       ?(centre = fun _ -> 1.)
-      () =
+      ()
+    =
     { offset; curve; swing; splay; rows; centre }
 end
 
@@ -92,13 +94,14 @@ let make
     ?(tent = Float.pi /. 12.)
     ?(n_thumb_cols = 1)
     ?(rotate_thumb_clips = false)
-    ?(thumb_offset = -14., -42., 13.5)
-    ?(thumb_angle = Float.(pi /. 20., pi /. -9., pi /. 12.))
+    ?(thumb_offset = v3 (-14.) (-42.) 13.5)
+    ?(thumb_angle = Float.(v3 (pi /. 20.) (pi /. -9.) (pi /. 12.)))
     ?(body_lookups = Lookups.body ())
     ?(thumb_lookups = Lookups.thumb ())
     ?(caps = Caps.SA.uniform)
     ?thumb_caps
-    (keyhole : _ KeyHole.t) =
+    (keyhole : _ KeyHole.t)
+  =
   let curve_column ~join_ax ~caps (lookups : _ Lookups.t) i k =
     Column.make
       ~join_ax
@@ -110,7 +113,7 @@ let make
   let body_offsets, thumb_offsets =
     let space = keyhole.config.outer_w +. spacing in
     let f (lookups : _ Lookups.t) m i =
-      let data = Vec3.(lookups.offset i <+> (space *. Float.of_int i, 0., 0.)) in
+      let data = Vec3.xtrans (space *. Float.of_int i) (lookups.offset i) in
       Map.add_exn ~key:i ~data m
     and init = Map.empty (module Int) in
     ( List.fold ~f:(f body_lookups) ~init (List.range 0 n_body_cols)
@@ -122,15 +125,14 @@ let make
       let f ~key:i ~data:off =
         let tented =
           Column.(
-            rotate_about_pt
-              (0., tent, 0.)
-              Vec3.(off <-> centre_offset)
+            yrot
+              ~about:Vec3.(centre_offset -@ off)
+              tent
               (curve_column ~join_ax:`NS ~caps body_lookups i keyhole))
         in
-        Column.rotate_about_pt
-          (0., body_lookups.swing i, body_lookups.splay i)
-          (Vec3.negate
-             (Map.find_exn tented.keys (Int.of_float @@ body_lookups.centre i)).origin )
+        Column.rotate
+          ~about:(Map.find_exn tented.keys (Int.of_float @@ body_lookups.centre i)).origin
+          (v3 0. (body_lookups.swing i) (body_lookups.splay i))
           tented
         |> Column.translate off
       in
@@ -138,13 +140,12 @@ let make
     and thumb =
       let place ~key:i ~data:off =
         let caps, keyhole =
-          if rotate_thumb_clips then
-            ( caps >> Scad.rotate (0., 0., Float.pi /. 2.)
-            , KeyHole.rotate (0., 0., Float.pi /. 2.) keyhole )
+          if rotate_thumb_clips
+          then caps >> Scad.zrot (Float.pi /. 2.), KeyHole.zrot (Float.pi /. 2.) keyhole
           else caps, KeyHole.cycle_faces keyhole
         in
         Column.rotate
-          (0., thumb_lookups.swing i, thumb_lookups.splay i)
+          (v3 0. (thumb_lookups.swing i) (thumb_lookups.splay i))
           (curve_column
              ~join_ax:`EW
              ~caps:(Option.value ~default:caps thumb_caps)
@@ -156,7 +157,7 @@ let make
       let placed =
         Map.mapi ~f:place thumb_offsets
         (* orient along x-axis *)
-        |> Columns.rotate (0., 0., Float.pi /. -2.)
+        |> Columns.rotate (v3 0. 0. (Float.pi /. -2.))
         |> Columns.rotate thumb_angle
         |> Columns.translate thumb_offset
       in
@@ -164,7 +165,7 @@ let make
         let col = Map.find_exn placed 0 in
         (Map.find_exn col.keys (Int.of_float @@ thumb_lookups.centre 0)).origin
       in
-      Columns.(rotate_about_pt (0., tent, 0.) Vec3.(origin <-> centre_offset) placed)
+      Columns.(yrot ~about:Vec3.(centre_offset -@ origin) tent placed)
     in
     let lift =
       let lowest_z =
@@ -188,7 +189,7 @@ let make
           ~init:Float.max_value
           body_cols
       in
-      Map.map ~f:(Column.translate (0., 0., keyhole.config.clearance -. lowest_z))
+      Map.map ~f:(Column.translate (v3 0. 0. (keyhole.config.clearance -. lowest_z)))
     in
     lift body_cols, lift thumb
   in
@@ -225,7 +226,8 @@ let skeleton_bridges
     ?in_d
     ?out_d1
     ?out_d2
-    { config = { n_body_rows; n_body_cols; _ }; body; thumb; _ } =
+    { config = { n_body_rows; n_body_cols; _ }; body; thumb; _ }
+  =
   let bridge c first =
     let r = if first then fun _ -> 0 else fun i -> n_body_rows i - 1 in
     match Columns.key body c (r c) with

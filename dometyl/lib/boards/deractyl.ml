@@ -5,28 +5,28 @@ open! Infix
 
 let body_lookups =
   let offset = function
-    | 0 -> -3.5, -6., 7. (* outer index *)
-    | 2 -> 0., 3., -5.5 (* middle *)
-    | 3 -> 0., 0., 0. (* ring *)
-    | 4 -> 0., -12., 9.5 (* pinky *)
-    | 5 -> 5.2, -13.5, 19. (* outer pinky *)
-    | _ -> 0., -5., 1.
+    | 0 -> v3 (-3.5) (-6.) 7. (* outer index *)
+    | 2 -> v3 0. 3. (-5.5) (* middle *)
+    | 3 -> v3 0. 0. 0. (* ring *)
+    | 4 -> v3 0. (-12.) 9.5 (* pinky *)
+    | 5 -> v3 5.2 (-13.5) 19. (* outer pinky *)
+    | _ -> v3 0. (-5.) 1.
   and curve = function
     | i when i = 0 ->
       let f = function
         | 3 ->
           KeyHole.quaternion_about_origin (Float.pi /. -128.)
-          >> KeyHole.translate (-0.5, -1.5, 1.6)
+          >> KeyHole.translate (v3 (-0.5) (-1.5) 1.6)
         | _ -> Fn.id
       in
       Curvature.(
         post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
     | i when i = 5 ->
       let f = function
-        | 0 -> KeyHole.translate (-1., 0., 3.)
+        | 0 -> KeyHole.translate (v3 (-1.) 0. 3.)
         | 3 ->
           KeyHole.quaternion_about_origin (Float.pi /. 55.)
-          >> KeyHole.translate (-0.75, -4., 4.)
+          >> KeyHole.translate (v3 (-0.75) (-4.) 4.)
         | _ -> Fn.id
       in
       Curvature.(
@@ -57,8 +57,8 @@ let plate_builder =
     ~n_body_cols:6
     ~spacing:1.
     ~tent:(Float.pi /. 12.)
-    ~thumb_offset:(7., -52., 11.5)
-    ~thumb_angle:Float.(0., pi /. -3.8, pi /. 6.5)
+    ~thumb_offset:(v3 7. (-52.) 11.5)
+    ~thumb_angle:Float.(v3 0. (pi /. -3.8) (pi /. 6.5))
     ~body_lookups
     ~thumb_lookups
     ~caps:Caps.SA.uniform
@@ -114,8 +114,8 @@ let build ?reset_button ?right_hand ?hotswap () =
 
 let compactyl =
   Scad.import_3d "../things/others/dereknheiley_compactyl_5x6.stl"
-  |> Scad.rotate (0., Float.pi /. -8., 0.)
-  |> Scad.translate (70., -2., -10.)
+  |> Scad.rotate (v3 0. (Float.pi /. -8.) 0.)
+  |> Scad.translate (v3 70. (-2.) (-10.))
   |> Scad.color ~alpha:0.25 Color.DarkSlateBlue
 
 let compactyl_compare () =
