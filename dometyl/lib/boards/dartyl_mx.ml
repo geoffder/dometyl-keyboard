@@ -54,11 +54,12 @@ let base_connector =
 
 let body_lookups =
   let offset = function
-    | 2 -> -1., 4.6, -3. (* middle *)
-    | 3 -> 0.33, -2., 0. (* ring *)
-    | i when i >= 4 -> 0.5, -19., 6.5 (* pinky *)
-    | 0 -> -3., -3.5, 14. (* inside *)
-    | _ -> -1.66, -3., 5. (* index *)
+    | 2 -> v3 (-1.) 4.6 (-3.) (* middle *)
+    | 3 -> v3 0.33 (-2.) 0. (* ring *)
+    | i when i >= 4 -> v3 0.5 (-19.) 6.5 (* pinky *)
+    | 0 -> v3 (-3.) (-3.5) 14. (* inside *)
+    | _ -> v3 (-1.66) (-3.) 5.
+    (* index *)
   and curve = function
     | 0 ->
       Curvature.(
@@ -80,21 +81,27 @@ let body_lookups =
 
 let thumb_lookups =
   let curve _ =
-    Curvature.(curve 
-      ~fan:{ angle = Float.pi /. 11.0; radius = 87.; tilt = Float.pi /. 48. } 
-      ~well:{ angle = Float.pi /. 7.5; radius = 49.; tilt = 0. } ())
+    Curvature.(
+      curve
+        ~fan:{ angle = Float.pi /. 11.0; radius = 87.; tilt = Float.pi /. 48. }
+        ~well:{ angle = Float.pi /. 7.5; radius = 49.; tilt = 0. }
+        ())
   and rows _ = 2 in
   Plate.Lookups.thumb ~curve ~rows ()
-
 
 let plate_welder = Plate.skeleton_bridges
 
 let ports_cutter =
-  Ports.reversible_holder ~reset_button:true ~x_off:1.8 ~y_off:(-2.2) ~z_rot:0.09 ~rail_w:1.5 ()
+  Ports.reversible_holder
+    ~reset_button:true
+    ~x_off:1.8
+    ~y_off:(-2.2)
+    ~z_rot:0.09
+    ~rail_w:1.5
+    ()
 
 let build ?hotswap () =
   let keyhole = Mx.make_hole ~clearance:1.5 ~thickness:4.88 ?hotswap () in
-
   let plate_builder =
     Plate.make
       ~n_body_cols:5
@@ -104,8 +111,8 @@ let build ?hotswap () =
       ~thumb_lookups
       ~caps:Caps.Matty3.row
       ~thumb_caps:Caps.MT3.thumb_1u
-      ~thumb_offset:(-1., -53., 10.)
-      ~thumb_angle:Float.(0., -0.3, pi /. 17.)
+      ~thumb_offset:(v3 (-1.) (-53.) 10.)
+      ~thumb_angle:Float.(v3 0. (-0.3) (pi /. 17.))
   in
   Case.make
     ~plate_welder

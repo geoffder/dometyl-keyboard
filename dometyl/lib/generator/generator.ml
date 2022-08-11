@@ -16,7 +16,6 @@ module Column = Column
 module Curvature = Curvature
 module KeyHole = KeyHole
 module Points = Points
-module Bezier = Bezier
 module Mx = Mx
 module Choc = Choc
 module Niz = Niz

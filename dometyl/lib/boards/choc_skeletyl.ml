@@ -7,11 +7,11 @@ open Generator
 
 let body_lookups =
   let offset = function
-    | 2 -> 0., 3.5, -8. (* middle *)
-    | 3 -> 0., -1., -1.5 (* ring *)
-    | i when i >= 4 -> 0., -12., 7. (* pinky *)
-    | 0 -> -0.75, 0., 0.
-    | _ -> 0., 0., -3.
+    | 2 -> v3 0. 3.5 (-8.) (* middle *)
+    | 3 -> v3 0. (-1.) (-1.5) (* ring *)
+    | i when i >= 4 -> v3 0. (-12.) 7. (* pinky *)
+    | 0 -> v3 (-0.75) 0. 0.
+    | _ -> v3 0. 0. (-3.)
   and curve = function
     | 0 ->
       Curvature.(
@@ -39,8 +39,8 @@ let plate_builder =
     ~tent:(Float.pi /. 10.)
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(-1., -49., -6.)
-    ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
+    ~thumb_offset:(v3 (-1.) (-49.) (-6.))
+    ~thumb_angle:Float.(v3 0. (pi /. -4.3) (pi /. 6.))
     ~rotate_thumb_clips:true
     ~caps:Caps.MBK.uniform
 

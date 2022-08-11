@@ -9,11 +9,11 @@ open! Generator
    room for real MT3 caps. *)
 let body_lookups =
   let offset = function
-    | 2 -> 0., 3.5, -5. (* middle *)
-    | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2.5, 0., 5.
-    | _ -> 0., 0., 0.
+    | 2 -> v3 0. 3.5 (-5.) (* middle *)
+    | 3 -> v3 1. (-2.5) 0.5 (* ring *)
+    | i when i >= 4 -> v3 0.5 (-18.) 8.5 (* pinky *)
+    | 0 -> v3 (-2.5) 0. 5.
+    | _ -> v3 0. 0. 0.
   and curve = function
     | i when i >= 3 ->
       Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.25)) ())
@@ -44,8 +44,8 @@ let plate_builder =
     ~n_body_cols:5
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(-13., -41., 10.)
-    ~thumb_angle:Float.(pi /. 40., pi /. -14., pi /. 24.)
+    ~thumb_offset:(v3 (-13.) (-41.) 10.)
+    ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.))
     ~rotate_thumb_clips:false
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)

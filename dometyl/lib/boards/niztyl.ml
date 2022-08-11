@@ -5,11 +5,11 @@ open! Infix
 
 let body_lookups =
   let offset = function
-    | 2 -> 0., 3.5, -5. (* middle *)
-    | 3 -> 1., -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> 0.5, -18., 8.5 (* pinky *)
-    | 0 -> -2.5, 0., 5.6 (* inner index *)
-    | _ -> 0., 0., 0.
+    | 2 -> v3 0. 3.5 (-5.) (* middle *)
+    | 3 -> v3 1. (-2.5) 0.5 (* ring *)
+    | i when i >= 4 -> v3 0.5 (-18.) 8.5 (* pinky *)
+    | 0 -> v3 (-2.5) 0. 5.6 (* inner index *)
+    | _ -> v3 0. 0. 0.
   and curve = function
     | i when i = 0 ->
       Curvature.(
@@ -32,7 +32,7 @@ let thumb_lookups =
     let f = function
       | 2 ->
         KeyHole.quaternion_about_origin (Float.pi /. 30.)
-        >> KeyHole.translate (-0.5, -0.8, 1.)
+        >> KeyHole.translate (v3 (-0.5) (-0.8) 1.)
       | _ -> Fn.id
     in
     Curvature.(
@@ -49,8 +49,8 @@ let plate_builder =
     ~spacing:0.
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(-15., -44., 8.5)
-    ~thumb_angle:Float.(pi /. 60., pi /. -14., pi /. 12.)
+    ~thumb_offset:(v3 (-15.) (-44.) 8.5)
+    ~thumb_angle:Float.(v3 (pi /. 60.) (pi /. -14.) (pi /. 12.))
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.thumb_1u
 
@@ -110,6 +110,5 @@ let build ?right_hand ?(empty = false) () =
     hole
 
 let fastener = Eyelet.screw_fastener ~clearance:6. () (* countersunk M4 *)
-
 let bottom case = Bottom.make ~fastener case
 let tent ?(degrees = 30.) case = Tent.make ~fastener ~degrees case

@@ -17,8 +17,8 @@ let prism_connection bezs steps =
     | `Ragged ns -> List.hd_exn ns
   in
   { scad = Bezier.prism_exn bezs steps
-  ; outline = Bezier.curve ~n_steps (List.hd_exn bezs)
-  ; inline = Bezier.curve ~n_steps (List.last_exn bezs)
+  ; outline = Bezier3.curve ~fn:n_steps (List.hd_exn bezs)
+  ; inline = Bezier3.curve ~fn:n_steps (List.last_exn bezs)
   }
 
 let clockwise_union ts =
@@ -73,15 +73,15 @@ let base_steps ~n_steps starts dests =
   `Ragged (List.map ~f:adjust norms)
 
 let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
-  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let mask = if Float.(abs dx > abs dy) then 1., 0., 0. else 0., 1., 0. in
+  let mask = if Float.(abs dx > abs dy) then v3 1. 0. 0. else v3 0. 1. 0. in
   let get_bez start dest =
-    let diff = V3.(dest <-> start) in
-    let p1 = V3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
-    and p2 = V3.(start <+> mul mask diff)
-    and p3 = V3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
-    Bezier.quad_vec3 ~p1 ~p2 ~p3
+    let diff = V3.(dest -@ start) in
+    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
+    and p2 = V3.(start +@ mul mask diff)
+    and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
+    Bezier3.make [ p1; p2; p3 ]
   in
   let starts = base_endpoints ~n_facets ~height `Right w1 in
   let dests = base_endpoints ~n_facets ~height `Left w2 in
@@ -101,17 +101,17 @@ let cubic_base
   =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
-  and dist = d, d, 0.
+  and dist = v3 d d 0.
   and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in
   let get_bez top start dest =
     let outward =
-      if Bool.equal top bow_out then V3.add (width, width, 0.) dist else dist
+      if Bool.equal top bow_out then V3.add (v3 width width 0.) dist else dist
     in
-    let p1 = V3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
-    and p2 = V3.(start <-> mul dir1 outward)
-    and p3 = V3.(dest <+> mul dir2 outward)
-    and p4 = V3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
-    Bezier.cubic_vec3 ~p1 ~p2 ~p3 ~p4
+    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
+    and p2 = V3.(start -@ mul dir1 outward)
+    and p3 = V3.(dest +@ mul dir2 outward)
+    and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
+    Bezier3.make [ p1; p2; p3; p4 ]
   in
   let starts = base_endpoints ~n_facets ~height `Right w1 in
   let dests = base_endpoints ~n_facets ~height `Left w2 in
@@ -138,15 +138,15 @@ let snake_base
   =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
-  and dist = d, d, 0.
+  and dist = v3 d d 0.
   and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in
   let get_bez top start dest =
-    let outward = V3.add (width, width, 0.) dist in
-    let p1 = V3.(start <+> mul dir1 (0.01, 0.01, 0.)) (* fudge for union *)
-    and p2 = V3.(start <-> mul dir1 (if top then dist else outward))
-    and p3 = V3.(dest <+> mul dir2 (if top then outward else dist))
-    and p4 = V3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
-    Bezier.cubic_vec3 ~p1 ~p2 ~p3 ~p4
+    let outward = V3.add (v3 width width 0.) dist in
+    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
+    and p2 = V3.(start -@ mul dir1 (if top then dist else outward))
+    and p3 = V3.(dest +@ mul dir2 (if top then outward else dist))
+    and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
+    Bezier3.make [ p1; p2; p3; p4 ]
   in
   let starts = base_endpoints ~n_facets ~height `Right w1 in
   let dests = base_endpoints ~n_facets ~height `Left w2 in
@@ -176,20 +176,20 @@ let inward_elbow_base
    * the inward face (on the right) or the usual CW facing right side. *)
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
-  and ((inx, iny, _) as inward_dir) =
-    V3.normalize V3.(w1.foot.bot_right <-> w1.foot.top_right)
+  and ({ x = inx; y = iny; z = _ } as inward_dir) =
+    V3.normalize V3.(w1.foot.bot_right -@ w1.foot.top_right)
   in
-  let mask = if Float.(abs inx > abs iny) then 1., 0., 0. else 0., 1., 0. in
+  let mask = if Float.(abs inx > abs iny) then v3 1. 0. 0. else v3 0. 1. 0. in
   let get_bez start dest =
-    let diff = V3.(dest <-> start) in
-    let p1 = V3.(start <-> mul inward_dir (0.01, 0.01, 0.)) (* fudge for union *)
-    and p2 = V3.(start <+> mul mask diff <+> map (( *. ) d) dir2)
-    and p3 = V3.(dest <-> mul dir2 (0.01, 0.01, 0.)) in
-    Bezier.quad_vec3 ~p1 ~p2 ~p3
+    let diff = V3.(dest -@ start) in
+    let p1 = V3.(start -@ mul inward_dir (v3 0.01 0.01 0.)) (* fudge for union *)
+    and p2 = V3.(start +@ mul mask diff +@ map (( *. ) d) dir2)
+    and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
+    Bezier3.make [ p1; p2; p3 ]
   in
   let starts =
     let w = V3.distance w1.foot.bot_right w1.foot.top_right in
-    let slide p = V3.(add p (mul dir1 (w, w, 0.))) in
+    let slide p = V3.(add p (mul dir1 (v3 w w 0.))) in
     endpoints
       ~n_facets
       ~height
@@ -212,12 +212,10 @@ let straight_base
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
-  and ((lx, ly, _) as line) =
-    V3.(
-      mean [ w1.foot.bot_right; w1.foot.top_right ]
-      <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
+  and ({ x = lx; y = ly; z = _ } as line) =
+    V3.(mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left)
   in
   let major_diff, minor_diff = if Float.(abs dx > abs dy) then lx, ly else ly, lx in
   let fudge d =
@@ -231,9 +229,9 @@ let straight_base
     and width_extra =
       (* Check now thick the connection is in the middle, and create a rough adjustment
          if it is less than the specified minimum. *)
-      let mid_top = V3.mean [ w1.foot.top_right; w2.foot.top_left ]
-      and mid_bot = V3.mean [ w1.foot.bot_right; w2.foot.bot_left ] in
-      let mid_diff = V3.(mid_top <-> mid_bot) in
+      let mid_top = V3.mid w1.foot.top_right w2.foot.top_left
+      and mid_bot = V3.mid w1.foot.bot_right w2.foot.bot_left in
+      let mid_diff = V3.(mid_top -@ mid_bot) in
       let align = 1. -. V3.(norm @@ cross (normalize mid_diff) (normalize line)) in
       let thickness =
         Float.max
@@ -243,7 +241,7 @@ let straight_base
       if Float.(thickness < min_width) then min_width -. thickness else 0.
     in
     let extra = Float.max angle_extra width_extra in
-    V3.(add (mul d (extra, extra, 0.)))
+    V3.(add (mul d (v3 extra extra 0.)))
   and overlap =
     let major_ax = if Float.(abs dx > abs dy) then dx else dy
     and intersect = Points.overlapping_bounds w1.foot w2.foot in
@@ -286,7 +284,7 @@ let straight_base
       else fudge (V3.negate dir1) w1.foot.bot_right
     in
     endpoints ~n_facets ~height w1.foot.top_right w1.edges.top_right bot_bez bot_pt
-    |> List.map ~f:V3.(add (mul dir1 (overlap, overlap, 0.)))
+    |> List.map ~f:V3.(add (mul dir1 (v3 overlap overlap 0.)))
   and dests og =
     let slide = fudge (V3.negate dir2) in
     let bot_bez =
@@ -303,7 +301,7 @@ let straight_base
       else fudge (V3.negate dir2) w2.foot.bot_left
     in
     endpoints ~n_facets ~height w2.foot.top_left w2.edges.top_left bot_bez bot_pt
-    |> List.map ~f:V3.(add (mul dir2 (-0.05, -0.05, 0.)))
+    |> List.map ~f:V3.(add (mul dir2 (v3 (-0.05) (-0.05) 0.)))
   in
   let extra_starts = starts false
   and extra_dests = dests false in
@@ -330,7 +328,7 @@ let join_walls
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let ((dx, dy, _) as dir1) = Wall.foot_direction w1
+  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2
   and n_steps =
     let summit (w : Wall.t) =
@@ -339,10 +337,9 @@ let join_walls
     Wall.Steps.to_int n_steps (Float.max (summit w1) (summit w2))
   in
   let major_diff, minor_diff =
-    let x, y, _ =
+    let { x; y; z = _ } =
       V3.(
-        mean [ w1.foot.bot_right; w1.foot.top_right ]
-        <-> mean [ w2.foot.bot_left; w2.foot.top_left ])
+        mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left)
     in
     if Float.(abs dx > abs dy) then x, y else y, x
   in
@@ -355,8 +352,8 @@ let join_walls
     (* Obtuse angle between wall top difference and the foot difference indicates
        that the start wall is likely dodging the column below. If this is a corner,
        don't flag. *)
-    let foot_diff = V3.(w1.foot.top_right <-> w2.foot.top_right)
-    and top_diff = V3.(mul (w1.start.top_right <-> w2.start.top_left) (1., 1., 0.)) in
+    let foot_diff = V3.(w1.foot.top_right -@ w2.foot.top_right)
+    and top_diff = V3.(mul (w1.start.top_right -@ w2.start.top_left) (v3 1. 1. 0.)) in
     let mag = V3.norm top_diff in
     if Float.(mag > 0.1 && V3.dot foot_diff top_diff < 0.) then Some mag else None
   in
@@ -369,7 +366,7 @@ let join_walls
         then Float.(abs (max (fudge_factor -. major_diff) 0.))
         else 0.
       in
-      V3.(add (mul dir2 (-.extra, -.extra, 0.))) )
+      V3.(add (mul dir2 (v3 (-.extra) (-.extra) 0.))) )
     else Fn.id
   and overlap =
     match overhang with
@@ -394,7 +391,7 @@ let join_walls
   (* HACK: The way I am using the overhang flag here seemed to partially rescue one case,
      but I am not confident that it is a solid fix. *)
   let top_start, starts =
-    let shove = V3.(add (mul dir1 (overlap, overlap, 0.))) in
+    let shove = V3.(add (mul dir1 (v3 overlap overlap 0.))) in
     let top =
       w1.edges.top_right 0.
       |> fudge true
@@ -402,13 +399,16 @@ let join_walls
       |> w1.edge_drawer.top
     in
     ( top
-    , Bezier.curve_rev
-        ~n_steps
+    , Bezier3.curve
+        ~rev:true
+        ~fn:n_steps
         ~init:
-          (Bezier.curve ~n_steps (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)))
+          (Bezier3.curve
+             ~fn:n_steps
+             (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)) )
         top )
   and top_dest, dests =
-    let shove = V3.(add (mul dir2 (-.overlap, -.overlap, 0.))) in
+    let shove = V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.))) in
     let top =
       w2.edges.top_left 0.
       |> fudge false
@@ -416,9 +416,11 @@ let join_walls
       |> w2.edge_drawer.top
     in
     ( top
-    , Bezier.curve_rev
-        ~n_steps
-        ~init:(Bezier.curve ~n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.)))
+    , Bezier3.curve
+        ~rev:true
+        ~fn:n_steps
+        ~init:
+          (Bezier3.curve ~fn:n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.)))
         top )
   in
   let wedge =
@@ -426,21 +428,21 @@ let join_walls
      * key face and moving it out for clearance prior to drawing the walls. *)
     Util.prism_exn
       (List.map
-         ~f:V3.(add (mul (Wall.start_direction w1) (overlap, overlap, 0.)))
+         ~f:V3.(add (mul (Wall.start_direction w1) (v3 overlap overlap 0.)))
          [ w1.start.top_right
          ; w1.start.bot_right
          ; w1.edges.bot_right 0.
          ; top_start 0.001
          ] )
       (List.map
-         ~f:V3.(add (mul (Wall.start_direction w2) (-0.01, -0.01, 0.)))
+         ~f:V3.(add (mul (Wall.start_direction w2) (v3 (-0.01) (-0.01) 0.)))
          [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.001 ] )
   in
   { scad = Scad.union [ Util.prism_exn starts dests; wedge ]
   ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ]
   ; inline =
-      [ V3.(add (mul dir1 (overlap, overlap, 0.)) w1.foot.bot_right)
-      ; V3.(add (mul dir2 (-.overlap, -.overlap, 0.)) w2.foot.bot_left)
+      [ V3.(add (mul dir1 (v3 overlap overlap 0.)) w1.foot.bot_right)
+      ; V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.)) w2.foot.bot_left)
       ]
   }
 

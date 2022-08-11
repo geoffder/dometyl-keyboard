@@ -157,7 +157,7 @@ let make
       let placed =
         Map.mapi ~f:place thumb_offsets
         (* orient along x-axis *)
-        |> Columns.rotate (v3 0. 0. (Float.pi /. -2.))
+        |> Columns.zrot (Float.pi /. -2.)
         |> Columns.rotate thumb_angle
         |> Columns.translate thumb_offset
       in

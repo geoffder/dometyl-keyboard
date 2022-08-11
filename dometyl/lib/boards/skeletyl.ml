@@ -10,11 +10,11 @@ open Generator
 
 let body_lookups =
   let offset = function
-    | 2 -> 0., 3.5, -8. (* middle *)
-    | 3 -> 1., -1., -1.5 (* ring *)
-    | i when i >= 4 -> 0., -12., 7. (* pinky *)
-    | 0 -> -1., 0., -2.
-    | _ -> 0., 0., -3.
+    | 2 -> v3 0. 3.5 (-8.) (* middle *)
+    | 3 -> v3 1. (-1.) (-1.5) (* ring *)
+    | i when i >= 4 -> v3 0. (-12.) 7. (* pinky *)
+    | 0 -> v3 (-1.) 0. (-2.)
+    | _ -> v3 0. 0. (-3.)
   and curve = function
     | 0 ->
       Curvature.(
@@ -42,8 +42,8 @@ let plate_builder =
     ~tent:(Float.pi /. 10.)
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(-1., -50., -6.)
-    ~thumb_angle:Float.(0., pi /. -4.3, pi /. 6.)
+    ~thumb_offset:(v3 (-1.) (-50.) (-6.))
+    ~thumb_angle:Float.(v3 0. (pi /. -4.3) (pi /. 6.))
 
 let plate_welder = Plate.skeleton_bridges
 
@@ -100,9 +100,9 @@ let build ?right_hand ?hotswap () =
 
 let bastard_skelly =
   Scad.import_3d "../things/others/bastardkb_skeletyl_v3_v5.stl"
-  |> Scad.translate (87., 0., 25.)
-  |> Scad.rotate (Float.pi /. 2., 0., 0.)
-  |> Scad.translate (0., -2., 8.)
+  |> Scad.translate (v3 87. 0. 25.)
+  |> Scad.xrot (Float.pi /. 2.)
+  |> Scad.translate (v3 0. (-2.) 8.)
   |> Scad.color ~alpha:0.5 Color.DarkSlateBlue
 
 let bastard_compare () =
@@ -115,5 +115,6 @@ let bk_skeletyl_w_shield () =
   let shield = BastardShield.(make ()) in
   Scad.union
     [ bastard_skelly
-    ; BastardShield.to_scad ~show_screws:true shield |> Scad.translate (-6.71, 35.2, 2.)
+    ; BastardShield.to_scad ~show_screws:true shield
+      |> Scad.translate (v3 (-6.71) 35.2 2.)
     ]

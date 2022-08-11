@@ -12,8 +12,7 @@ let thing ?(export = false) name scad =
   let filename ext = Printf.sprintf "%s../things/%s.%s" path_to_root name ext in
   Stdio.printf "- %s => scad" name;
   Stdio.(Out_channel.flush stdout);
-  let oc = Stdio.Out_channel.create (filename "scad") in
-  Scad.write oc scad;
+  Scad.to_file (filename "scad") scad;
   if export
   then (
     Stdio.printf " => stl\n";

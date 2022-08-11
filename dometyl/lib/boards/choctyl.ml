@@ -4,11 +4,11 @@ open! Generator
 
 let body_lookups =
   let offset = function
-    | 2 -> 0., 3.5, -6. (* middle *)
-    | 3 -> 0.5, -2.5, 0.5 (* ring *)
-    | i when i >= 4 -> -1., -18., 8.5 (* pinky *)
-    | 0 -> -2.25, 0., 6.5
-    | _ -> 0., 0., 0.
+    | 2 -> v3 0. 3.5 (-6.) (* middle *)
+    | 3 -> v3 0.5 (-2.5) 0.5 (* ring *)
+    | i when i >= 4 -> v3 (-1.) (-18.) 8.5 (* pinky *)
+    | 0 -> v3 (-2.25) 0. 6.5
+    | _ -> v3 0. 0. 0.
   and curve = function
     | i when i = 3 ->
       Curvature.(curve ~well:(spec ~radius:30.8 (Float.pi /. 4.25)) ()) (* ring  *)
@@ -40,8 +40,8 @@ let plate_builder =
     ~n_body_cols:5
     ~spacing:0.5
     ~tent:(Float.pi /. 16.)
-    ~thumb_offset:(-14., -39., 9.)
-    ~thumb_angle:Float.(pi /. 60., pi /. -14., pi /. 12.)
+    ~thumb_offset:(v3 (-14.) (-39.) 9.)
+    ~thumb_angle:Float.(v3 (pi /. 60.) (pi /. -14.) (pi /. 12.))
     ~rotate_thumb_clips:true
     ~body_lookups
     ~thumb_lookups

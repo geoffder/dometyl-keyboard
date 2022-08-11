@@ -49,11 +49,11 @@ let base_connector =
 
 let body_lookups =
   let offset = function
-    | 2 -> -2.33, 4.6, -3. (* middle *)
-    | 3 -> -1.66, -4.5, 0. (* ring *)
-    | i when i >= 4 -> -3.5, -19., 6.5 (* pinky *)
-    | 0 -> -0.85, -3.5, 13. (* inside *)
-    | _ -> -1.66, -2., 5.
+    | 2 -> v3 (-2.33) 4.6 (-3.) (* middle *)
+    | 3 -> v3 (-1.66) (-4.5) 0. (* ring *)
+    | i when i >= 4 -> v3 (-3.5) (-19.) 6.5 (* pinky *)
+    | 0 -> v3 (-0.85) (-3.5) 13. (* inside *)
+    | _ -> v3 (-1.66) (-2.) 5.
   (* index *)
   and curve = function
     | 0 ->
@@ -106,8 +106,8 @@ let build ?hotswap () =
       ~thumb_lookups
       ~caps:Caps.MBK.uniform
       ~thumb_caps:Caps.MBK.uniform
-      ~thumb_offset:(1., -48., 10.)
-      ~thumb_angle:Float.(0.23, -0.3, pi /. 17.)
+      ~thumb_offset:(v3 1. (-48.) 10.)
+      ~thumb_angle:Float.(v3 0.23 (-0.3) (pi /. 17.))
   in
   Case.make
     ~plate_welder
