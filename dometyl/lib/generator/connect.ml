@@ -16,7 +16,8 @@ let prism_connection bezs steps =
     | `Uniform n -> n
     | `Ragged ns -> List.hd_exn ns
   in
-  { scad = Bezier.prism_exn bezs steps
+  (* { scad = Bezier.prism_exn bezs steps *)
+  { scad = Scad.union_3d []
   ; outline = Bezier3.curve ~fn:n_steps (List.hd_exn bezs)
   ; inline = Bezier3.curve ~fn:n_steps (List.last_exn bezs)
   }

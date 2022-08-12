@@ -87,7 +87,7 @@ let make
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
       | _                     -> SameMagnet )
     | Some fastener -> fastener
-  and rot = v3 0. (Util.deg_to_rad degrees *. rot_sign) 0.
+  and rot = v3 0. (-1. *. Util.deg_to_rad degrees *. rot_sign) 0.
   and about = v3 (-.bb_pinky) 0. 0. in
   let filled_top =
     let eyelets =

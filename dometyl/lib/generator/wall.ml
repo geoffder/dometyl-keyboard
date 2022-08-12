@@ -286,9 +286,65 @@ let poly_siding
     in
     Option.map ~f eyelet_config
   in
+  let bz =
+    let d1 = d1 *. 2. in
+    let d2 = d2 *. 2. in
+    let ({ x; y; z } as cx) = cleared_face.points.centre in
+    let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
+    and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 (x +. x_off) (y +. y_off) (z +. z_hop)))
+    and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 (x +. x_off) (y +. y_off) 0.)) in
+    Bezier3.make [ p1; p2; p3 ]
+    (* Bezier3.make V3.[ zero; p2 -@ p1; p3 -@ p1 ] *)
+  in
+  let bz_pts = Bezier3.curve ~fn:16 bz in
+  (* let transforms = Path3.to_transforms bz_pts in *)
+  let transforms = Trans.to_transforms ~initial:ortho bz_pts in
+  let _poly =
+    (* NOTE:
+         - this hacky way of creating a poly combined with the forced initial
+           alignment to the orthogonal of the face successfully achieves a sweep
+           from the starting position of the face. It of course does not align
+           with the ground at the end, and shifting in xy causes funny twists.
+           So I guess what I need to do is to generate a set of profiles for
+           skinning, rather than sweeps, to ensure that things line up at both
+           ends.
+
+         - the question is then, how much further should I go beyond the
+           pre-rotating and clearing of the faces from the column that I already do,
+           in order to make things more reliable. I think it is more natural to
+    morph things to line up the orthogonal with the xy plane (thus vertical
+    face) before beginning the wall. This is also going to be required anyway
+    if I want to do a continuous wall option that could be part of the support
+    for a separate switch plate.
+       *)
+    let pth = Points.to_clockwise_list cleared_face.points in
+    (* let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in *)
+    let plane = Path3.to_plane pth in
+    let pth = Path3.project plane pth in
+    let pth = Path2.translate (V2.negate (Path2.centroid pth)) pth in
+    (* let pth = Path2.mirror (v2 1. 0.) pth in *)
+    (* Poly2.make @@ Path2.zrot (Float.pi /. 2.) pth *)
+    Poly2.make pth
+  in
+  let _mesh =
+    let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in
+    let rows = List.map ~f:(fun m -> Path3.affine m pth) transforms in
+    (* let rows = *)
+    (*   List.map *)
+    (*     ~f:(fun m -> *)
+    (*       List.map ~f:(fun p -> V3.(affine m p -@ cleared_face.points.centre)) pth ) *)
+    (*     transforms *)
+    (* in *)
+    Mesh.of_rows rows
+  in
+  (* let poly = Poly2.square ~center:true (v2 19. 4.) in *)
+  ignore steps;
   { scad =
       Scad.hull [ start_face.scad; cleared_face.scad ]
-      :: Bezier.prism_exn bezs steps
+      (* :: Path3.show_points (Fn.const @@ Scad.sphere 1.) bz_pts *)
+      (* :: Mesh.(to_scad @@ path_extrude ~euler:true ~path:bz_pts poly) *)
+      :: Mesh.(to_scad @@ rev_faces @@ sweep ~transforms _poly)
+      (* :: Mesh.to_scad _mesh *)
       :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Scad.union
       |> Fn.flip
