@@ -287,8 +287,10 @@ let poly_siding
     Option.map ~f eyelet_config
   in
   let bz =
-    let d1 = d1 *. 2. in
+    let d1 = d1 *. 4. in
     let d2 = d2 *. 2. in
+    let x_off = 0. in
+    let y_off = 0. in
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
     and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 (x +. x_off) (y +. y_off) (z +. z_hop)))
@@ -296,9 +298,25 @@ let poly_siding
     Bezier3.make [ p1; p2; p3 ]
     (* Bezier3.make V3.[ zero; p2 -@ p1; p3 -@ p1 ] *)
   in
+  let _mbz =
+    let d1 = d1 *. 4. in
+    let d2 = d2 *. 2. in
+    let x_off = 0. in
+    let y_off = 0. in
+    let { x = _; y = _; z } = cleared_face.points.centre in
+    let p1 = V3.(ortho *$ -0.01) (* fudge for union *)
+    and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 x_off y_off z_hop))
+    and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 x_off y_off (-.z))) in
+    Bezier3.make [ p1; p2; p3 ]
+  in
   let bz_pts = Bezier3.curve ~fn:16 bz in
   (* let transforms = Path3.to_transforms bz_pts in *)
-  let transforms = Trans.to_transforms ~initial:ortho bz_pts in
+  let _transforms = Path3.to_transforms ~mode:(`Align ortho) bz_pts in
+  let _m_trans =
+    Path3.to_transforms ~mode:`NoAlign bz_pts
+    (* (Bezier3.curve ~fn:16 _mbz) *)
+  in
+  (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
   let _poly =
     (* NOTE:
          - this hacky way of creating a poly combined with the forced initial
@@ -328,7 +346,21 @@ let poly_siding
   in
   let _mesh =
     let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in
-    let rows = List.map ~f:(fun m -> Path3.affine m pth) transforms in
+    let pth = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
+    (* let pth = Path3.(roundover Round.(flat ~corner:(chamf (`Cut 0.5)) pth)) in *)
+    let pth = Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) pth)) in
+    (* let rows = List.map ~f:(fun m -> Path3.affine m pth) _transforms in *)
+    let scaled =
+      let frac = x_off /. 19. in
+      let step = frac /. (Float.of_int @@ List.length _m_trans) /. 2. in
+      List.mapi
+        ~f:(fun i m -> Affine3.(scale (v3 (1. +. (Float.of_int i *. step)) 1. 1.) %> m))
+        _m_trans
+      (* let s = Affine3.scale (v3 (1. +. (x_off /. 19.)) 1. 1.) in *)
+      (* List.map ~f:(fun m -> Affine3.(s %> m)) _m_trans *)
+    in
+    (* let rows = List.map ~f:(fun m -> Path3.affine m pth) _m_trans in *)
+    let rows = List.map ~f:(fun m -> Path3.affine m pth) scaled in
     (* let rows = *)
     (*   List.map *)
     (*     ~f:(fun m -> *)
@@ -343,8 +375,11 @@ let poly_siding
       Scad.hull [ start_face.scad; cleared_face.scad ]
       (* :: Path3.show_points (Fn.const @@ Scad.sphere 1.) bz_pts *)
       (* :: Mesh.(to_scad @@ path_extrude ~euler:true ~path:bz_pts poly) *)
-      :: Mesh.(to_scad @@ rev_faces @@ sweep ~transforms _poly)
-      (* :: Mesh.to_scad _mesh *)
+      (* :: Mesh.(to_scad @@ rev_faces @@ sweep ~transforms _poly) *)
+      (* :: Path3.show_points *)
+      (*      (Fn.const @@ Scad.sphere 1.) *)
+      (*      Bezier3.(curve ~fn:16 @@ translate cleared_face.points.centre _mbz) *)
+      :: Mesh.to_scad _mesh
       :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Scad.union
       |> Fn.flip
