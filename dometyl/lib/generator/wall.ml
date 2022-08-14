@@ -180,6 +180,30 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     V3.quaternion ~about:pivot q key_origin |> V3.sub face'.points.centre |> V3.normalize
   in
   face', ortho'
+(* let dir = KeyHole.Face.direction face' in *)
+(* let free, about, z_sign = *)
+(*   if Float.(V3.get_z dir > 0.) *)
+(*   then face'.points.bot_left, face'.points.bot_right, -1. *)
+(*   else face'.points.bot_right, face'.points.bot_left, 1. *)
+(* in *)
+(* let quat = Quaternion.make ortho' in *)
+(* let diff a = *)
+(*   Float.abs V3.(get_z (V3.quaternion ~about (quat (a *. z_sign)) free) -. about.z) *)
+(* in *)
+(* let rec find_angle a best_d best = *)
+(*   if Float.(a < pi) *)
+(*   then ( *)
+(*     let d = diff a in *)
+(*     let best_d, best = if Float.(d < best_d) then d, a else best_d, best in *)
+(*     find_angle (a +. step) best_d best ) *)
+(*   else best *)
+(* in *)
+(* let q = quat (find_angle step (V3.get_z free -. about.z) step *. z_sign) in *)
+(* let face' = KeyHole.Face.quaternion ~about q face' in *)
+(* let ortho' = *)
+(*   V3.quaternion ~about q key_origin |> V3.sub face'.points.centre |> V3.normalize *)
+(* in *)
+(* face', ortho' *)
 
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
  * do so in the higher level functions in walls that call this one. Having a larger
@@ -319,21 +343,13 @@ let poly_siding
   (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
   let _poly =
     (* NOTE:
-         - this hacky way of creating a poly combined with the forced initial
-           alignment to the orthogonal of the face successfully achieves a sweep
-           from the starting position of the face. It of course does not align
-           with the ground at the end, and shifting in xy causes funny twists.
-           So I guess what I need to do is to generate a set of profiles for
-           skinning, rather than sweeps, to ensure that things line up at both
-           ends.
-
-         - the question is then, how much further should I go beyond the
-           pre-rotating and clearing of the faces from the column that I already do,
-           in order to make things more reliable. I think it is more natural to
-    morph things to line up the orthogonal with the xy plane (thus vertical
-    face) before beginning the wall. This is also going to be required anyway
-    if I want to do a continuous wall option that could be part of the support
-    for a separate switch plate.
+       I have experimented with "chopping" the face down to be flat relative to
+    the xy plane but it is pretty terrible. I think a better compromise might be
+    fixing the bottom part of the wall after all. I could calculate the z to
+       stop at and begin a linear transition from by using:
+       - (thickness /. 2.) to account for angling of the vertical axis of the
+         key face
+       - the difference in height between left and right corners of the face
        *)
     let pth = Points.to_clockwise_list cleared_face.points in
     (* let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in *)
@@ -346,41 +362,36 @@ let poly_siding
   in
   let _mesh =
     let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in
-    let pth = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
-    (* let pth = Path3.(roundover Round.(flat ~corner:(chamf (`Cut 0.5)) pth)) in *)
     let pth = Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) pth)) in
-    (* let rows = List.map ~f:(fun m -> Path3.affine m pth) _transforms in *)
+    let centred = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
     let scaled =
       let frac = x_off /. 19. in
       let step = frac /. (Float.of_int @@ List.length _m_trans) /. 2. in
       List.mapi
         ~f:(fun i m -> Affine3.(scale (v3 (1. +. (Float.of_int i *. step)) 1. 1.) %> m))
         _m_trans
-      (* let s = Affine3.scale (v3 (1. +. (x_off /. 19.)) 1. 1.) in *)
-      (* List.map ~f:(fun m -> Affine3.(s %> m)) _m_trans *)
     in
-    (* let rows = List.map ~f:(fun m -> Path3.affine m pth) _m_trans in *)
-    let rows = List.map ~f:(fun m -> Path3.affine m pth) scaled in
-    (* let rows = *)
-    (*   List.map *)
-    (*     ~f:(fun m -> *)
-    (*       List.map ~f:(fun p -> V3.(affine m p -@ cleared_face.points.centre)) pth ) *)
-    (*     transforms *)
-    (* in *)
-    Mesh.of_rows rows
+    let rows = List.map ~f:(fun m -> Path3.affine m centred) scaled in
+    let clearing =
+      let start =
+        List.rev @@ Points.to_clockwise_list start_face.points
+        |> Path3.subdivide ~freq:(`N (List.length pth, `ByLen))
+      in
+      Mesh.slice_profiles ~slices:(`Flat 5) [ start; pth ]
+    in
+    Mesh.of_rows (clearing @ rows)
   in
-  (* let poly = Poly2.square ~center:true (v2 19. 4.) in *)
   ignore steps;
   { scad =
-      Scad.hull [ start_face.scad; cleared_face.scad ]
+      (* Scad.hull [ start_face.scad; cleared_face.scad ] *)
       (* :: Path3.show_points (Fn.const @@ Scad.sphere 1.) bz_pts *)
       (* :: Mesh.(to_scad @@ path_extrude ~euler:true ~path:bz_pts poly) *)
       (* :: Mesh.(to_scad @@ rev_faces @@ sweep ~transforms _poly) *)
       (* :: Path3.show_points *)
       (*      (Fn.const @@ Scad.sphere 1.) *)
       (*      Bezier3.(curve ~fn:16 @@ translate cleared_face.points.centre _mbz) *)
-      :: Mesh.to_scad _mesh
-      :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
+      (* :: Mesh.to_scad _mesh *)
+      Mesh.to_scad _mesh :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Scad.union
       |> Fn.flip
            Scad.difference
