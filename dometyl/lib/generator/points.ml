@@ -30,9 +30,10 @@ let fold ~f ~init t =
   let flipped = Fn.flip f in
   f init t.top_left |> flipped t.top_right |> flipped t.bot_left |> flipped t.bot_right
 
-let to_clockwise_list t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
+let to_cw_path t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
+let to_ccw_path t = [ t.bot_left; t.bot_right; t.top_right; t.top_left ]
 
-let of_clockwise_list_exn = function
+let of_cw_path_exn = function
   | [ top_left; top_right; bot_right; bot_left ] ->
     { top_left
     ; top_right
@@ -42,25 +43,20 @@ let of_clockwise_list_exn = function
     }
   | _ -> failwith "Expect list of length 4, with corner points in clockwise order."
 
-let of_clockwise_list l =
-  try Ok (of_clockwise_list_exn l) with
+let of_cw_path l =
+  try Ok (of_cw_path_exn l) with
   | Failure e -> Error e
 
 let overlapping_bounds a b =
-  let a = Path3.bbox (to_clockwise_list a)
-  and b = Path3.bbox (to_clockwise_list b) in
-  (* intersection rectangle *)
-  let top = Float.min a.max.y b.max.y
-  and right = Float.min a.max.x b.max.x
-  and bot = Float.max a.min.y b.min.y
-  and left = Float.max a.min.x b.min.x in
-  if not Float.(right < left || top < bot)
-  then (
-    let intersect = (right -. left) *. (top -. bot)
+  let a = Path3.bbox (to_cw_path a)
+  and b = Path3.bbox (to_cw_path b) in
+  match V3.bbox_intersect a b with
+  | Some inter ->
+    let area_inter = V3.bbox_area inter
     and area_a = (a.max.x -. a.min.x) *. (a.max.y -. a.min.y)
     and area_b = (b.max.x -. b.min.x) *. (b.max.y -. b.min.y) in
-    intersect /. (area_a +. area_b -. intersect) )
-  else 0.
+    area_inter /. (area_a +. area_b -. area_inter)
+  | None       -> 0.
 
 let get t = function
   | `TL -> t.top_left

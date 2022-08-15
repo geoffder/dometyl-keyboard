@@ -69,12 +69,12 @@ module Edges : sig
 
   val map : f:(Edge.t -> Edge.t) -> t -> t
 
-  (** [of_clockwise_list_exn l] Convert a four element list into a [t]. The ordering
+  (** [of_cw_path_exn l] Convert a four element list into a [t]. The ordering
       actually shouldn't just be clockwise, but is assumed to literally be: TL, TR, BR,
       BL. *)
-  val of_clockwise_list_exn : Edge.t list -> t
+  val of_cw_path_exn : Edge.t list -> t
 
-  val of_clockwise_list : Edge.t list -> (t, string) Result.t
+  val of_cw_path : Edge.t list -> (t, string) Result.t
 
   (** [get t corner]
 

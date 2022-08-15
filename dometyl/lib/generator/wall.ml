@@ -2,6 +2,21 @@ open Base
 open Scad_ml
 open Infix
 
+(* TODO:
+
+   What is needed?
+   - KeyHole must carry the full path of its front and back ends, along with a
+    Points holding coordinates of not the corners as they are originally, but
+    instead, the points of the long edges (first point of the corner, e.g.
+    beginning of the arc or start of the chamfer), such that connections can be drawn
+    disregarding the roundovers
+   - These points can then be used with the same transforms that draw the wall
+    to create edge paths that can be skinned together to join walls, or be the
+    target endpoints for (bespoke of_rows usage likely) sweeps between the
+    bases of column walls.
+   - Of course, these edge paths will need to take into account the skinning
+    that happens at the base of the walls (unimplemented fix that ensures that
+    the wall foot is flat on the xy plane). *)
 module Steps = struct
   type t =
     [ `PerZ of float
@@ -100,13 +115,13 @@ module Edges = struct
     ; bot_right = f t.bot_right
     }
 
-  let of_clockwise_list_exn = function
+  let of_cw_path_exn = function
     | [ top_left; top_right; bot_right; bot_left ] ->
       { top_left; top_right; bot_left; bot_right }
     | _ -> failwith "Expect list of length 4, with edges beziers in clockwise order."
 
-  let of_clockwise_list l =
-    try Ok (of_clockwise_list_exn l) with
+  let of_cw_path l =
+    try Ok (of_cw_path_exn l) with
     | Failure e -> Error e
 
   let get t = function
@@ -180,30 +195,36 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     V3.quaternion ~about:pivot q key_origin |> V3.sub face'.points.centre |> V3.normalize
   in
   face', ortho'
-(* let dir = KeyHole.Face.direction face' in *)
-(* let free, about, z_sign = *)
-(*   if Float.(V3.get_z dir > 0.) *)
-(*   then face'.points.bot_left, face'.points.bot_right, -1. *)
-(*   else face'.points.bot_right, face'.points.bot_left, 1. *)
-(* in *)
-(* let quat = Quaternion.make ortho' in *)
-(* let diff a = *)
-(*   Float.abs V3.(get_z (V3.quaternion ~about (quat (a *. z_sign)) free) -. about.z) *)
-(* in *)
-(* let rec find_angle a best_d best = *)
-(*   if Float.(a < pi) *)
-(*   then ( *)
-(*     let d = diff a in *)
-(*     let best_d, best = if Float.(d < best_d) then d, a else best_d, best in *)
-(*     find_angle (a +. step) best_d best ) *)
-(*   else best *)
-(* in *)
-(* let q = quat (find_angle step (V3.get_z free -. about.z) step *. z_sign) in *)
-(* let face' = KeyHole.Face.quaternion ~about q face' in *)
-(* let ortho' = *)
-(*   V3.quaternion ~about q key_origin |> V3.sub face'.points.centre |> V3.normalize *)
-(* in *)
-(* face', ortho' *)
+
+(* pivot around the lower corner to bring the bottom edge of the face parallel
+    with the XY plane. Largely duplicated from swing_face, though it likely will
+    not be used so not combining them into a cleaner implementation and just
+    hanging onto it for now in case I want to lift part of it. *)
+let _chop_face ?(step = Float.pi /. 24.) key_origin ortho face =
+  let dir = KeyHole.Face.direction face in
+  let free, about, z_sign =
+    if Float.(V3.get_z dir > 0.)
+    then face.points.bot_left, face.points.bot_right, -1.
+    else face.points.bot_right, face.points.bot_left, 1.
+  in
+  let quat = Quaternion.make ortho in
+  let diff a =
+    Float.abs V3.(get_z (V3.quaternion ~about (quat (a *. z_sign)) free) -. about.z)
+  in
+  let rec find_angle a best_d best =
+    if Float.(a < pi)
+    then (
+      let d = diff a in
+      let best_d, best = if Float.(d < best_d) then d, a else best_d, best in
+      find_angle (a +. step) best_d best )
+    else best
+  in
+  let q = quat (find_angle step (V3.get_z free -. about.z) step *. z_sign) in
+  let face' = KeyHole.Face.quaternion ~about q face in
+  let ortho' =
+    V3.quaternion ~about q key_origin |> V3.sub face'.points.centre |> V3.normalize
+  in
+  face', ortho'
 
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
  * do so in the higher level functions in walls that call this one. Having a larger
@@ -294,7 +315,7 @@ let poly_siding
       ~init:([], [])
       (List.rev cw_points)
   in
-  let foot = Points.of_clockwise_list_exn (corners end_ps) in
+  let foot = Points.of_cw_path_exn (corners end_ps) in
   let screw =
     let f config =
       let open Eyelet in
@@ -311,7 +332,7 @@ let poly_siding
     Option.map ~f eyelet_config
   in
   let bz =
-    let d1 = d1 *. 4. in
+    let d1 = d1 *. 7. in
     let d2 = d2 *. 2. in
     let x_off = 0. in
     let y_off = 0. in
@@ -333,7 +354,7 @@ let poly_siding
     and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 x_off y_off (-.z))) in
     Bezier3.make [ p1; p2; p3 ]
   in
-  let bz_pts = Bezier3.curve ~fn:16 bz in
+  let bz_pts = Bezier3.curve ~fn:13 bz in
   (* let transforms = Path3.to_transforms bz_pts in *)
   let _transforms = Path3.to_transforms ~mode:(`Align ortho) bz_pts in
   let _m_trans =
@@ -351,8 +372,8 @@ let poly_siding
          key face
        - the difference in height between left and right corners of the face
        *)
-    let pth = Points.to_clockwise_list cleared_face.points in
-    (* let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in *)
+    let pth = Points.to_cw_path cleared_face.points in
+    (* let pth = List.rev @@ Points.to_cw_path cleared_face.points in *)
     let plane = Path3.to_plane pth in
     let pth = Path3.project plane pth in
     let pth = Path2.translate (V2.negate (Path2.centroid pth)) pth in
@@ -361,11 +382,12 @@ let poly_siding
     Poly2.make pth
   in
   let _mesh =
-    let pth = List.rev @@ Points.to_clockwise_list cleared_face.points in
+    let pth = List.rev @@ Points.to_cw_path cleared_face.points in
     let pth = Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) pth)) in
     let centred = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
     let scaled =
-      let frac = x_off /. 19. in
+      (* let frac = x_off /. 19. in *)
+      let frac = 0. in
       let step = frac /. (Float.of_int @@ List.length _m_trans) /. 2. in
       List.mapi
         ~f:(fun i m -> Affine3.(scale (v3 (1. +. (Float.of_int i *. step)) 1. 1.) %> m))
@@ -374,23 +396,21 @@ let poly_siding
     let rows = List.map ~f:(fun m -> Path3.affine m centred) scaled in
     let clearing =
       let start =
-        List.rev @@ Points.to_clockwise_list start_face.points
+        let s = List.rev @@ Points.to_cw_path start_face.points in
+        Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) s))
         |> Path3.subdivide ~freq:(`N (List.length pth, `ByLen))
       in
       Mesh.slice_profiles ~slices:(`Flat 5) [ start; pth ]
     in
-    Mesh.of_rows (clearing @ rows)
+    Mesh.of_rows (clearing @ List.tl_exn rows)
   in
   ignore steps;
   { scad =
       (* Scad.hull [ start_face.scad; cleared_face.scad ] *)
       (* :: Path3.show_points (Fn.const @@ Scad.sphere 1.) bz_pts *)
-      (* :: Mesh.(to_scad @@ path_extrude ~euler:true ~path:bz_pts poly) *)
-      (* :: Mesh.(to_scad @@ rev_faces @@ sweep ~transforms _poly) *)
       (* :: Path3.show_points *)
       (*      (Fn.const @@ Scad.sphere 1.) *)
       (*      Bezier3.(curve ~fn:16 @@ translate cleared_face.points.centre _mbz) *)
-      (* :: Mesh.to_scad _mesh *)
       Mesh.to_scad _mesh :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Scad.union
       |> Fn.flip
@@ -402,7 +422,7 @@ let poly_siding
       EdgeDrawer.make
         ~get_bez:(fun top start -> snd (get_bez top start))
         cleared_face.points
-  ; edges = Edges.of_clockwise_list_exn (corners bezs)
+  ; edges = Edges.of_cw_path_exn (corners bezs)
   ; screw
   }
 

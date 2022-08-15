@@ -4,8 +4,8 @@ open! Infix
 
 type t =
   { scad : Scad.d3
-  ; outline : V3.t list
-  ; inline : V3.t list
+  ; outline : Path3.t
+  ; inline : Path3.t
   }
 [@@deriving scad]
 
