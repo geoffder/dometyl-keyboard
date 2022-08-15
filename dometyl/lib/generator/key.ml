@@ -125,11 +125,12 @@ let make
   (* TODO: corner in config should be option, no roundover if None *)
   let pth = Path2.(roundover ?fn @@ Round.flat ~corner ~closed:true sq) in
   let hole =
-    Mesh.linear_extrude ~center:true ~height:outer_h (Poly2.make pth)
-    |> Mesh.xrot (Float.pi /. -2.)
-    |> Mesh.to_scad
-    |> Scad.sub (Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)))
-    |> clip
+    let outer =
+      Mesh.linear_extrude ~center:true ~height:outer_h (Poly2.make pth)
+      |> Mesh.xrot (Float.pi /. -2.)
+      |> Mesh.to_scad
+    and inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
+    clip @@ Scad.sub outer inner
   in
   let faces =
     let top_edge, bot_edge =
