@@ -26,4 +26,5 @@ val of_cw_path_exn : Path3.t -> t
 val of_cw_path : Path3.t -> (t, string) Result.t
 val overlapping_bounds : t -> t -> float
 val get : t -> [< `BL | `BR | `CN | `TL | `TR ] -> V3.t
+val direction : t -> V3.t
 val mark : t -> Scad.d3

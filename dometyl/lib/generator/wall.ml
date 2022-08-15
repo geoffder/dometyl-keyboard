@@ -331,39 +331,7 @@ let poly_siding
     in
     Option.map ~f eyelet_config
   in
-  let bz =
-    let d1 = d1 *. 7. in
-    let d2 = d2 *. 2. in
-    let x_off = 0. in
-    let y_off = 0. in
-    let ({ x; y; z } as cx) = cleared_face.points.centre in
-    let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
-    and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 (x +. x_off) (y +. y_off) (z +. z_hop)))
-    and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 (x +. x_off) (y +. y_off) 0.)) in
-    Bezier3.make [ p1; p2; p3 ]
-    (* Bezier3.make V3.[ zero; p2 -@ p1; p3 -@ p1 ] *)
-  in
-  let _mbz =
-    let d1 = d1 *. 4. in
-    let d2 = d2 *. 2. in
-    let x_off = 0. in
-    let y_off = 0. in
-    let { x = _; y = _; z } = cleared_face.points.centre in
-    let p1 = V3.(ortho *$ -0.01) (* fudge for union *)
-    and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 x_off y_off z_hop))
-    and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 x_off y_off (-.z))) in
-    Bezier3.make [ p1; p2; p3 ]
-  in
-  let bz_pts = Bezier3.curve ~fn:13 bz in
-  (* let transforms = Path3.to_transforms bz_pts in *)
-  let _transforms = Path3.to_transforms ~mode:(`Align ortho) bz_pts in
-  let _m_trans =
-    Path3.to_transforms ~mode:`NoAlign bz_pts
-    (* (Bezier3.curve ~fn:16 _mbz) *)
-  in
-  (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
-  let _poly =
-    (* NOTE:
+  (* NOTE:
        I have experimented with "chopping" the face down to be flat relative to
     the xy plane but it is pretty terrible. I think a better compromise might be
     fixing the bottom part of the wall after all. I could calculate the z to
@@ -372,37 +340,59 @@ let poly_siding
          key face
        - the difference in height between left and right corners of the face
        *)
-    let pth = Points.to_cw_path cleared_face.points in
-    (* let pth = List.rev @@ Points.to_cw_path cleared_face.points in *)
-    let plane = Path3.to_plane pth in
-    let pth = Path3.project plane pth in
-    let pth = Path2.translate (V2.negate (Path2.centroid pth)) pth in
-    (* let pth = Path2.mirror (v2 1. 0.) pth in *)
-    (* Poly2.make @@ Path2.zrot (Float.pi /. 2.) pth *)
-    Poly2.make pth
+  (* TODO: add a rel factor of the key thickness, or absolute z as the bezier
+    stopping point (where the linear transition to the flat foot begins) *)
+  let end_z = key.config.thickness /. 3. in
+  let bz =
+    let d1 = d1 *. 7. in
+    let d2 = d2 *. 2. in
+    let x_off = 0. in
+    let y_off = 0. in
+    let ({ x; y; z } as cx) = cleared_face.points.centre in
+    let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
+    and p2 = V3.(mul xy (v3 d1 d1 0.) |> add (v3 (x +. x_off) (y +. y_off) (z +. z_hop)))
+    and p3 = V3.(add (mul xy (v3 d2 d2 0.)) (v3 (x +. x_off) (y +. y_off) end_z)) in
+    Bezier3.make [ p1; p2; p3 ]
   in
+  let bz_pts = Bezier3.curve ~fn:13 bz in
+  (* let transforms = Path3.to_transforms bz_pts in *)
+  let transforms = Path3.to_transforms ~mode:`NoAlign bz_pts in
+  (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
   let _mesh =
-    let pth = List.rev @@ Points.to_cw_path cleared_face.points in
-    let pth = Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) pth)) in
+    let pth =
+      Points.to_ccw_path cleared_face.points
+      |> Path3.Round.(flat ~corner:(circ (`Cut 0.5)))
+      |> Path3.roundover
+    in
     let centred = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
     let scaled =
       (* let frac = x_off /. 19. in *)
       let frac = 0. in
-      let step = frac /. (Float.of_int @@ List.length _m_trans) /. 2. in
+      let step = frac /. (Float.of_int @@ List.length transforms) /. 2. in
       List.mapi
         ~f:(fun i m -> Affine3.(scale (v3 (1. +. (Float.of_int i *. step)) 1. 1.) %> m))
-        _m_trans
+        transforms
     in
     let rows = List.map ~f:(fun m -> Path3.affine m centred) scaled in
     let clearing =
       let start =
-        let s = List.rev @@ Points.to_cw_path start_face.points in
+        let s = Points.to_ccw_path start_face.points in
         Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) s))
         |> Path3.subdivide ~freq:(`N (List.length pth, `ByLen))
       in
       Mesh.slice_profiles ~slices:(`Flat 5) [ start; pth ]
     in
-    Mesh.of_rows (clearing @ List.tl_exn rows)
+    let final =
+      let s = List.last_exn rows in
+      let n = Path3.normal s in
+      let c = bz 1. in
+      let flat =
+        Path3.quaternion ~about:c (Quaternion.align n (v3 0. 0. (-1.))) s
+        |> Path3.ztrans (-.c.z)
+      in
+      Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
+    in
+    Mesh.of_rows (List.concat [ clearing; List.tl_exn rows; List.tl_exn final ])
   in
   ignore steps;
   { scad =

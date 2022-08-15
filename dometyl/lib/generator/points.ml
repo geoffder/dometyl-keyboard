@@ -65,6 +65,8 @@ let get t = function
   | `BR -> t.bot_right
   | `CN -> t.centre
 
+let direction { top_left; top_right; _ } = V3.normalize V3.(top_left -@ top_right)
+
 let mark t =
   let f p = Scad.cube ~center:true (v3 1. 1. 1.) |> Scad.translate p in
   Scad.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]
