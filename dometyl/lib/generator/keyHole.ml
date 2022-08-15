@@ -98,22 +98,20 @@ let normal t =
   V3.(normalize (top_left -@ bot_left))
 
 let rotate_about_origin r t =
-  let about = V3.negate t.origin in
   { t with
-    scad = Scad.rotate ~about r t.scad
-  ; faces = Faces.rotate ~about r t.faces
-  ; cap = Option.map ~f:(Scad.rotate ~about r) t.cap
-  ; cutout = Option.map ~f:(Scad.rotate ~about r) t.cutout
+    scad = Scad.rotate ~about:t.origin r t.scad
+  ; faces = Faces.rotate ~about:t.origin r t.faces
+  ; cap = Option.map ~f:(Scad.rotate ~about:t.origin r) t.cap
+  ; cutout = Option.map ~f:(Scad.rotate ~about:t.origin r) t.cutout
   }
 
 let quaternion_about_origin angle t =
-  let about = V3.negate t.origin
-  and q = Quaternion.make (normal t) angle in
+  let q = Quaternion.make (normal t) angle in
   { t with
-    scad = Scad.quaternion ~about q t.scad
-  ; faces = Faces.quaternion ~about q t.faces
-  ; cap = Option.map ~f:(Scad.quaternion ~about q) t.cap
-  ; cutout = Option.map ~f:(Scad.quaternion ~about q) t.cutout
+    scad = Scad.quaternion ~about:t.origin q t.scad
+  ; faces = Faces.quaternion ~about:t.origin q t.faces
+  ; cap = Option.map ~f:(Scad.quaternion ~about:t.origin q) t.cap
+  ; cutout = Option.map ~f:(Scad.quaternion ~about:t.origin q) t.cutout
   }
 
 let cycle_faces ({ faces = { north; south; east; west }; _ } as t) =
