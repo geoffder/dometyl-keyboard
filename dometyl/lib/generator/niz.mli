@@ -30,6 +30,8 @@ module Config : sig
     ; cap_height : float
     ; cap_cutout_height : float option
     ; clearance : float
+    ; corner : Path2.Round.corner option
+    ; fn : int option
     ; dome_w : float
     ; dome_waist_clip : float
     ; dome_thickness : float
@@ -38,8 +40,8 @@ module Config : sig
     ; sensor_cutter : Sensor.cutter
     }
 
-  val make :
-       ?outer_w:float
+  val make
+    :  ?outer_w:float
     -> ?outer_h:float
     -> ?inner_w:float
     -> ?inner_h:float
@@ -47,6 +49,8 @@ module Config : sig
     -> ?cap_height:float
     -> ?cap_cutout_height:float option
     -> ?clearance:float
+    -> ?corner:Path2.Round.corner
+    -> ?fn:int
     -> ?dome_w:float
     -> ?dome_waist_clip:float
     -> ?dome_thickness:float
@@ -59,11 +63,10 @@ module Config : sig
   val default : t
 end
 
-val hole_of_config :
-  ?render:bool -> ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+val hole_of_config : ?render:bool -> ?cap:Scad.d3 -> Config.t -> Key.t
 
-val make_hole :
-     ?render:bool
+val make_hole
+  :  ?render:bool
   -> ?cap:Scad.d3
   -> ?outer_w:float
   -> ?outer_h:float
@@ -73,6 +76,8 @@ val make_hole :
   -> ?cap_height:float
   -> ?cap_cutout_height:float option
   -> ?clearance:float
+  -> ?corner:Path2.Round.corner
+  -> ?fn:int
   -> ?dome_w:float
   -> ?dome_waist_clip:float
   -> ?dome_thickness:float
@@ -80,13 +85,12 @@ val make_hole :
   -> ?sensor_depth:float
   -> ?sensor_cutter:Sensor.cutter
   -> unit
-  -> KeyHole.Kind.key KeyHole.t
+  -> Key.t
 
-val empty_hole_of_config :
-  ?render:bool -> ?cap:Scad.d3 -> Config.t -> KeyHole.Kind.key KeyHole.t
+val empty_hole_of_config : ?render:bool -> ?cap:Scad.d3 -> Config.t -> Key.t
 
-val make_empty_hole :
-     ?render:bool
+val make_empty_hole
+  :  ?render:bool
   -> ?cap:Scad.d3
   -> ?outer_w:float
   -> ?outer_h:float
@@ -96,5 +100,7 @@ val make_empty_hole :
   -> ?cap_height:float
   -> ?cap_cutout_height:float option
   -> ?clearance:float
+  -> ?corner:Path2.Round.corner
+  -> ?fn:int
   -> unit
-  -> KeyHole.Kind.key KeyHole.t
+  -> Key.t

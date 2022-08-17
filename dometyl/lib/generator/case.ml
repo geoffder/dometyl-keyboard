@@ -2,9 +2,9 @@ open! Base
 open! Scad_ml
 open! Infix
 
-type 'k t =
+type t =
   { scad : Scad.d3
-  ; plate : 'k Plate.t
+  ; plate : Plate.t
   ; walls : Walls.t
   ; connections : Connect.t
   }
@@ -20,7 +20,7 @@ let make
     keyhole
   =
   let plate =
-    plate_builder (if right_hand then keyhole else KeyHole.mirror_internals keyhole)
+    plate_builder (if right_hand then keyhole else Key.mirror_internals keyhole)
   in
   let walls = wall_builder plate in
   let connections = base_connector walls in

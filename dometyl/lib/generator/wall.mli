@@ -57,7 +57,7 @@ end
 (** Bezier curves representing the four edges running from the start to the foot of each
     {!Wall.t} *)
 module Edges : sig
-  (** Record containting an {!Edge.t} running from the corners of {!KeyHole.Face.points}
+  (** Record containting an {!Edge.t} running from the corners of {!Key.Face.points}
       down to the floor, where the terminal points are used for {!Wall.foot}. *)
   type t =
     { top_left : Edge.t [@scad.d3]
@@ -95,10 +95,10 @@ type config =
 
 val default : config
 
-(** Record representing a wall extending from a {!KeyHole.Face.t} to the ground. *)
+(** Record representing a wall extending from a {!Key.Face.t} to the ground. *)
 type t =
   { scad : Scad.d3 (** Aggregate scad, including screw outshoot if included *)
-  ; start : Points.t (** Corner points of the {!KeyHole.Face.t} this wall emerged from *)
+  ; start : Points.t (** Corner points of the {!Key.Face.t} this wall emerged from *)
   ; foot : Points.t (** Terminal points where the wall meets the XY plane. *)
   ; edge_drawer : EdgeDrawer.t
         (** Generate {!Edge.t}'s emerging from point along top and bottom starting edges
@@ -113,9 +113,9 @@ type t =
 
     Iteratively find a rotation around [face]s bottom or top axis, depending on which way
     it is pointing in z (determined with [key_origin]), that brings [face] to a more
-    vertical orientation, returning a pivoted {!KeyHole.Face.t} and it's new orthogonal
+    vertical orientation, returning a pivoted {!Key.Face.t} and it's new orthogonal
     {!V3.t}. *)
-val swing_face : ?step:float -> V3.t -> KeyHole.Face.t -> KeyHole.Face.t * V3.t
+val swing_face : ?step:float -> V3.t -> Key.Face.t -> Key.Face.t * V3.t
 
 (** [poly_siding ?x_off ?y_off ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
       ?eyelet_config side keyhole]
@@ -158,7 +158,7 @@ val poly_siding
   -> ?thickness:float
   -> ?eyelet_config:Eyelet.config
   -> [< `East | `North | `South | `West ]
-  -> 'a KeyHole.t
+  -> Key.t
   -> t
 
 val poly_of_config
@@ -166,14 +166,14 @@ val poly_of_config
   -> ?y_off:float
   -> config
   -> [< `East | `North | `South | `West ]
-  -> 'a KeyHole.t
+  -> Key.t
   -> t
 
 (** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
       ~spacing ~columns idx]
 
     Wrapper function for {!val:poly_siding} specifically for (north and south) column end
-    walls. Unlike {!val:poly_siding}, which takes a {!KeyHole.t}, this takes the map
+    walls. Unlike {!val:poly_siding}, which takes a {!Key.t}, this takes the map
     [columns], and an [idx] specifying the column to generate the wall for. Overhang over
     the next column (to the right) that may have been introduced by tenting is checked
     for, and an x offset that will reclaim the desired column [spacing] is calculated and
@@ -188,7 +188,7 @@ val column_drop
   -> ?thickness:float
   -> ?eyelet_config:Eyelet.config
   -> spacing:float
-  -> columns:'k Columns.t
+  -> columns:Columns.t
   -> [< `North | `South ]
   -> int
   -> t
@@ -196,7 +196,7 @@ val column_drop
 val drop_of_config
   :  spacing:float
   -> config
-  -> columns:'k Columns.t
+  -> columns:Columns.t
   -> [< `North | `South ]
   -> int
   -> t

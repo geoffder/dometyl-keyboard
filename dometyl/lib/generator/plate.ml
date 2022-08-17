@@ -3,9 +3,9 @@ open Scad_ml
 open Infix
 
 module Lookups = struct
-  type 'k t =
+  type t =
     { offset : int -> V3.t
-    ; curve : int -> 'k Curvature.t
+    ; curve : int -> Curvature.t
     ; swing : int -> float
     ; splay : int -> float
     ; rows : int -> int
@@ -65,7 +65,7 @@ module Lookups = struct
     { offset; curve; swing; splay; rows; centre }
 end
 
-type 'k config =
+type config =
   { n_body_rows : int -> int
   ; body_centres : int -> float
   ; n_body_cols : int
@@ -79,11 +79,11 @@ type 'k config =
   ; thumb_angle : V3.t
   }
 
-type 'k t =
-  { config : 'k config [@scad.ignore]
+type t =
+  { config : config [@scad.ignore]
   ; scad : Scad.d3
-  ; body : 'k Columns.t
-  ; thumb : 'k Columns.t
+  ; body : Columns.t
+  ; thumb : Columns.t
   }
 [@@deriving scad]
 
@@ -100,7 +100,7 @@ let make
     ?(thumb_lookups = Lookups.thumb ())
     ?(caps = Caps.SA.uniform)
     ?thumb_caps
-    (keyhole : _ KeyHole.t)
+    (keyhole : Key.t)
   =
   let curve_column ~join_ax ~caps (lookups : _ Lookups.t) i k =
     Column.make
@@ -141,8 +141,8 @@ let make
       let place ~key:i ~data:off =
         let caps, keyhole =
           if rotate_thumb_clips
-          then caps >> Scad.zrot (Float.pi /. 2.), KeyHole.zrot (Float.pi /. 2.) keyhole
-          else caps, KeyHole.cycle_faces keyhole
+          then caps >> Scad.zrot (Float.pi /. 2.), Key.zrot (Float.pi /. 2.) keyhole
+          else caps, Key.cycle_faces keyhole
         in
         Column.rotate
           (v3 0. (thumb_lookups.swing i) (thumb_lookups.splay i))
@@ -169,11 +169,11 @@ let make
     in
     let lift =
       let lowest_z =
-        let face_low ({ points = ps; _ } : KeyHole.Face.t) =
+        let face_low ({ points = ps; _ } : Key.Face.t) =
           Points.fold ~f:(fun m p -> Float.min m (V3.get_z p)) ~init:Float.max_value ps
         in
-        let key_low ({ faces = fs; _ } : _ KeyHole.t) =
-          KeyHole.Faces.fold
+        let key_low ({ faces = fs; _ } : Key.t) =
+          Key.Faces.fold
             ~f:(fun m face -> Float.min m (face_low face))
             ~init:Float.max_value
             fs
@@ -233,7 +233,7 @@ let skeleton_bridges
     match Columns.key body c (r c) with
     | Some ({ origin = o1; _ } as k1) ->
       let%bind.Option next_col = Map.find body (c + 1) in
-      let f ~key:_ ~data:(KeyHole.{ origin = o2; _ } as k2) (m, closest) =
+      let f ~key:_ ~data:(Key.{ origin = o2; _ } as k2) (m, closest) =
         let dist = V3.distance o1 o2 in
         if Float.(dist < m) then dist, Some k2 else m, closest
       in
@@ -260,11 +260,11 @@ let collect ~f t =
 let collect_caps t =
   collect
     ~f:(fun ~key:_ ~data acc ->
-      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cap )
+      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.Key.cap )
     t
 
 let collect_cutouts t =
   collect
     ~f:(fun ~key:_ ~data acc ->
-      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.KeyHole.cutout )
+      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.Key.cutout )
     t

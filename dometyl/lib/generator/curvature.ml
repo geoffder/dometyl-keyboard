@@ -13,13 +13,13 @@ type curve =
   ; fan : spec option
   }
 
-type 'k custom = int -> 'k KeyHole.t -> 'k KeyHole.t
+type custom = int -> Key.t -> Key.t
 
-type 'k t =
+type t =
   | Curve of curve
-  | Custom of 'k custom
-  | PreTweak of 'k custom * curve
-  | PostTweak of curve * 'k custom
+  | Custom of custom
+  | PreTweak of custom * curve
+  | PostTweak of curve * custom
 
 let spec ?(tilt = 0.) ~radius angle = { radius; angle; tilt }
 let curve ?well ?fan () = Curve { well; fan }
@@ -41,20 +41,19 @@ let place ?well ?fan ~centre_idx i key =
   match well, fan with
   | Some spec, None ->
     let r = well_theta' spec i in
-    KeyHole.rotate (v3 0. spec.tilt (V3.get_x r *. spec.tilt /. -2.)) key
-    |> KeyHole.rotate ~about:(well_point spec) r
+    Key.rotate (v3 0. spec.tilt (V3.get_x r *. spec.tilt /. -2.)) key
+    |> Key.rotate ~about:(well_point spec) r
   | None, Some spec ->
-    KeyHole.yrot spec.tilt key
-    |> KeyHole.rotate ~about:(fan_point spec) (fan_theta' spec i)
+    Key.yrot spec.tilt key |> Key.rotate ~about:(fan_point spec) (fan_theta' spec i)
   | Some w, Some f  ->
     let welled =
       let r = well_theta' w i in
-      KeyHole.rotate (v3 0. w.tilt (V3.get_x r *. w.tilt /. -2.)) key
-      |> KeyHole.rotate ~about:(well_point w) r
+      Key.rotate (v3 0. w.tilt (V3.get_x r *. w.tilt /. -2.)) key
+      |> Key.rotate ~about:(well_point w) r
     in
-    KeyHole.ytrans (welled.origin.y *. -1.) welled
-    |> KeyHole.yrot f.tilt
-    |> KeyHole.rotate ~about:(fan_point f) (fan_theta' f i)
+    Key.ytrans (welled.origin.y *. -1.) welled
+    |> Key.yrot f.tilt
+    |> Key.rotate ~about:(fan_point f) (fan_theta' f i)
   | None, None      -> key
 
 let apply ~centre_idx t =

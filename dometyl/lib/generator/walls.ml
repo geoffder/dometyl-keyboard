@@ -20,7 +20,7 @@ module Sides = struct
     }
   [@@deriving scad]
 
-  let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : _ Columns.t) =
+  let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : Columns.t) =
     { west =
         Map.filter_mapi
           ~f:(fun ~key ~data ->
@@ -47,7 +47,7 @@ module Sides = struct
           columns
     }
 
-  let manual_thumb ~west ~north ~east ~south (columns : _ Columns.t) =
+  let manual_thumb ~west ~north ~east ~south (columns : Columns.t) =
     { west =
         Map.filter_mapi
           ~f:(fun ~key ~data ->
@@ -94,7 +94,8 @@ module Sides = struct
       ?(eyelet_config = Eyelet.m4_config)
       ?(spacing = 1.)
       ?(thumb = false)
-      (columns : 'k Columns.t) =
+      (columns : Columns.t)
+    =
     let present m i conf = function
       | Yes -> Map.add_exn m ~key:i ~data:conf
       | Eye ->
@@ -123,7 +124,8 @@ module Sides = struct
       @@ List.fold
            ~init
            ~f:(fun m i -> present m i conf (east_lookup i))
-           ( if thumb then Map.keys columns
+           ( if thumb
+           then Map.keys columns
            else Map.keys (snd @@ Map.min_elt_exn columns).keys )
     and north =
       let index = Option.value ~default:thickness index_thickness in
@@ -141,7 +143,8 @@ module Sides = struct
       @@ List.fold
            ~init
            ~f
-           ( if thumb then Map.keys (snd @@ Map.min_elt_exn columns).keys
+           ( if thumb
+           then Map.keys (snd @@ Map.min_elt_exn columns).keys
            else Map.keys columns )
     and south =
       Map.find
@@ -149,10 +152,12 @@ module Sides = struct
            ~init
            ~f:(fun m i ->
              present m i { conf with clearance = south_clearance } (south_lookup i) )
-           ( if thumb then Map.keys (snd @@ Map.max_elt_exn columns).keys
+           ( if thumb
+           then Map.keys (snd @@ Map.max_elt_exn columns).keys
            else Map.keys columns )
     in
-    if thumb then manual_thumb ~west ~north ~east ~south columns
+    if thumb
+    then manual_thumb ~west ~north ~east ~south columns
     else manual_body ~west ~north ~east ~south ~spacing columns
 
   let fold ~init ~f (t : t) =
@@ -194,7 +199,8 @@ let auto_body
     ?west_lookup
     ?east_lookup
     ?eyelet_config
-    Plate.{ config = { spacing; _ }; body; _ } =
+    Plate.{ config = { spacing; _ }; body; _ }
+  =
   Sides.auto
     ?d1
     ?d2
@@ -230,7 +236,8 @@ let auto_thumb
     ?(west_lookup = fun i -> if i = 0 then Yes else No)
     ?(east_lookup = fun _ -> No)
     ?eyelet_config
-    Plate.{ thumb; _ } =
+    Plate.{ thumb; _ }
+  =
   Sides.auto
     ~d1
     ~d2
@@ -267,7 +274,8 @@ let manual
     ~thumb_north
     ~thumb_east
     ~thumb_west
-    Plate.{ config = { spacing; _ }; body; thumb; _ } =
+    Plate.{ config = { spacing; _ }; body; thumb; _ }
+  =
   { body =
       Sides.manual_body
         ~west:body_west

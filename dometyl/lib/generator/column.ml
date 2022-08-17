@@ -23,16 +23,16 @@ module Join = struct
   [@@deriving scad]
 end
 
-type 'k config =
-  { key : 'k KeyHole.t
+type config =
+  { key : Key.t
   ; n_keys : int
-  ; curve : int -> 'k KeyHole.t -> 'k KeyHole.t
+  ; curve : int -> Key.t -> Key.t
   }
 
-type 'k t =
-  { config : 'k config [@scad.ignore]
+type t =
+  { config : config [@scad.ignore]
   ; scad : Scad.d3
-  ; keys : 'k KeyHole.t Map.M(Int).t
+  ; keys : Key.t Map.M(Int).t
   ; joins : Join.t Map.M(Int).t
   }
 [@@deriving scad_jane]
@@ -42,7 +42,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     let cap =
       let p =
         V3.(
-          (KeyHole.normal key *$ (key.config.cap_height +. (key.config.thickness /. 2.)))
+          (Key.normal key *$ (key.config.cap_height +. (key.config.thickness /. 2.)))
           +@ key.origin)
       in
       Option.some @@ Scad.translate p (caps i)
@@ -50,13 +50,15 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     Map.add_exn ~key:i ~data:(curve i { key with cap }) keys
   in
   let get_start, get_dest =
-    let get s key = KeyHole.Faces.face key.KeyHole.faces s in
+    let get s key = Key.Faces.face key.Key.faces s in
     match join_ax with
     | `NS -> get `North, get `South
     | `EW -> get `East, get `West
   in
-  let join_keys (a : 'k KeyHole.t) (b : 'k KeyHole.t) =
-    Scad.hull [ (get_start a).scad; (get_dest b).scad ]
+  let join_keys (a : Key.t) (b : Key.t) =
+    (* Scad.hull [ (get_start a).scad; (get_dest b).scad ] *)
+    Mesh.skin_between ~slices:5 (get_start a).path (List.rev (get_dest b).path)
+    |> Mesh.to_scad
   in
   let keys =
     List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
@@ -70,8 +72,8 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
         let face1 = get_start k1
         and face2 = get_dest k2 in
         let scad = join_keys k1 k2
-        and dir1 = KeyHole.Face.direction face1
-        and dir2 = KeyHole.Face.direction face2 in
+        and dir1 = Key.Face.direction face1
+        and dir2 = Key.Face.direction face2 in
         let west =
           Util.prism_exn
             [ face1.points.top_left

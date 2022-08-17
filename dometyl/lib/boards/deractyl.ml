@@ -15,18 +15,18 @@ let body_lookups =
     | i when i = 0 ->
       let f = function
         | 3 ->
-          KeyHole.quaternion_about_origin (Float.pi /. -128.)
-          >> KeyHole.translate (v3 (-0.5) (-1.5) 1.6)
+          Key.quaternion_about_origin (Float.pi /. -128.)
+          >> Key.translate (v3 (-0.5) (-1.5) 1.6)
         | _ -> Fn.id
       in
       Curvature.(
         post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
     | i when i = 5 ->
       let f = function
-        | 0 -> KeyHole.translate (v3 (-1.) 0. 3.)
+        | 0 -> Key.translate (v3 (-1.) 0. 3.)
         | 3 ->
-          KeyHole.quaternion_about_origin (Float.pi /. 55.)
-          >> KeyHole.translate (v3 (-0.75) (-4.) 4.)
+          Key.quaternion_about_origin (Float.pi /. 55.)
+          >> Key.translate (v3 (-0.75) (-4.) 4.)
         | _ -> Fn.id
       in
       Curvature.(

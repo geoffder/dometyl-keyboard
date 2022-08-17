@@ -264,7 +264,7 @@ let to_scad
 let home ?(hover = 18.) Plate.{ body; config; _ } t =
   let centre_row = config.body_centres config.centre_col in
   let key = Columns.key_exn body config.centre_col (Int.of_float centre_row) in
-  let pos = V3.(key.origin +@ (KeyHole.normal key *$ hover))
+  let pos = V3.(key.origin +@ (Key.normal key *$ hover))
   and aligned =
     let column_vec =
       V3.(

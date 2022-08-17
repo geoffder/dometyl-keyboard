@@ -7,7 +7,7 @@ type bump_loc =
   | Body of Util.idx * Util.idx
   | Point of V3.t
 
-let locate_bump (plate : _ Plate.t) = function
+let locate_bump (plate : Plate.t) = function
   | Thumb (c, k) ->
     let%bind.Option col = Util.idx_to_find c plate.thumb in
     let%map.Option key = Util.idx_to_find k col.keys in

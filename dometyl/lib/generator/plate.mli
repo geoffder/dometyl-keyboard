@@ -4,17 +4,16 @@ open! Base
 open! Scad_ml
 
 (** Provides per-column lookup functions to be used by {!val:make} for placement of
-    {!KeyHole.t}s to form {!Column.t}s, and for arrangment and orientation of the
+    {!Key.t}s to form {!Column.t}s, and for arrangment and orientation of the
     generated columns to form the plate. *)
 module Lookups : sig
   (** Record containing the column generation and placement functions. When each column is
       being generated (and placed) its index will be given to the lookup functions here to
       get the relevant settings. *)
-  type 'k t =
+  type t =
     { offset : int -> V3.t
           (** Translation of columns following default spacing and tenting. *)
-    ; curve : int -> 'k Curvature.t
-          (** Distribution of {!KeyHole.t}s to form the columns *)
+    ; curve : int -> Curvature.t (** Distribution of {!Key.t}s to form the columns *)
     ; swing : int -> float
           (** Rotation around columnar y-axis, which can emulate row curvature, adding to
               or subtracting from rotation due to tenting. *)
@@ -30,7 +29,7 @@ module Lookups : sig
     }
 
   val default_offset : int -> V3.t
-  val default_curve : int -> 'k Curvature.t
+  val default_curve : int -> Curvature.t
   val default_swing : int -> float
   val default_splay : int -> float
   val default_rows : int -> int
@@ -42,27 +41,27 @@ module Lookups : sig
       overview of what each one is used for. *)
   val body
     :  ?offset:(int -> V3.t)
-    -> ?curve:(int -> 'k Curvature.t)
+    -> ?curve:(int -> Curvature.t)
     -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> ?rows:(int -> int)
     -> ?centre:(int -> float)
     -> unit
-    -> 'k t
+    -> t
 
   val thumb
     :  ?offset:(int -> V3.t)
-    -> ?curve:(int -> 'k Curvature.t)
+    -> ?curve:(int -> Curvature.t)
     -> ?swing:(int -> float)
     -> ?splay:(int -> float)
     -> ?rows:(int -> int)
     -> ?centre:(int -> float)
     -> unit
-    -> 'k t
+    -> t
 end
 
 (** Non-function parameters used for the construction of the plate. *)
-type 'k config =
+type config =
   { n_body_rows : int -> int
   ; body_centres : int -> float
   ; n_body_cols : int
@@ -79,11 +78,11 @@ type 'k config =
 (** The plate is constructed from a main body of {!Columns.t} and a thumb cluster,
     modelled as a separate {!Column.t}. As with lower types, the config as well as the
     aggregate {!Scad.d3} are carried around for convenient access. *)
-type 'k t =
-  { config : 'k config
+type t =
+  { config : config
   ; scad : Scad.d3
-  ; body : 'k Columns.t
-  ; thumb : 'k Columns.t
+  ; body : Columns.t
+  ; thumb : Columns.t
   }
 [@@deriving scad]
 
@@ -111,11 +110,11 @@ type 'k t =
       and orientation functions for the construction of the body and thumb respectively.
       See {!module:Lookups}.
     - [caps] is a lookup from row number to a {!Scad.d3} representing a keycap. This will
-      be used to provide caps to {!KeyHole.t}s before they are distributed in
+      be used to provide caps to {!Key.t}s before they are distributed in
       {!Column.make}.
     - [thumb_caps] same as [caps], but for the thumb. If not provided, this default to
       [caps].
-    - [keyhole] is the {!KeyHole.t} that will be distributed to make up the main plate and
+    - [keyhole] is the {!Key.t} that will be distributed to make up the main plate and
       thumb cluster, carring all contained coordinate information and accesory {!Scad.d3}s
       along with them to their new homes. *)
 val make
@@ -127,24 +126,24 @@ val make
   -> ?rotate_thumb_clips:bool
   -> ?thumb_offset:V3.t
   -> ?thumb_angle:V3.t
-  -> ?body_lookups:'k Lookups.t
-  -> ?thumb_lookups:'k Lookups.t
+  -> ?body_lookups:Lookups.t
+  -> ?thumb_lookups:Lookups.t
   -> ?caps:(int -> Scad.d3)
   -> ?thumb_caps:(int -> Scad.d3)
-  -> 'k KeyHole.t
-  -> 'k t
+  -> Key.t
+  -> t
 
 (** [column_joins ?in_d ?out_d1 ?out_d2 t]
 
     Returns a {!Scad.d3} scad which joins together all columns of the main plate by
-    hulling the {!KeyHole.Face.scad}s of the {!KeyHole.t}s together, for a closed
+    hulling the {!Key.Face.scad}s of the {!Key.t}s together, for a closed
     switch-plate look (and sturdiness). Typically, a function such as this or
     {!val:skeleton_bridges} below will be used as as the [plate_welder] parameter to
     {!Case.make}. Optional params [in_d], [out_d1] and [out_d2] are passed on to
     {!Bridges.cols} to control how far the lower key's face is moved out, and the upper
     keys face is moved in before being hulled with its neighbours across the gap. This can
     be used to thicken the generated supports. *)
-val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.d3
+val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> t -> Scad.d3
 
 (** [skeleton_bridges ?in_d ?out_d1 ?out_d2 t]
 
@@ -156,34 +155,31 @@ val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad
     on to {!Bridges.cols} to control how far the lower key's face is moved out, and the
     upper keys face is moved in before being hulled with its neighbours across the gap.
     This can be used to thicken the generated supports. *)
-val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> 'k t -> Scad.d3
+val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> t -> Scad.d3
 
 (** [to_scad t]
 
     Extracts the {!Scad.d3} from [t]. *)
-val to_scad : 'k t -> Scad.d3
+val to_scad : t -> Scad.d3
 
 (** [collect ~f t]
 
-    Fold over all {!KeyHole.t}s contained within [t], extracting {!Scad.d3}s with [f], and
+    Fold over all {!Key.t}s contained within [t], extracting {!Scad.d3}s with [f], and
     unioning them. Used for {!val:collect_caps} and {!val:collect_cutouts}. *)
-val collect
-  :  f:(key:int -> data:'k KeyHole.t -> Scad.d3 list -> Scad.d3 list)
-  -> 'k t
-  -> Scad.d3
+val collect : f:(key:int -> data:Key.t -> Scad.d3 list -> Scad.d3 list) -> t -> Scad.d3
 
 (** [collect_caps t]
 
     Return a {!Scad.d3} representing the union between all caps carried by the
-    {!KeyHole.t}s that make up the plate [t]. Used to design around keycap closeness, and
+    {!Key.t}s that make up the plate [t]. Used to design around keycap closeness, and
     lookout for collisions etc. *)
-val collect_caps : 'k t -> Scad.d3
+val collect_caps : t -> Scad.d3
 
 (** [collect_cutout t]
 
-    Return a {!Scad.d3} representing the union between all {!KeyHole.cutout}s found in the
+    Return a {!Scad.d3} representing the union between all {!Key.cutout}s found in the
     plate [t]. This is used by {!Case.make} to perform the clearance cut from the
-    {!Case.scad} model to make room for whatever the {!KeyHole.cutout} is modelling (e.g.
+    {!Case.scad} model to make room for whatever the {!Key.cutout} is modelling (e.g.
     hotswap sockets). Like {!val:collect_caps}, this could also be useful for
     visualization. *)
-val collect_cutouts : 'k t -> Scad.d3
+val collect_cutouts : t -> Scad.d3

@@ -55,7 +55,7 @@ let make
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
-    (case : _ Case.t)
+    (case : Case.t)
   =
   let bb_index, bb_pinky, rot_sign =
     let V3.{ min = { x = bb_left; _ }; max = { x = bb_right; _ } } =

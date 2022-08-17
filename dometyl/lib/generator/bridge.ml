@@ -19,27 +19,27 @@ let keys
     ?(in_d = 0.25)
     ?out_d1
     ?out_d2
-    (k1 : _ KeyHole.t)
-    (k2 : _ KeyHole.t)
+    (k1 : Key.t)
+    (k2 : Key.t)
   =
-  let aux (in_side, (inney : _ KeyHole.t)) (out_side, outey) =
+  let aux (in_side, (inney : Key.t)) (out_side, outey) =
     let out_a, out_b =
       slide
         ?d1:out_d1
         ?d2:out_d2
-        ~ortho:(KeyHole.orthogonal outey out_side)
-        (KeyHole.Faces.face outey.faces out_side).scad
+        ~ortho:(Key.orthogonal outey out_side)
+        (Key.Faces.face outey.faces out_side).scad
     in
     let _, in_b =
       slide
         ~d1:0.
         ~d2:(Float.neg in_d)
-        ~ortho:(KeyHole.orthogonal inney in_side)
-        (KeyHole.Faces.face inney.faces in_side).scad
+        ~ortho:(Key.orthogonal inney in_side)
+        (Key.Faces.face inney.faces in_side).scad
     in
     Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
-  and face1 = KeyHole.Faces.face k1.faces start
-  and face2 = KeyHole.Faces.face k2.faces dest in
+  and face1 = Key.Faces.face k1.faces start
+  and face2 = Key.Faces.face k2.faces dest in
   if Float.(V3.get_z face1.points.centre > V3.get_z face2.points.centre)
   then aux (start, k1) (dest, k2)
   else aux (dest, k2) (start, k1)
@@ -60,7 +60,7 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
   and join_folder ~key ~data hulls =
     let huller ~low_west (out_last, out_next, out_join) (in_last, in_next, in_join) =
       let mean_ortho side last next =
-        V3.(normalize (KeyHole.orthogonal last side +@ KeyHole.orthogonal next side))
+        V3.(normalize (Key.orthogonal last side +@ Key.orthogonal next side))
       and in_side, out_side = if low_west then dest, start else start, dest in
       let out_ortho = mean_ortho out_side out_last out_next
       and in_ortho = mean_ortho in_side in_last in_next in
@@ -89,7 +89,7 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
         V3.(
           get_z
           @@ mean
-               KeyHole.Faces.
+               Key.Faces.
                  [ (face w_last.faces start).points.centre
                  ; (face w_next.faces start).points.centre
                  ])
@@ -97,7 +97,7 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
         V3.(
           get_z
           @@ mean
-               KeyHole.Faces.
+               Key.Faces.
                  [ (face e_last.faces dest).points.centre
                  ; (face e_next.faces dest).points.centre
                  ])

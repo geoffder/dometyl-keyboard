@@ -71,6 +71,8 @@ module Config = struct
     ; cap_height : float
     ; cap_cutout_height : float option
     ; clearance : float
+    ; corner : Path2.Round.corner option
+    ; fn : int option
     ; dome_w : float
     ; dome_waist_clip : float
     ; dome_thickness : float
@@ -88,6 +90,8 @@ module Config = struct
       ?(cap_height = 6.5)
       ?(cap_cutout_height = Some 1.5)
       ?(clearance = 4.)
+      ?corner
+      ?fn
       ?(dome_w = 19.5)
       ?(dome_waist_clip = 1.)
       ?(dome_thickness = 1.6)
@@ -104,6 +108,8 @@ module Config = struct
     ; cap_height
     ; cap_cutout_height
     ; clearance
+    ; corner
+    ; fn
     ; dome_w
     ; dome_waist_clip
     ; dome_thickness
@@ -149,6 +155,8 @@ let hole_of_config
       ; cap_height
       ; cap_cutout_height
       ; clearance
+      ; corner
+      ; fn
       ; dome_w
       ; dome_waist_clip
       ; dome_thickness
@@ -209,13 +217,12 @@ let hole_of_config
         ]
     | None   -> internals
   and clip hole = Scad.union [ base; hole; pillars ] in
-  KeyHole.(
+  Key.(
     make
       ?render
       ?cap
       ~cutout
-      { spec = Kind.Key
-      ; outer_w
+      { outer_w
       ; outer_h
       ; inner_w
       ; inner_h
@@ -223,6 +230,8 @@ let hole_of_config
       ; clip
       ; cap_height
       ; clearance
+      ; corner
+      ; fn
       })
 
 let make_hole
@@ -236,6 +245,8 @@ let make_hole
     ?cap_height
     ?cap_cutout_height
     ?clearance
+    ?corner
+    ?fn
     ?dome_w
     ?dome_waist_clip
     ?dome_thickness
@@ -256,6 +267,8 @@ let make_hole
        ?cap_height
        ?cap_cutout_height
        ?clearance
+       ?corner
+       ?fn
        ?dome_w
        ?dome_waist_clip
        ?dome_thickness
@@ -276,6 +289,8 @@ let empty_hole_of_config
       ; cap_height
       ; cap_cutout_height
       ; clearance
+      ; corner
+      ; fn
       ; _
       }
   =
@@ -290,6 +305,8 @@ let empty_hole_of_config
     ~cap_height
     ~cap_cutout_height
     ~clearance
+    ?corner
+    ?fn
     ()
 
 let make_empty_hole
@@ -303,6 +320,8 @@ let make_empty_hole
     ?cap_height
     ?cap_cutout_height
     ?clearance
+    ?corner
+    ?fn
     ()
   =
   empty_hole_of_config
@@ -317,4 +336,6 @@ let make_empty_hole
        ?cap_height
        ?cap_cutout_height
        ?clearance
+       ?corner
+       ?fn
        () )

@@ -31,8 +31,8 @@ let thumb_lookups =
   let curve _ =
     let f = function
       | 2 ->
-        KeyHole.quaternion_about_origin (Float.pi /. 30.)
-        >> KeyHole.translate (v3 (-0.5) (-0.8) 1.)
+        Key.quaternion_about_origin (Float.pi /. 30.)
+        >> Key.translate (v3 (-0.5) (-0.8) 1.)
       | _ -> Fn.id
     in
     Curvature.(

@@ -5,7 +5,7 @@ open Infix
 (* TODO:
 
    What is needed?
-   - KeyHole must carry the full path of its front and back ends, along with a
+   - Key must carry the full path of its front and back ends, along with a
     Points holding coordinates of not the corners as they are originally, but
     instead, the points of the long edges (first point of the corner, e.g.
     beginning of the arc or start of the chamfer), such that connections can be drawn
@@ -164,7 +164,7 @@ type t =
 [@@deriving scad]
 
 let swing_face ?(step = Float.pi /. 24.) key_origin face =
-  let quat = Quaternion.make (KeyHole.Face.direction face)
+  let quat = Quaternion.make (Key.Face.direction face)
   and free, pivot, rock_z, z_sign =
     let ortho = V3.(normalize (face.points.centre -@ key_origin)) in
     if Float.(V3.get_z ortho > 0.)
@@ -190,7 +190,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     else a -. step
   in
   let q = quat @@ (find_angle step (V3.get_z free -. rock_z) *. z_sign) in
-  let face' = KeyHole.Face.quaternion ~about:pivot q face in
+  let face' = Key.Face.quaternion ~about:pivot q face in
   let ortho' =
     V3.quaternion ~about:pivot q key_origin |> V3.sub face'.points.centre |> V3.normalize
   in
@@ -201,7 +201,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     not be used so not combining them into a cleaner implementation and just
     hanging onto it for now in case I want to lift part of it. *)
 let _chop_face ?(step = Float.pi /. 24.) key_origin ortho face =
-  let dir = KeyHole.Face.direction face in
+  let dir = Key.Face.direction face in
   let free, about, z_sign =
     if Float.(V3.get_z dir > 0.)
     then face.points.bot_left, face.points.bot_right, -1.
@@ -220,7 +220,7 @@ let _chop_face ?(step = Float.pi /. 24.) key_origin ortho face =
     else best
   in
   let q = quat (find_angle step (V3.get_z free -. about.z) step *. z_sign) in
-  let face' = KeyHole.Face.quaternion ~about q face in
+  let face' = Key.Face.quaternion ~about q face in
   let ortho' =
     V3.quaternion ~about q key_origin |> V3.sub face'.points.centre |> V3.normalize
   in
@@ -249,14 +249,12 @@ let poly_siding
     ?thickness
     ?eyelet_config
     side
-    (key : _ KeyHole.t)
+    (key : Key.t)
   =
-  let start_face = KeyHole.Faces.face key.faces side
+  let start_face = Key.Faces.face key.faces side
   and thickness = Option.value ~default:key.config.thickness thickness in
   let pivoted_face, ortho = swing_face key.origin start_face in
-  let cleared_face =
-    KeyHole.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face
-  in
+  let cleared_face = Key.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face in
   let xy = V3.(normalize (mul ortho (v3 1. 1. 0.)))
   (* NOTE: I think z_hop is much less relevant now, check what kind of values it
    * is getting, and consider removing. *)
@@ -448,7 +446,7 @@ let column_drop
     idx
   =
   let key, face, hanging =
-    let c : _ Column.t = Map.find_exn columns idx in
+    let c : Column.t = Map.find_exn columns idx in
     match side with
     | `North ->
       let key = snd @@ Map.max_elt_exn c.keys in
@@ -463,9 +461,7 @@ let column_drop
     match Map.find columns (idx + 1) with
     | Some next_c ->
       let right_x = V3.get_x face.points.top_right
-      and next_face =
-        KeyHole.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side
-      in
+      and next_face = Key.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side in
       let diff =
         if hanging (V3.get_y next_face.points.centre)
         then right_x -. V3.get_x next_face.points.bot_left

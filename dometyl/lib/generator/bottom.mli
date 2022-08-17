@@ -7,7 +7,7 @@ type bump_loc =
   | Point of V3.t
 
 val default_bumps : bump_loc list
-val locate_bump : 'k Plate.t -> bump_loc -> V3.t option
+val locate_bump : Plate.t -> bump_loc -> V3.t option
 
 val make
   :  ?thickness:float
@@ -15,5 +15,5 @@ val make
   -> ?bumpon_rad:float
   -> ?bumpon_inset:float
   -> ?bump_locs:bump_loc list
-  -> 'a Case.t
+  -> Case.t
   -> Scad.d3

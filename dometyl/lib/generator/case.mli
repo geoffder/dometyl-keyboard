@@ -1,6 +1,6 @@
 (** Top-level module of this generator library. Used to tie together each of
     the major components of the case:
-- The switch-{!Plate.t} made up by columns of {!KeyHole.t}
+- The switch-{!Plate.t} made up by columns of {!Key.t}
 - The {!Walls.t} from columns/thumb cluster to the ground
 - The connections between the separate walls provided by {!module:Connect} *)
 
@@ -10,9 +10,9 @@ open! Scad_ml
 (** The top-level type of this library. The {!Scad.d3} scad held within this type
     should generally represent the finished case, made up of the three major building
     blocks: {!Plate.t}, {!Walls.t}, and {!Connect.t}. *)
-type 'k t =
+type t =
   { scad : Scad.d3
-  ; plate : 'k Plate.t
+  ; plate : Plate.t
   ; walls : Walls.t
   ; connections : Connect.t
   }
@@ -22,10 +22,10 @@ type 'k t =
       ~ports_cutter keyhole]
 
 A high level helper used to contsruct the case from provided functions and a
-{!KeyHole.t}. If [right_hand] is false, the case will be built with a mirrored
+{!Key.t}. If [right_hand] is false, the case will be built with a mirrored
 [keyhole], then the completed case will be flipped (keeping non-reversible
 clips/cutouts such as those for hotswap holders in the right orientation).
-- [plate_builder] will use the provided {!KeyHole.t} to generate a {!Plate.t}
+- [plate_builder] will use the provided {!Key.t} to generate a {!Plate.t}
 - [plate_welder] function intended to generate a {!Scad.d3} that provides support
   between columns of the built plate.
 - [wall_builder] uses the generated {!Plate.t} to create {!Walls.t} from the ends and
@@ -44,21 +44,21 @@ clips/cutouts such as those for hotswap holders in the right orientation).
   parameter. *)
 val make
   :  ?right_hand:bool
-  -> plate_builder:('k KeyHole.t -> 'k Plate.t)
-  -> plate_welder:('k Plate.t -> Scad.d3)
-  -> wall_builder:('k Plate.t -> Walls.t)
+  -> plate_builder:(Key.t -> Plate.t)
+  -> plate_welder:(Plate.t -> Scad.d3)
+  -> wall_builder:(Plate.t -> Walls.t)
   -> base_connector:(Walls.t -> Connect.t)
   -> ports_cutter:Ports.cutter
-  -> 'k KeyHole.t
-  -> 'k t
+  -> Key.t
+  -> t
 
 (** [to_scad ?show_caps ?show_cutouts]
 
     Extract the contained {!Scad.d3}, optionally tacking on keycaps and case
     cutouts (such as representations of hotswap sockets, that are used to
-    provide clearance), stored in {!KeyHole.t} with [show_caps] and
+    provide clearance), stored in {!Key.t} with [show_caps] and
     [show_cutouts] respectively. I would recommend against rendering with these
     options active, as they will balloon the processing time, remove the
     colouration only visible in preview mode, and they are not something that
     you will want and stl of anyway. *)
-val to_scad : ?show_caps:bool -> ?show_cutouts:bool -> 'k t -> Scad.d3
+val to_scad : ?show_caps:bool -> ?show_cutouts:bool -> t -> Scad.d3

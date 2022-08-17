@@ -69,14 +69,8 @@ module Faces = struct
     | `West  -> t.west
 end
 
-module Kind = struct
-  type key = Key
-  type 'k t = Key : key t
-end
-
-type 'k config =
-  { spec : 'k Kind.t
-  ; outer_w : float
+type config =
+  { outer_w : float
   ; outer_h : float
   ; inner_w : float
   ; inner_h : float
@@ -84,12 +78,12 @@ type 'k config =
   ; clip : Scad.d3 -> Scad.d3
   ; cap_height : float
   ; clearance : float
-  ; corner : Path2.Round.corner
+  ; corner : Path2.Round.corner option
   ; fn : int option
   }
 
-type 'k t =
-  { config : 'k config [@scad.ignore]
+type t =
+  { config : config [@scad.ignore]
   ; scad : Scad.d3
   ; origin : V3.t
   ; faces : Faces.t
@@ -121,73 +115,71 @@ let make
     ( { outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; corner; fn; _ }
     as config )
   =
-  let sq = Path2.square ~center:true (v2 outer_w thickness) in
-  (* TODO: corner in config should be option, no roundover if None *)
-  let pth = Path2.(roundover ?fn @@ Round.flat ~corner ~closed:true sq) in
+  let poly =
+    let sq = Path2.square ~center:true (v2 outer_w thickness) in
+    match corner with
+    | Some corner -> Path2.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
+    | None        -> sq
+  in
   let hole =
     let outer =
-      Mesh.linear_extrude ~center:true ~height:outer_h (Poly2.make pth)
+      Mesh.linear_extrude ~center:true ~height:outer_h (Poly2.make poly)
       |> Mesh.xrot (Float.pi /. -2.)
       |> Mesh.to_scad
     and inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
     clip @@ Scad.sub outer inner
   in
   let faces =
-    let top_edge, bot_edge =
-      match Path2.segment ~closed:true pth with
-      | s0 :: s1 :: segs ->
-        let f ((a, a_len, b, b_len) as acc) (s : V2.line) =
-          let s_len = V2.distance s.a s.b in
-          if Float.(s_len > a_len)
-          then s, s_len, b, b_len
-          else if Float.(s_len > b_len)
-          then a, a_len, s, s_len
-          else acc
-        in
-        let a, _, b, _ =
-          List.fold_left
-            ~f
-            ~init:(s0, V2.distance s0.a s0.b, s1, V2.distance s1.a s1.b)
-            segs
-        in
-        if Float.(a.a.y > 0.) then a, b else b, a
-      | _                -> failwith "unreachable"
-    in
     let south =
-      let path = Path3.(ytrans (outer_h /. -2.) @@ of_path2 ~plane:Plane.xz pth) in
+      let top_edge, bot_edge =
+        match Path2.segment ~closed:true poly with
+        | s0 :: s1 :: segs ->
+          let f ((a, a_len, b, b_len) as acc) (s : V2.line) =
+            let s_len = V2.distance s.a s.b in
+            if Float.(s_len > a_len)
+            then s, s_len, b, b_len
+            else if Float.(s_len > b_len)
+            then a, a_len, s, s_len
+            else acc
+          in
+          let a, _, b, _ =
+            List.fold_left
+              ~f
+              ~init:(s0, V2.distance s0.a s0.b, s1, V2.distance s1.a s1.b)
+              segs
+          in
+          if Float.(a.a.y > 0.) then a, b else b, a
+        | _                -> failwith "unreachable"
+      and path =
+        Path3.(ytrans (outer_h /. -2.) @@ of_path2 ~plane:Plane.(negate xz) poly)
+      in
       let points =
         Points.
-          { top_left = V3.of_v2 top_edge.a
-          ; top_right = V3.of_v2 top_edge.b
+          { top_left = V3.of_v2 top_edge.b
+          ; top_right = V3.of_v2 top_edge.a
           ; bot_left = V3.of_v2 bot_edge.a
           ; bot_right = V3.of_v2 bot_edge.b
           ; centre = v3 0. 0. 0.
           }
-        |> Points.xrot (Float.pi /. -2.)
+        |> Points.xrot (Float.pi /. 2.)
         |> Points.ytrans (outer_h /. -2.)
       in
       Face.{ path; points }
     in
     let north = Face.zrot Float.pi south in
-    let west =
-      let path =
-        [ south.points.bot_left
-        ; north.points.bot_right
-        ; north.points.top_right
-        ; south.points.top_left
-        ]
-      and points =
+    let east =
+      let points =
         Points.
-          { bot_left = south.points.bot_left
-          ; bot_right = north.points.bot_right
-          ; top_left = south.points.top_left
-          ; top_right = north.points.top_right
-          ; centre = v3 (outer_w /. -2.) 0. 0.
+          { bot_left = north.points.bot_right
+          ; bot_right = south.points.bot_left
+          ; top_left = north.points.top_right
+          ; top_right = south.points.top_left
+          ; centre = v3 (outer_w /. 2.) 0. 0.
           }
       in
-      Face.{ path; points }
+      Face.{ path = Points.to_ccw_path points; points }
     in
-    let east = Face.zrot Float.pi west in
+    let west = Face.zrot Float.pi east in
     Faces.{ north; south; east; west }
   in
   { config

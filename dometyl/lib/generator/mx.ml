@@ -113,6 +113,8 @@ let make_hole
     ?(cap_height = 6.25)
     ?(cap_cutout_height = Some 1.5)
     ?(clearance = 3.)
+    ?corner
+    ?fn
     ()
   =
   let clearance, clip, cutout =
@@ -132,13 +134,12 @@ let make_hole
           (Scad.cube ~center:true (v3 20. 20. 5.)) )
       cap_cutout_height
   in
-  KeyHole.(
+  Key.(
     make
       ?render
       ?cap
       ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
-      { spec = Kind.Key
-      ; outer_w
+      { outer_w
       ; outer_h
       ; inner_w
       ; inner_h
@@ -146,4 +147,6 @@ let make_hole
       ; clip
       ; cap_height
       ; clearance
+      ; corner
+      ; fn
       })
