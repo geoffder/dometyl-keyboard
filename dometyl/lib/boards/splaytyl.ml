@@ -104,7 +104,7 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path2.Round.circ (`Cut 0.5)) ~fn:6 ())
+    (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.circ (`Cut 0.5)) ~fn:6 ())
 
 let bottom ?(chonk = false) case =
   (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,

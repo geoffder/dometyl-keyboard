@@ -71,7 +71,7 @@ module Config = struct
     ; cap_height : float
     ; cap_cutout_height : float option
     ; clearance : float
-    ; corner : Path2.Round.corner option
+    ; corner : Path3.Round.corner option
     ; fn : int option
     ; dome_w : float
     ; dome_waist_clip : float

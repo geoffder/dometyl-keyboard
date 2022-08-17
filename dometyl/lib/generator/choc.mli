@@ -29,7 +29,7 @@ val make_hole
   -> ?cap_height:float
   -> ?cap_cutout_height:float option
   -> ?clearance:float
-  -> ?corner:Path2.Round.corner
+  -> ?corner:Path3.Round.corner
   -> ?fn:int
   -> unit
   -> Key.t

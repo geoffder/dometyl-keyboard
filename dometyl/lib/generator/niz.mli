@@ -30,7 +30,7 @@ module Config : sig
     ; cap_height : float
     ; cap_cutout_height : float option
     ; clearance : float
-    ; corner : Path2.Round.corner option
+    ; corner : Path3.Round.corner option
     ; fn : int option
     ; dome_w : float
     ; dome_waist_clip : float
@@ -49,7 +49,7 @@ module Config : sig
     -> ?cap_height:float
     -> ?cap_cutout_height:float option
     -> ?clearance:float
-    -> ?corner:Path2.Round.corner
+    -> ?corner:Path3.Round.corner
     -> ?fn:int
     -> ?dome_w:float
     -> ?dome_waist_clip:float
@@ -76,7 +76,7 @@ val make_hole
   -> ?cap_height:float
   -> ?cap_cutout_height:float option
   -> ?clearance:float
-  -> ?corner:Path2.Round.corner
+  -> ?corner:Path3.Round.corner
   -> ?fn:int
   -> ?dome_w:float
   -> ?dome_waist_clip:float
@@ -100,7 +100,7 @@ val make_empty_hole
   -> ?cap_height:float
   -> ?cap_cutout_height:float option
   -> ?clearance:float
-  -> ?corner:Path2.Round.corner
+  -> ?corner:Path3.Round.corner
   -> ?fn:int
   -> unit
   -> Key.t

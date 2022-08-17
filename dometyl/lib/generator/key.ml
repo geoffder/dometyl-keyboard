@@ -50,7 +50,7 @@ type config =
   ; clip : Scad.d3 -> Scad.d3
   ; cap_height : float
   ; clearance : float
-  ; corner : Path2.Round.corner option
+  ; corner : Path3.Round.corner option
   ; fn : int option
   }
 
@@ -87,17 +87,17 @@ let make
     ( { outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; corner; fn; _ }
     as config )
   =
-  let poly =
-    let sq = Path2.square ~center:true (v2 outer_w thickness) in
+  let front =
+    let sq =
+      Path3.square ~center:true ~plane:Plane.(negate xz) (v2 outer_w thickness)
+      |> Path3.ytrans (outer_h /. -2.)
+    in
     match corner with
-    | Some corner -> Path2.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
+    | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
     | None        -> sq
   in
   let hole =
-    let outer =
-      Mesh.linear_extrude ~center:true ~height:outer_h (Poly2.make poly)
-      |> Mesh.xrot (Float.pi /. -2.)
-      |> Mesh.to_scad
+    let outer = Mesh.to_scad @@ Mesh.of_rows [ front; Path3.ytrans outer_h front ]
     and inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
     clip @@ Scad.sub outer inner
   in
@@ -109,10 +109,10 @@ let make
          calculate the corner points for the face. *)
     let south =
       let top_edge, bot_edge =
-        match Path2.segment ~closed:true poly with
+        match Path3.segment ~closed:true front with
         | s0 :: s1 :: segs ->
-          let f ((a, a_len, b, b_len) as acc) (s : V2.line) =
-            let s_len = V2.distance s.a s.b in
+          let f ((a, a_len, b, b_len) as acc) (s : V3.line) =
+            let s_len = V3.distance s.a s.b in
             if Float.(s_len > a_len)
             then s, s_len, b, b_len
             else if Float.(s_len > b_len)
@@ -122,26 +122,22 @@ let make
           let a, _, b, _ =
             List.fold_left
               ~f
-              ~init:(s0, V2.distance s0.a s0.b, s1, V2.distance s1.a s1.b)
+              ~init:(s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b)
               segs
           in
-          if Float.(a.a.y > 0.) then a, b else b, a
+          if Float.(a.a.z > 0.) then a, b else b, a
         | _                -> failwith "unreachable"
-      and path =
-        Path3.(ytrans (outer_h /. -2.) @@ of_path2 ~plane:Plane.(negate xz) poly)
       in
       let points =
         Points.
-          { top_left = V3.of_v2 top_edge.b
-          ; top_right = V3.of_v2 top_edge.a
-          ; bot_left = V3.of_v2 bot_edge.a
-          ; bot_right = V3.of_v2 bot_edge.b
-          ; centre = v3 0. 0. 0.
+          { top_left = top_edge.b
+          ; top_right = top_edge.a
+          ; bot_left = bot_edge.a
+          ; bot_right = bot_edge.b
+          ; centre = v3 0. (outer_h /. -2.) 0.
           }
-        |> Points.xrot (Float.pi /. 2.)
-        |> Points.ytrans (outer_h /. -2.)
       in
-      Face.{ path; points }
+      Face.{ path = front; points }
     in
     let north = Face.zrot Float.pi south in
     let east =
@@ -154,7 +150,13 @@ let make
           ; centre = v3 (outer_w /. 2.) 0. 0.
           }
       in
-      Face.{ path = Points.to_ccw_path points; points }
+      let sq = Points.to_ccw_path points in
+      let path =
+        match corner with
+        | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
+        | None        -> sq
+      in
+      Face.{ path; points }
     in
     let west = Face.zrot Float.pi east in
     Faces.{ north; south; east; west }

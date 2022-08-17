@@ -27,7 +27,8 @@ let keys
       let ortho = Key.orthogonal outey out_side in
       let scad =
         let p = (Key.Faces.face outey.faces out_side).path in
-        Mesh.(to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho 0.1) p))
+        Mesh.skin_between ~slices:0 p (Path3.translate (V3.smul ortho 0.01) p)
+        |> Mesh.to_scad
       in
       slide ?d1:out_d1 ?d2:out_d2 ~ortho scad
     in

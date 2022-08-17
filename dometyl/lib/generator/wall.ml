@@ -329,14 +329,20 @@ let poly_siding
     in
     Option.map ~f eyelet_config
   in
-  (* NOTE:
-       I have experimented with "chopping" the face down to be flat relative to
-    the xy plane but it is pretty terrible. I think a better compromise might be
-    fixing the bottom part of the wall after all. I could calculate the z to
-       stop at and begin a linear transition from by using:
-       - (thickness /. 2.) to account for angling of the vertical axis of the
-         key face
-       - the difference in height between left and right corners of the face
+  (* FIXME: Need some transformations that can be applied throughout the sweep
+     1. scaling down the thickness, and the width of walls
+     2. twisting the wall such that it can be more lined up along a cardinal
+        axis by the time it hits the ground (in particular the index walls are
+        angled severely, making port and MCU placement problematic)
+   - to do this, will need to plane project the face path, rotate it into
+    alignment with major axes so that scaling makes sense, then applying width
+    (x) and thickness (y) scaling, before lifting back up through the
+     orientation transforms. Then finally, given the current step of the sweep transform
+   - not totally sure whether this is actually possible without finicky special casing
+
+    - offset is an easier way to shring the wall, but that is in all directions
+    at once, and I *might* need to add a special mode of `Delta that ensures the
+    same number of points.
        *)
   (* TODO: add a rel factor of the key thickness, or absolute z as the bezier
     stopping point (where the linear transition to the flat foot begins) *)
