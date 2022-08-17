@@ -102,7 +102,7 @@ let make
     ?thumb_caps
     (keyhole : Key.t)
   =
-  let curve_column ~join_ax ~caps (lookups : _ Lookups.t) i k =
+  let curve_column ~join_ax ~caps (lookups : Lookups.t) i k =
     Column.make
       ~join_ax
       ~n_keys:(lookups.rows i)
@@ -112,7 +112,7 @@ let make
   in
   let body_offsets, thumb_offsets =
     let space = keyhole.config.outer_w +. spacing in
-    let f (lookups : _ Lookups.t) m i =
+    let f (lookups : Lookups.t) m i =
       let data = V3.xtrans (space *. Float.of_int i) (lookups.offset i) in
       Map.add_exn ~key:i ~data m
     and init = Map.empty (module Int) in
@@ -178,7 +178,7 @@ let make
             ~init:Float.max_value
             fs
         in
-        let col_low ({ keys = ks; _ } : _ Column.t) =
+        let col_low ({ keys = ks; _ } : Column.t) =
           Map.fold
             ~f:(fun ~key:_ ~data m -> Float.min m (key_low data))
             ~init:Float.max_value

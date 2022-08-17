@@ -8,18 +8,6 @@ module Face = struct
     }
   [@@deriving scad]
 
-  (* let make (V3.{ x; y; _ } as size) = *)
-  (*   let points = *)
-  (*     Points. *)
-  (*       { top_left = v3 (x /. -2.) (y /. 2.) 0. *)
-  (*       ; top_right = v3 (x /. 2.) (y /. 2.) 0. *)
-  (*       ; bot_left = v3 (x /. -2.) (y /. -2.) 0. *)
-  (*       ; bot_right = v3 (x /. 2.) (y /. -2.) 0. *)
-  (*       ; centre = v3 0. 0. 0. *)
-  (*       } *)
-  (*   in *)
-  (*   { scad = Scad.cube ~center:true size; points } *)
-
   let direction { points = { top_left; top_right; _ }; _ } =
     V3.normalize V3.(top_left -@ top_right)
 end
@@ -45,22 +33,6 @@ module Faces = struct
   let fold ~f ~init t =
     let f' = Fn.flip f in
     f init t.north |> f' t.south |> f' t.east |> f' t.west
-
-  (* let make w h depth = *)
-  (*   let vert north = *)
-  (*     Face.rotate *)
-  (*       Float.(v3 (pi /. 2.) 0. (if north then 0. else pi)) *)
-  (*       (Face.make (v3 w depth 0.1)) *)
-  (*   and lat west = *)
-  (*     Face.rotate *)
-  (*       Float.(v3 (pi /. 2.) 0. (pi /. if west then 2. else -2.)) *)
-  (*       (Face.make (v3 h depth 0.1)) *)
-  (*   in *)
-  (*   { north = Face.translate (v3 0. (h /. 2.) 0.) (vert true) *)
-  (*   ; south = Face.translate (v3 0. (h /. -2.) 0.) (vert false) *)
-  (*   ; west = Face.translate (v3 (w /. -2.) 0. 0.) (lat true) *)
-  (*   ; east = Face.translate (v3 (w /. 2.) 0. 0.) (lat false) *)
-  (*   } *)
 
   let face t = function
     | `North -> t.north
@@ -130,6 +102,11 @@ let make
     clip @@ Scad.sub outer inner
   in
   let faces =
+    (* TODO: make top and bot edge finding into a function, since I think I
+         should apply rounding to the paths generated for the east and west
+         faces as well. So the points from north and south make a rectangle,
+         which is then rounded. Then top and bot edge of that would be used to
+         calculate the corner points for the face. *)
     let south =
       let top_edge, bot_edge =
         match Path2.segment ~closed:true poly with

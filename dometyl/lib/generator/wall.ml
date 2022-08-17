@@ -357,12 +357,14 @@ let poly_siding
   let transforms = Path3.to_transforms ~mode:`NoAlign bz_pts in
   (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
   let _mesh =
-    let pth =
-      Points.to_ccw_path cleared_face.points
-      |> Path3.Round.(flat ~corner:(circ (`Cut 0.5)))
-      |> Path3.roundover
-    in
-    let centred = Path3.translate (V3.negate @@ Path3.centroid pth) pth in
+    (* let pth = *)
+    (*   Points.to_ccw_path cleared_face.points *)
+    (*   |> Path3.Round.(flat ~corner:(circ (`Cut 0.5))) *)
+    (*   |> Path3.roundover *)
+    (* in *)
+    let pth = cleared_face.path in
+    (* let centred = Path3.translate (V3.negate @@ Path3.centroid pth) pth in *)
+    let centred = Path3.translate (V3.negate @@ cleared_face.points.centre) pth in
     let scaled =
       (* let frac = x_off /. 19. in *)
       let frac = 0. in
@@ -373,11 +375,12 @@ let poly_siding
     in
     let rows = List.map ~f:(fun m -> Path3.affine m centred) scaled in
     let clearing =
-      let start =
-        let s = Points.to_ccw_path start_face.points in
-        Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) s))
-        |> Path3.subdivide ~freq:(`N (List.length pth, `ByLen))
-      in
+      (* let start = *)
+      (*   let s = Points.to_ccw_path start_face.points in *)
+      (*   Path3.(roundover Round.(flat ~corner:(circ (`Cut 0.5)) s)) *)
+      (*   |> Path3.subdivide ~freq:(`N (List.length pth, `ByLen)) *)
+      (* in *)
+      let start = start_face.path in
       Mesh.slice_profiles ~slices:(`Flat 5) [ start; pth ]
     in
     let final =
@@ -386,7 +389,7 @@ let poly_siding
       let c = bz 1. in
       let flat =
         Path3.quaternion ~about:c (Quaternion.align n (v3 0. 0. (-1.))) s
-        |> Path3.ztrans (-.c.z)
+        |> Path3.scale (v3 1. 1. 0.)
       in
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in

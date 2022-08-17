@@ -56,8 +56,11 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     | `EW -> get `East, get `West
   in
   let join_keys (a : Key.t) (b : Key.t) =
-    (* Scad.hull [ (get_start a).scad; (get_dest b).scad ] *)
-    Mesh.skin_between ~slices:5 (get_start a).path (List.rev (get_dest b).path)
+    Mesh.skin_between
+      ~mapping:(`Reindex `ByLen)
+      ~slices:5
+      (get_start a).path
+      (List.rev (get_dest b).path)
     |> Mesh.to_scad
   in
   let keys =

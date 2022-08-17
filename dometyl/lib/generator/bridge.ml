@@ -24,18 +24,21 @@ let keys
   =
   let aux (in_side, (inney : Key.t)) (out_side, outey) =
     let out_a, out_b =
-      slide
-        ?d1:out_d1
-        ?d2:out_d2
-        ~ortho:(Key.orthogonal outey out_side)
-        (Key.Faces.face outey.faces out_side).scad
+      let ortho = Key.orthogonal outey out_side in
+      let scad =
+        let p = (Key.Faces.face outey.faces out_side).path in
+        Mesh.(to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho 0.1) p))
+      in
+      slide ?d1:out_d1 ?d2:out_d2 ~ortho scad
     in
     let _, in_b =
-      slide
-        ~d1:0.
-        ~d2:(Float.neg in_d)
-        ~ortho:(Key.orthogonal inney in_side)
-        (Key.Faces.face inney.faces in_side).scad
+      let ortho = Key.orthogonal inney in_side in
+      let scad =
+        let p = (Key.Faces.face inney.faces in_side).path in
+        Mesh.(
+          to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.1)) p))
+      in
+      slide ~d1:0. ~d2:(Float.neg in_d) ~ortho scad
     in
     Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
   and face1 = Key.Faces.face k1.faces start
@@ -45,7 +48,7 @@ let keys
   else aux (dest, k2) (start, k1)
 
 let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
-  let a : _ Column.t = Map.find_exn columns a_i
+  let a : Column.t = Map.find_exn columns a_i
   and b = Map.find_exn columns b_i
   and bookends keys join_idx = Map.find_exn keys join_idx, Map.find_exn keys (join_idx + 1)
   and start, dest =

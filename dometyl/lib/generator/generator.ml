@@ -14,7 +14,6 @@ module Plate = Plate
 module Columns = Columns
 module Column = Column
 module Curvature = Curvature
-module Key = Key
 module Points = Points
 module Mx = Mx
 module Choc = Choc
