@@ -163,10 +163,10 @@ type t =
   }
 [@@deriving scad]
 
-let swing_face ?(step = Float.pi /. 24.) key_origin face =
+let swing_face ?(step = Float.pi /. 100.) key_origin face =
   let quat = Quaternion.make (Key.Face.direction face)
-  and free, pivot, rock_z, z_sign =
-    let ortho = V3.(normalize (face.points.centre -@ key_origin)) in
+  and ortho = V3.(normalize (face.points.centre -@ key_origin)) in
+  let free, pivot, rock_z, z_sign =
     if Float.(V3.get_z ortho > 0.)
     then
       ( face.points.top_right
@@ -189,7 +189,27 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
       if Float.(d < last_diff) then a -. step else find_angle (a +. step) d )
     else a -. step
   in
-  let q = quat @@ (find_angle step (V3.get_z free -. rock_z) *. z_sign) in
+  let a = find_angle step (V3.get_z free -. rock_z) *. z_sign in
+  let a' =
+    (* let d = Key.Face.direction face in *)
+    (* let up = *)
+    (*   V3.(normalize ((normalize @@ (face.points.top_left -@ face.points.bot_left)) -@ d)) *)
+    (* V3.angle up V3.(normalize @@ (v3 0. 0. 1. -@ d)) *)
+    (* TODO: This works! re-write swing face to use this, or simplify by just
+    doing the rotations directly where needed without a separate function now
+    that it is lighter weight. *)
+    let plane = Plane.of_normal (Key.Face.direction face) in
+    let up = V3.(normalize (face.points.top_left -@ face.points.bot_left)) in
+    let pup = Plane.project plane up
+    and pup' = Plane.project plane (v3 0. 0. 1.) in
+    (* V3.angle up (v3 0. 0. 1.) *. z_sign *)
+    V2.angle pup pup' *. z_sign
+  in
+  ignore a;
+  (* Stdio.printf "swing = %f; direct = %f \n" a a'; *)
+  (* let q = quat @@ (find_angle step (V3.get_z free -. rock_z) *. z_sign) in *)
+  let q = quat @@ a' in
+  (* let q = quat @@ a in *)
   let face' = Key.Face.quaternion ~about:pivot q face in
   let ortho' =
     V3.quaternion ~about:pivot q key_origin |> V3.sub face'.points.centre |> V3.normalize
@@ -200,7 +220,7 @@ let swing_face ?(step = Float.pi /. 24.) key_origin face =
     with the XY plane. Largely duplicated from swing_face, though it likely will
     not be used so not combining them into a cleaner implementation and just
     hanging onto it for now in case I want to lift part of it. *)
-let _chop_face ?(step = Float.pi /. 24.) key_origin ortho face =
+let _chop_face ?(step = Float.pi /. 100.) key_origin ortho face =
   let dir = Key.Face.direction face in
   let free, about, z_sign =
     if Float.(V3.get_z dir > 0.)
@@ -220,6 +240,14 @@ let _chop_face ?(step = Float.pi /. 24.) key_origin ortho face =
     else best
   in
   let angle = find_angle step (V3.get_z free -. about.z) step *. z_sign in
+  let a' =
+    let plane = Plane.of_normal ortho in
+    let pup = Plane.project plane dir
+    and pup' = Plane.project plane (v3 dir.x dir.y 0.) in
+    V2.angle pup pup' *. Math.sign dir.z *. -1.
+  in
+  ignore a';
+  (* Stdio.printf "chop = %f; direct = %f \n" angle a'; *)
   let q = quat angle in
   let face' = Key.Face.quaternion ~about q face in
   let ortho' =
@@ -359,7 +387,8 @@ let poly_siding
     and p3 = V3.((xy *@ v3 d2 d2 0.) +@ v3 (x +. x_off) (y +. y_off) end_z) in
     Bezier3.make [ p1; p2; p3 ]
   in
-  let bz_pts = Bezier3.curve ~fn:13 bz in
+  let fn = 6 in
+  let bz_pts = Bezier3.curve ~fn bz in
   (* let transforms = Path3.to_transforms bz_pts in *)
   let transforms = Path3.to_transforms ~mode:`NoAlign bz_pts in
   (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
@@ -369,12 +398,15 @@ let poly_siding
     let transforms =
       (* can repurpose chop_face to give me how angled up in z the face is,
            then use that to untwist the wall. *)
-      let ang, _, _ = _chop_face key.origin ortho cleared_face in
-      let a = Quaternion.make ortho 0.
-      and b = Quaternion.make ortho ang in
-      let s = Quaternion.slerp a b in
+      (* let _a, _, _ = _chop_face key.origin ortho cleared_face in *)
+      (* counter the rotation created by the z tilt of the face, such that the
+           angle of the wall is more in line with the xy angle of the originating face *)
+      let dir = Points.direction cleared_face.points in
+      let a = V3.angle dir (v3 dir.x dir.y 0.) *. Math.sign dir.z *. -1. in
+      let s = Quaternion.(slerp (make ortho 0.) (make ortho a)) in
+      let step = 1. /. Float.of_int fn in
       List.mapi
-        ~f:(fun i m -> Affine3.((Quaternion.to_affine @@ s (Float.of_int i /. 13.)) %> m))
+        ~f:(fun i m -> Affine3.((Quaternion.to_affine @@ s (Float.of_int i *. step)) %> m))
         transforms
     in
     let scaled =
@@ -389,12 +421,18 @@ let poly_siding
     let clearing = Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; pth ] in
     let final =
       let s = List.last_exn rows in
-      let n = Path3.normal s in
-      let c = bz 1. in
-      let flat =
-        Path3.quaternion ~about:c (Quaternion.align n (v3 0. 0. (-1.))) s
-        |> Path3.scale (v3 1. 1. 0.)
-      in
+      (* FIXME: would like to use straight plane projection rather than this rotation
+    then scaling style flattening, but with finely curved key paths combined
+    with enough tilt, it could result in broken paths (point bunching ->
+    reversals) that will break the mesh. I should perhaps run a point
+    deduplication with a large epsilon, then use a reindexing skin. *)
+      (* let n = Path3.normal s in *)
+      (* let c = bz 1. in *)
+      (* let flat = *)
+      (*   Path3.quaternion ~about:c (Quaternion.align n (v3 0. 0. (-1.))) s *)
+      (*   |> Path3.scale (v3 1. 1. 0.) *)
+      (* in *)
+      let flat = Path3.of_path2 @@ Path3.project Plane.xy s in
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in
     Mesh.of_rows (List.concat [ clearing; List.tl_exn rows; List.tl_exn final ])
