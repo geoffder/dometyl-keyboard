@@ -56,19 +56,25 @@ let wall_builder plate =
     { body =
         auto_body
           ~n_steps:(`Flat 3)
-          ~north_clearance:2.5
-          ~south_clearance:2.5
-          ~side_clearance:1.5
+            (* ~north_clearance:2.5 *)
+            (* ~south_clearance:2.5 *)
+            (* ~side_clearance:1.5 *)
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           ~eyelet_config
           plate
     ; thumb =
-        auto_thumb
-          ~south_lookup:(fun _ -> Yes)
+        auto_thumb (* ~south_lookup:(fun _ -> Yes) *)
+          ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye)
-          ~north_clearance:3.
-          ~south_clearance:3.
-          ~side_clearance:3.
+          ~west_lookup:(fun _ -> Eye )
+            (* ~north_clearance:3. *)
+            (* ~south_clearance:3. *)
+            (* ~side_clearance:3. *)
+          ~north_clearance:1.
+          ~south_clearance:1.
+          ~side_clearance:1.
           ~n_steps:(`Flat 3)
           ~eyelet_config
           plate
@@ -104,7 +110,9 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.circ (`Cut 0.5)) ~fn:6 ())
+    (* (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.circ (`Cut 0.5)) ~fn:6 ()) *)
+    (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.bez (`Cut 0.5)) ~fn:6 ())
+(* (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.chamf (`Cut 0.5)) ~fn:6 ()) *)
 
 let bottom ?(chonk = false) case =
   (* With 5x1 magnets, for thinner plate. If ~fastener is not specified,
