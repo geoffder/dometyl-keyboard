@@ -163,97 +163,24 @@ type t =
   }
 [@@deriving scad]
 
-let swing_face ?(step = Float.pi /. 100.) key_origin face =
-  let quat = Quaternion.make (Key.Face.direction face)
-  and ortho = V3.(normalize (face.points.centre -@ key_origin)) in
-  let free, pivot, rock_z, z_sign =
-    if Float.(V3.get_z ortho > 0.)
-    then
-      ( face.points.top_right
-      , V3.mid face.points.bot_left face.points.bot_right
-      , V3.get_z face.points.bot_right
-      , 1. )
-    else
-      ( face.points.bot_right
-      , V3.mid face.points.top_left face.points.top_right
-      , V3.get_z face.points.top_right
-      , -1. )
-  in
-  let diff a =
-    V3.(get_z (V3.quaternion ~about:pivot (quat (a *. z_sign)) free) -. rock_z) *. z_sign
-  in
-  let rec find_angle a last_diff =
-    if Float.(a < pi)
-    then (
-      let d = diff a in
-      if Float.(d < last_diff) then a -. step else find_angle (a +. step) d )
-    else a -. step
-  in
-  let a = find_angle step (V3.get_z free -. rock_z) *. z_sign in
-  let a' =
-    (* let d = Key.Face.direction face in *)
-    (* let up = *)
-    (*   V3.(normalize ((normalize @@ (face.points.top_left -@ face.points.bot_left)) -@ d)) *)
-    (* V3.angle up V3.(normalize @@ (v3 0. 0. 1. -@ d)) *)
-    (* TODO: This works! re-write swing face to use this, or simplify by just
-    doing the rotations directly where needed without a separate function now
-    that it is lighter weight. *)
-    let plane = Plane.of_normal (Key.Face.direction face) in
-    let up = V3.(normalize (face.points.top_left -@ face.points.bot_left)) in
-    let pup = Plane.project plane up
-    and pup' = Plane.project plane (v3 0. 0. 1.) in
-    (* V3.angle up (v3 0. 0. 1.) *. z_sign *)
-    V2.angle pup pup' *. z_sign
-  in
-  ignore a;
-  (* Stdio.printf "swing = %f; direct = %f \n" a a'; *)
-  (* let q = quat @@ (find_angle step (V3.get_z free -. rock_z) *. z_sign) in *)
-  let q = quat @@ a' in
-  (* let q = quat @@ a in *)
-  let face' = Key.Face.quaternion ~about:pivot q face in
-  let ortho' =
-    V3.quaternion ~about:pivot q key_origin |> V3.sub face'.points.centre |> V3.normalize
-  in
-  face', ortho'
-
-(* pivot around the lower corner to bring the bottom edge of the face parallel
-    with the XY plane. Largely duplicated from swing_face, though it likely will
-    not be used so not combining them into a cleaner implementation and just
-    hanging onto it for now in case I want to lift part of it. *)
-let _chop_face ?(step = Float.pi /. 100.) key_origin ortho face =
+(* Compute a rotation around the face's bottom or top edge, depending on which way
+   it's orthoganal is pointing in z, that makes the short edge (between the
+   bottom and top long edge), as vertical as possible. The pivoted face, and its
+   new orthogonal are returned. *)
+let swing_face key_origin face =
   let dir = Key.Face.direction face in
-  let free, about, z_sign =
-    if Float.(V3.get_z dir > 0.)
-    then face.points.bot_left, face.points.bot_right, -1.
-    else face.points.bot_right, face.points.bot_left, 1.
+  let ortho = V3.(normalize (face.points.centre -@ key_origin)) in
+  let about, z_sign =
+    if Float.(V3.get_z ortho > 0.)
+    then V3.mid face.points.bot_left face.points.bot_right, 1.
+    else V3.mid face.points.top_left face.points.top_right, -1.
   in
-  let quat = Quaternion.make ortho in
-  let diff a =
-    Float.abs V3.(get_z (V3.quaternion ~about (quat (a *. z_sign)) free) -. about.z)
+  let q =
+    let proj = Plane.(project @@ of_normal dir) in
+    let up = V3.(normalize (face.points.top_left -@ face.points.bot_left)) in
+    Quaternion.make dir @@ (V2.angle (proj up) (proj @@ v3 0. 0. 1.) *. z_sign)
   in
-  let rec find_angle a best_d best =
-    if Float.(a < pi)
-    then (
-      let d = diff a in
-      let best_d, best = if Float.(d < best_d) then d, a else best_d, best in
-      find_angle (a +. step) best_d best )
-    else best
-  in
-  let angle = find_angle step (V3.get_z free -. about.z) step *. z_sign in
-  let a' =
-    let plane = Plane.of_normal ortho in
-    let pup = Plane.project plane dir
-    and pup' = Plane.project plane (v3 dir.x dir.y 0.) in
-    V2.angle pup pup' *. Math.sign dir.z *. -1.
-  in
-  ignore a';
-  (* Stdio.printf "chop = %f; direct = %f \n" angle a'; *)
-  let q = quat angle in
-  let face' = Key.Face.quaternion ~about q face in
-  let ortho' =
-    V3.quaternion ~about q key_origin |> V3.sub face'.points.centre |> V3.normalize
-  in
-  angle, face', ortho'
+  Key.Face.quaternion ~about q face, V3.quaternion q ortho
 
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
  * do so in the higher level functions in walls that call this one. Having a larger
@@ -358,12 +285,6 @@ let poly_siding
     in
     Option.map ~f eyelet_config
   in
-  (* FIXME: Need some transformations that can be applied throughout the sweep
-     -- scaling down the thickness, and the width of walls
-        - offset is an easier way to shrink the wall, but that is in all directions
-          at once, and I *might* need to add a special mode of `Delta that ensures the
-          same number of points. *)
-
   (* TODO: add a rel factor of the key thickness, or absolute z as the bezier
     stopping point (where the linear transition to the flat foot begins). Also,
     maybe an `Auto option, which initially makes a bez down to 0, checks how
@@ -389,6 +310,7 @@ let poly_siding
   in
   let fn = 6 in
   let bz_pts = Bezier3.curve ~fn bz in
+  let dir = Points.direction cleared_face.points in
   (* let transforms = Path3.to_transforms bz_pts in *)
   let transforms = Path3.to_transforms ~mode:`NoAlign bz_pts in
   (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
@@ -396,28 +318,37 @@ let poly_siding
     let pth = cleared_face.path in
     let centred = Path3.translate (V3.negate @@ cleared_face.points.centre) pth in
     let transforms =
-      (* can repurpose chop_face to give me how angled up in z the face is,
-           then use that to untwist the wall. *)
-      (* let _a, _, _ = _chop_face key.origin ortho cleared_face in *)
       (* counter the rotation created by the z tilt of the face, such that the
            angle of the wall is more in line with the xy angle of the originating face *)
-      let dir = Points.direction cleared_face.points in
       let a = V3.angle dir (v3 dir.x dir.y 0.) *. Math.sign dir.z *. -1. in
       let s = Quaternion.(slerp (make ortho 0.) (make ortho a)) in
-      let step = 1. /. Float.of_int fn in
-      List.mapi
-        ~f:(fun i m -> Affine3.((Quaternion.to_affine @@ s (Float.of_int i *. step)) %> m))
-        transforms
+      let step = 1. /. Float.of_int fn
+      and ez = Easing.make (v2 0.42 0.) (v2 1. 1.) in
+      let f i m = Affine3.((of_quaternion @@ s (ez (Float.of_int i *. step))) %> m) in
+      List.mapi ~f transforms
     in
+    Stdio.print_endline (Int.to_string (List.length transforms));
+    (* TODO: should expose the function of this, since I would like to use it
+   for `Auto end_z calculation (just need the last scaled shape). Then after
+   end_z is known, regen the bez, transforms, then use scaled with mapi over
+   transforms instead of map2. Also, should work with x and y of course, rather
+    than just x as this demo does. *)
     let scaled =
-      (* let frac = x_off /. 19. in *)
-      let frac = 0. in
-      let step = frac /. (Float.of_int @@ List.length transforms) /. 2. in
-      List.mapi
-        ~f:(fun i m -> Affine3.(scale (v3 (1. +. (Float.of_int i *. step)) 1. 1.) %> m))
-        transforms
+      let p = Path3.to_plane centred in
+      let a = V2.angle (V3.project p dir) (v2 1. 0.) in
+      let aligned = Path2.rotate a @@ Path3.project p centred in
+      let frac = 0.2 in
+      let step = 1. /. Float.of_int fn
+      and ez = Easing.make (v2 0.42 0.) (v2 1. 1.) in
+      let f i =
+        Path2.scale (v2 (1. -. (ez (Float.of_int i *. step) *. frac)) 1.) aligned
+        |> Path2.rotate (-.a)
+        |> Path2.lift p
+      in
+      List.init (fn + 1) ~f
     in
-    let rows = List.map ~f:(fun m -> Path3.affine m centred) scaled in
+    (* let rows = List.map ~f:(fun m -> Path3.affine m centred) transforms in *)
+    let rows = List.map2_exn ~f:(fun s m -> Path3.affine m s) scaled transforms in
     let clearing = Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; pth ] in
     let final =
       let s = List.last_exn rows in
