@@ -296,7 +296,6 @@ let poly_siding
      - determine how sunken it is below the xy plane
      - generate new bez (and transforms) with the new end_z *)
   let end_z = key.config.thickness /. 4. in
-  (* let end_z = 0. in *)
   let bz =
     let d1 = d1 *. 7. in
     let d2 = d2 *. 2. in
@@ -311,7 +310,6 @@ let poly_siding
   let fn = 6 in
   let bz_pts = Bezier3.curve ~fn bz in
   let dir = Points.direction cleared_face.points in
-  (* let transforms = Path3.to_transforms bz_pts in *)
   let transforms = Path3.to_transforms ~mode:`NoAlign bz_pts in
   (* Stdio.printf "xoff = %f; yoff = %f\n" x_off y_off; *)
   let _mesh =
@@ -327,7 +325,6 @@ let poly_siding
       let f i m = Affine3.((of_quaternion @@ s (ez (Float.of_int i *. step))) %> m) in
       List.mapi ~f transforms
     in
-    Stdio.print_endline (Int.to_string (List.length transforms));
     (* TODO: should expose the function of this, since I would like to use it
    for `Auto end_z calculation (just need the last scaled shape). Then after
    end_z is known, regen the bez, transforms, then use scaled with mapi over
