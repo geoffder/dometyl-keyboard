@@ -349,18 +349,7 @@ let poly_siding
     let clearing = Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; pth ] in
     let final =
       let s = List.last_exn rows in
-      (* FIXME: would like to use straight plane projection rather than this rotation
-    then scaling style flattening, but with finely curved key paths combined
-    with enough tilt, it could result in broken paths (point bunching ->
-    reversals) that will break the mesh. I should perhaps run a point
-    deduplication with a large epsilon, then use a reindexing skin. *)
-      (* let n = Path3.normal s in *)
-      (* let c = bz 1. in *)
-      (* let flat = *)
-      (*   Path3.quaternion ~about:c (Quaternion.align n (v3 0. 0. (-1.))) s *)
-      (*   |> Path3.scale (v3 1. 1. 0.) *)
-      (* in *)
-      let flat = Path3.of_path2 @@ Path3.project Plane.xy s in
+      let flat = List.map ~f:(fun { x; y; z = _ } -> v3 x y 0.) s in
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in
     Mesh.of_rows (List.concat [ clearing; List.tl_exn rows; List.tl_exn final ])

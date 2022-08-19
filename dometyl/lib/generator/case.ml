@@ -26,14 +26,14 @@ let make
   let connections = base_connector walls in
   let t =
     { scad =
-        Scad.difference
+        Scad.sub
           (Scad.union
              [ Plate.to_scad plate
+             ; plate_welder plate
              ; Walls.to_scad walls
              ; Connect.to_scad connections
-             ; plate_welder plate
              ] )
-          [ Plate.collect_cutouts plate ]
+          (Plate.collect_cutouts plate)
         |> Ports.apply (ports_cutter ~walls ~connections)
     ; plate
     ; walls
