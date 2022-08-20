@@ -59,6 +59,8 @@ let wall_builder plate =
             (* ~north_clearance:2.5 *)
             (* ~south_clearance:2.5 *)
             (* ~side_clearance:1.5 *)
+          ~scale:(v2 0.8 1.)
+          ~scale_ez:(v2 0.42 0., v2 1. 1.)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
@@ -72,6 +74,8 @@ let wall_builder plate =
             (* ~north_clearance:3. *)
             (* ~south_clearance:3. *)
             (* ~side_clearance:3. *)
+          ~scale:(v2 0.8 1.)
+          ~scale_ez:(v2 0.42 0., v2 1. 1.)
           ~north_clearance:1.
           ~south_clearance:1.
           ~side_clearance:1.

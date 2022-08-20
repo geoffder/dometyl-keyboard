@@ -58,7 +58,7 @@ module Sides : sig
     -> Columns.t
     -> t
 
-  (** [auto ?d1 ?d2 ?z_off ?thickness ?index_thickness ?north_clearance
+  (** [auto ?d1 ?d2 ?thickness ?index_thickness ?north_clearance
     ?south_clearance ?side_clearance ?n_steps ?n_faces ?north_lookup
     ?south_lookup ?west_lookup ?east_lookup ?eyelet_config ?spacing ?thumb
     columns]
@@ -66,7 +66,7 @@ module Sides : sig
       Construct a {!t} from a collection of parameters to be applied consistently across
       the generated {!Wall.t}s.
 
-      - [d1], [d2], [z_off], [thickness], [n_steps], [n_facets], and [eyelet_config] are
+      - [d1], [d2], [thickness], [n_steps], [n_facets], and [eyelet_config] are
         as described in the documentation of {!Wall.poly_siding}
       - [index_thickness] can be used to override [thickness] for the first two columns of
         the body.
@@ -81,13 +81,14 @@ module Sides : sig
   val auto
     :  ?d1:float
     -> ?d2:float
-    -> ?z_off:float
     -> ?thickness:float
     -> ?index_thickness:float
     -> ?north_clearance:float
     -> ?south_clearance:float
     -> ?side_clearance:float
     -> ?n_steps:Wall.Steps.t
+    -> ?scale:V2.t
+    -> ?scale_ez:V2.t * V2.t
     -> ?n_facets:int
     -> ?north_lookup:(int -> presence)
     -> ?south_lookup:(int -> presence)
@@ -108,13 +109,14 @@ end
 val auto_body
   :  ?d1:float
   -> ?d2:float
-  -> ?z_off:float
   -> ?thickness:float
   -> ?index_thickness:float
   -> ?north_clearance:float
   -> ?south_clearance:float
   -> ?side_clearance:float
   -> ?n_steps:Wall.Steps.t
+  -> ?scale:V2.t
+  -> ?scale_ez:V2.t * V2.t
   -> ?n_facets:int
   -> ?north_lookup:(int -> presence)
   -> ?south_lookup:(int -> presence)
@@ -128,13 +130,14 @@ val auto_body
 val auto_thumb
   :  ?d1:float
   -> ?d2:float
-  -> ?z_off:float
   -> ?thickness:float
   -> ?index_thickness:float
   -> ?north_clearance:float
   -> ?south_clearance:float
   -> ?side_clearance:float
   -> ?n_steps:Wall.Steps.t
+  -> ?scale:V2.t
+  -> ?scale_ez:V2.t * V2.t
   -> ?n_facets:int
   -> ?north_lookup:(int -> presence)
   -> ?south_lookup:(int -> presence)

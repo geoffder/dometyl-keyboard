@@ -85,10 +85,11 @@ end
 type config =
   { d1 : float
   ; d2 : float
-  ; z_off : float
   ; thickness : float
   ; clearance : float
   ; n_steps : Steps.t
+  ; scale : V2.t option
+  ; scale_ez : (V2.t * V2.t) option
   ; n_facets : int
   ; eyelet_config : Eyelet.config option
   }
@@ -117,7 +118,7 @@ type t =
     {!V3.t}. *)
 val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
 
-(** [poly_siding ?x_off ?y_off ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
+(** [poly_siding ?x_off ?y_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
       ?eyelet_config side keyhole]
 
     Generate a {!type:t} using an OpenScad polyhedron, drawn from a set of bezier curves
@@ -125,8 +126,6 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
     the generated wall:
 
     - [x_off] and [y_off] shift the target endpoints (on the ground) of the wall
-    - [z_off] shifts the second bezier control point in z (positive would lead to more
-      arc)
     - [clearance] moves the start of the wall out from the face of the keyhole
     - [n_steps] controls the number of points used to draw the wall (see:
       {!module:Steps}). This impact the aeshetics of the wall, but it also determines how
@@ -149,13 +148,14 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
 val poly_siding
   :  ?x_off:float
   -> ?y_off:float
-  -> ?z_off:float
   -> ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
   -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
+  -> ?scale:V2.t
+  -> ?scale_ez:V2.t * V2.t
   -> ?eyelet_config:Eyelet.config
   -> [< `East | `North | `South | `West ]
   -> Key.t
@@ -169,7 +169,7 @@ val poly_of_config
   -> Key.t
   -> t
 
-(** [column_drop ?z_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
+(** [column_drop ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
       ~spacing ~columns idx]
 
     Wrapper function for {!val:poly_siding} specifically for (north and south) column end
@@ -179,13 +179,14 @@ val poly_of_config
     for, and an x offset that will reclaim the desired column [spacing] is calculated and
     passed along to {!val:poly_siding}. *)
 val column_drop
-  :  ?z_off:float
-  -> ?clearance:float
+  :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
   -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
   -> ?thickness:float
+  -> ?scale:V2.t
+  -> ?scale_ez:V2.t * V2.t
   -> ?eyelet_config:Eyelet.config
   -> spacing:float
   -> columns:Columns.t

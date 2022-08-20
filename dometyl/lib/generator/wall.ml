@@ -134,10 +134,11 @@ end
 type config =
   { d1 : float
   ; d2 : float
-  ; z_off : float
   ; thickness : float
   ; clearance : float
   ; n_steps : Steps.t
+  ; scale : V2.t option
+  ; scale_ez : (V2.t * V2.t) option
   ; n_facets : int
   ; eyelet_config : Eyelet.config option
   }
@@ -145,11 +146,12 @@ type config =
 let default =
   { d1 = 2.
   ; d2 = 5.
-  ; z_off = 0.
   ; thickness = 3.5
   ; clearance = 1.5
   ; n_steps = `Flat 4
   ; n_facets = 1
+  ; scale = None
+  ; scale_ez = None
   ; eyelet_config = None
   }
 
@@ -196,17 +198,20 @@ let swing_face key_origin face =
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
-    ?(z_off = 0.)
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
     ?(n_facets = 1)
     ?(d1 = 2.)
     ?(d2 = 5.)
     ?thickness
+    ?scale
+    ?scale_ez
     ?eyelet_config
     side
     (key : Key.t)
   =
+  let z_off = 0. in
+  (* dummy, removing z_off from interface *)
   let start_face = Key.Faces.face key.faces side
   and thickness = Option.value ~default:key.config.thickness thickness in
   let pivoted_face, ortho = swing_face key.origin start_face in
@@ -292,11 +297,11 @@ let poly_siding
     let y_off = 0. in
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
-    and p2 = V3.((xy *@ v3 d1 d1 0.) +@ v3 (x +. x_off) (y +. y_off) (z +. z_hop))
+    and p2 = V3.((xy *@ v3 d1 d1 0.) +@ v3 (x +. x_off) (y +. y_off) z)
     and p3 = V3.((xy *@ v3 d2 d2 0.) +@ v3 (x +. x_off) (y +. y_off) end_z) in
     Bezier3.make [ p1; p2; p3 ]
   in
-  let fn = 6 in
+  let fn = 12 in
   let dir = Points.direction cleared_face.points in
   let counter =
     (* counter the rotation created by the z tilt of the face, such that the
@@ -310,19 +315,26 @@ let poly_siding
   in
   let pth = cleared_face.path in
   let centred = Path3.translate (V3.negate @@ cleared_face.points.centre) pth in
+  (* TODO: may need to expose a scaling function rather than only making
+    the scaled profiles since it will likely need to be stored in the wall
+    record such that it can be used for calculating point locations to target
+    for connections. *)
   let scaled =
-    let p = Path3.to_plane centred in
-    let a = V2.angle (V3.project p dir) (v2 1. 0.) in
-    let aligned = Path2.rotate a @@ Path3.project p centred in
-    let frac = 0.6 in
-    let step = 1. /. Float.of_int fn
-    and ez = Easing.make (v2 0.42 0.) (v2 1. 1.) in
-    let f i =
-      Path2.scale (v2 (1. -. (ez (Float.of_int i *. step) *. frac)) 1.) aligned
-      |> Path2.rotate (-.a)
-      |> Path2.lift p
-    in
-    List.init (fn + 1) ~f
+    match scale with
+    | Some s ->
+      let p = Path3.to_plane centred in
+      let a = V2.angle (V3.project p dir) (v2 1. 0.) in
+      let aligned = Path2.rotate a @@ Path3.project p centred in
+      let step = 1. /. Float.of_int fn
+      and ez =
+        match scale_ez with
+        | Some (a, b) -> Easing.make a b
+        | None        -> Fn.id
+      in
+      let factor i = V2.lerp (v2 1. 1.) s (ez (Float.of_int i *. step)) in
+      let f i = Path2.scale (factor i) aligned |> Path2.rotate (-.a) |> Path2.lift p in
+      List.init (fn + 1) ~f
+    | None   -> List.init (fn + 1) ~f:(Fn.const centred)
   in
   let end_z = None in
   let transforms =
@@ -375,28 +387,30 @@ let poly_siding
 let poly_of_config
     ?x_off
     ?y_off
-    { d1; d2; z_off; thickness; clearance; n_steps; n_facets; eyelet_config }
+    { d1; d2; thickness; clearance; n_steps; n_facets; scale; scale_ez; eyelet_config }
   =
   poly_siding
     ~d1
     ~d2
     ?x_off
     ?y_off
-    ~z_off
     ~thickness
     ~clearance
     ~n_steps
     ~n_facets
     ?eyelet_config
+    ?scale
+    ?scale_ez
 
 let column_drop
-    ?z_off
     ?clearance
     ?n_steps
     ?n_facets
     ?d1
     ?d2
     ?thickness
+    ?scale
+    ?scale_ez
     ?eyelet_config
     ~spacing
     ~columns
@@ -430,7 +444,6 @@ let column_drop
   in
   poly_siding
     ~x_off:(x_dodge *. -1.)
-    ?z_off
     ?clearance
     ?d1
     ?d2
@@ -438,22 +451,25 @@ let column_drop
     ?n_steps
     ?n_facets
     ?eyelet_config
+    ?scale
+    ?scale_ez
     side
     key
 
 let drop_of_config
     ~spacing
-    { d1; d2; z_off; thickness; clearance; n_steps; n_facets; eyelet_config }
+    { d1; d2; thickness; clearance; n_steps; scale; scale_ez; n_facets; eyelet_config }
   =
   column_drop
     ~d1
     ~d2
-    ~z_off
     ~thickness
     ~clearance
     ~n_steps
     ~n_facets
     ~spacing
+    ?scale
+    ?scale_ez
     ?eyelet_config
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
