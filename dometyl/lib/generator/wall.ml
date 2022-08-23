@@ -29,76 +29,6 @@ module Steps = struct
     | `Flat n -> n
 end
 
-module Edge = struct
-  include Bezier3
-
-  let point_at_z ?(max_iter = 100) ?(tolerance = 0.001) t z =
-    let bez_frac =
-      Util.bisection_exn ~max_iter ~tolerance ~f:(fun s -> V3.get_z (t s) -. z) 0. 1.
-    in
-    t bez_frac
-end
-
-module EdgeDrawer = struct
-  type drawer = V3.t -> Edge.t
-
-  type t =
-    { top : drawer
-    ; bot : drawer
-    }
-
-  let make
-      ?(max_iter = 100)
-      ?(tolerance = 0.001)
-      ~(get_bez : bool -> V3.t -> Edge.t)
-      Points.{ top_left; top_right; bot_left; bot_right; _ }
-    =
-    let find_between lp rp { x; y; z = _ } =
-      let ({ x = dx; y = dy; z = _ } as diff) = V3.sub rp lp in
-      let get_major, target =
-        if Float.(abs dx > abs dy) then V3.get_x, x else V3.get_y, y
-      in
-      let ml = get_major lp
-      and mr = get_major rp in
-      if Float.(target > ml && target < mr) || Float.(target < ml && target > mr)
-      then (
-        let get s = V3.(lp +@ (diff *$ s)) in
-        let pos =
-          Util.bisection_exn
-            ~max_iter
-            ~tolerance
-            ~f:(fun s -> get_major (get s) -. target)
-            0.
-            1.
-        in
-        get pos )
-      else if Float.(abs (target -. ml) < abs (target -. mr))
-      then lp
-      else rp
-    in
-    { top = find_between top_left top_right >> get_bez true
-    ; bot = find_between bot_left bot_right >> get_bez false
-    }
-
-  let map ~f t = { top = f t.top; bot = f t.bot }
-  let translate p = map ~f:(fun d start -> d start >> V3.add p)
-  let xtrans x = map ~f:(fun d start -> d start >> V3.xtrans x)
-  let ytrans y = map ~f:(fun d start -> d start >> V3.ytrans y)
-  let ztrans z = map ~f:(fun d start -> d start >> V3.ztrans z)
-  let scale s = map ~f:(fun d start -> d start >> V3.scale s)
-  let mirror ax = map ~f:(fun d start -> d start >> V3.mirror ax)
-  let rotate ?about r = map ~f:(fun d start -> d start >> V3.rotate ?about r)
-  let xrot ?about r = map ~f:(fun d start -> d start >> V3.xrot ?about r)
-  let yrot ?about r = map ~f:(fun d start -> d start >> V3.yrot ?about r)
-  let zrot ?about r = map ~f:(fun d start -> d start >> V3.zrot ?about r)
-
-  let axis_rotate ?about ax r =
-    map ~f:(fun d start -> d start >> V3.axis_rotate ?about ax r)
-
-  let quaternion ?about q = map ~f:(fun d start -> d start >> V3.quaternion ?about q)
-  let affine m = map ~f:(fun d start -> d start >> V3.affine m)
-end
-
 module Drawer = struct
   type t =
     [ `BL
@@ -127,38 +57,6 @@ module Drawer = struct
   let axis_rotate ?about ax r t loc = Path3.axis_rotate ?about ax r (t loc)
   let quaternion ?about q t loc = Path3.quaternion ?about q (t loc)
   let affine m t loc = Path3.affine m (t loc)
-end
-
-module Edges = struct
-  type t =
-    { top_left : Edge.t [@scad.d3]
-    ; top_right : Edge.t
-    ; bot_left : Edge.t
-    ; bot_right : Edge.t
-    }
-  [@@deriving scad]
-
-  let map ~f t =
-    { top_left = f t.top_left
-    ; top_right = f t.top_right
-    ; bot_left = f t.bot_left
-    ; bot_right = f t.bot_right
-    }
-
-  let of_cw_path_exn = function
-    | [ top_left; top_right; bot_right; bot_left ] ->
-      { top_left; top_right; bot_left; bot_right }
-    | _ -> failwith "Expect list of length 4, with edges beziers in clockwise order."
-
-  let of_cw_path l =
-    try Ok (of_cw_path_exn l) with
-    | Failure e -> Error e
-
-  let get t = function
-    | `TL -> t.top_left
-    | `TR -> t.top_right
-    | `BL -> t.bot_left
-    | `BR -> t.bot_right
 end
 
 type config =

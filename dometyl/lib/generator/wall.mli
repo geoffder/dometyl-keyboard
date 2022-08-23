@@ -19,41 +19,8 @@ module Steps : sig
   val to_int : [< `Flat of int | `PerZ of float ] -> float -> int
 end
 
-(** Bezier curve wall edge type and helpers. *)
-module Edge : sig
-  (** Bezier function, returns position along curve, from 0. to 1. *)
-  type t = float -> V3.t [@@deriving scad]
-
-  (** [point_at_z ?max_iter ?tolerance t z]
-
-      Use {!Util.bisection_exn} to search for the {!V3.t} in [t] closest to [z].
-      [max_iter] and [tolerance] provide maximum iterations and tolerance (accuracy)
-      bounds to the search function. *)
-  val point_at_z : ?max_iter:int -> ?tolerance:float -> t -> float -> V3.t
-end
-
-(** Functions that find the point along the top and bottom edges of the start position of
-    the wall closest to the given xy position, and provides a bezier edge to the ground
-    starting from there. *)
-module EdgeDrawer : sig
-  type drawer = V3.t -> Edge.t
-
-  type t =
-    { top : drawer [@scad.d3]
-    ; bot : drawer
-    }
-  [@@deriving scad]
-
-  val make
-    :  ?max_iter:int
-    -> ?tolerance:float
-    -> get_bez:(bool -> V3.t -> Edge.t)
-    -> Points.t
-    -> t
-
-  val map : f:(drawer -> drawer) -> t -> t
-end
-
+(** Type providing a means to obtain the path from a particular point on the
+    originating face of a wall and the ground. *)
 module Drawer : sig
   type t =
     [ `BL
@@ -70,34 +37,6 @@ module Drawer : sig
   [@@deriving scad]
 
   val map : f:(Path3.t -> Path3.t) -> t -> t
-end
-
-(** Bezier curves representing the four edges running from the start to the foot of each
-    {!Wall.t} *)
-module Edges : sig
-  (** Record containting an {!Edge.t} running from the corners of {!Key.Face.points}
-      down to the floor, where the terminal points are used for {!Wall.foot}. *)
-  type t =
-    { top_left : Edge.t [@scad.d3]
-    ; top_right : Edge.t
-    ; bot_left : Edge.t
-    ; bot_right : Edge.t
-    }
-  [@@deriving scad]
-
-  val map : f:(Edge.t -> Edge.t) -> t -> t
-
-  (** [of_cw_path_exn l] Convert a four element list into a [t]. The ordering
-      actually shouldn't just be clockwise, but is assumed to literally be: TL, TR, BR,
-      BL. *)
-  val of_cw_path_exn : Edge.t list -> t
-
-  val of_cw_path : Edge.t list -> (t, string) Result.t
-
-  (** [get t corner]
-
-      Access fields from record [t] according to provided [corner] tag. *)
-  val get : t -> [< `BL | `BR | `TL | `TR ] -> Edge.t
 end
 
 type config =
@@ -148,13 +87,12 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
       well the wall follows the bezier curve, which can have implications for positioning
       the cutouts for ports near the bottom of the case. A number of steps that is too
       high can sometimes cause the generated polyhedrons to fail, as points can bunch up,
-      leading to a mesh that is difficult for the OpenScad engine (CGAL) to close. When
-      this happens, either decreasing number of steps (can be done preferentially for
-      short walls with `PerZ), or increasing [n_facets] to increase the number of (and
-      decrease the size of) triangles that CGAL can use to close the wall shape.
-    - [n_facets] sets the number of polyhedron faces assigned to the outside and inside of
-      the wall. Values above one will introduce additional beziers of vertices spaced
-      between the ends of the wall, leading to a finer triangular mesh.
+      leading to a mesh with intersecting faces that will cause the OpenScad
+      engine (CGAL) to fail. When this happens, either decreasing number of steps
+      (can be done preferentially for short walls with `PerZ), or increasing [d1]
+      which will spread out the points at the beginning of the sweep (which is
+      typically the most problematic) may help.
+
     - [d1] and [d2] set the distance projected outward along the orthogonal of the [side]
       of the [keyhole] on the xy-plane used to for the second and third quadratic bezier
       control points respectively.
