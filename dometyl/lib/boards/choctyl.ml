@@ -55,8 +55,6 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~index_thickness:4.
-          ~n_facets:3
           ~n_steps:(`Flat 3)
           ~north_clearance:3.5
           ~south_clearance:3.5
@@ -75,7 +73,6 @@ let wall_builder plate =
           ~north_clearance:3.
           ~south_clearance:3.
           ~side_clearance:3.
-          ~n_facets:3
           ~n_steps:(`Flat 4)
           ~eyelet_config
           plate

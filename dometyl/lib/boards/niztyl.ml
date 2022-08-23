@@ -65,7 +65,6 @@ let wall_builder plate =
           ~east_lookup:(fun _ -> Yes)
           ~d1:2.
           ~d2:5.
-          ~n_facets:2
           ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5
@@ -77,7 +76,6 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)
-          ~n_facets:3
           ~n_steps:(`Flat 3)
           ~north_clearance:3.
           ~south_clearance:3.

@@ -75,15 +75,13 @@ module Sides = struct
   let auto
       ?(d1 = 2.)
       ?(d2 = 5.)
-      ?(thickness = 3.5)
-      ?index_thickness
       ?(north_clearance = 2.5)
       ?(south_clearance = 2.5)
       ?(side_clearance = 3.0)
       ?(n_steps = `Flat 4)
       ?scale:s
       ?scale_ez
-      ?(n_facets = 1)
+      ?index_scale
       ?(north_lookup = fun i -> if i = 2 || i = 4 then Eye else Yes)
       ?(south_lookup =
         function
@@ -101,17 +99,15 @@ module Sides = struct
       | Yes -> Map.add_exn m ~key:i ~data:conf
       | Eye ->
         Map.add_exn m ~key:i ~data:Wall.{ conf with eyelet_config = Some eyelet_config }
-      | No  -> m
+      | No -> m
     and conf =
       Wall.
         { d1
         ; d2
-        ; thickness
         ; clearance = side_clearance
         ; n_steps
         ; scale = s
         ; scale_ez
-        ; n_facets
         ; eyelet_config = None
         }
     and init = Map.empty (module Int) in
@@ -130,15 +126,12 @@ module Sides = struct
            then Map.keys columns
            else Map.keys (snd @@ Map.min_elt_exn columns).keys )
     and north =
-      let index = Option.value ~default:thickness index_thickness in
+      let index = Option.first_some index_scale s in
       let f m i =
         present
           m
           i
-          { conf with
-            clearance = north_clearance
-          ; thickness = (if i < 2 then index else thickness)
-          }
+          { conf with clearance = north_clearance; scale = (if i < 2 then index else s) }
           (north_lookup i)
       in
       Map.find
@@ -188,15 +181,13 @@ end
 let auto_body
     ?d1
     ?d2
-    ?thickness
-    ?index_thickness
     ?north_clearance
     ?south_clearance
     ?side_clearance
     ?n_steps
     ?scale
     ?scale_ez
-    ?n_facets
+    ?index_scale
     ?north_lookup
     ?south_lookup
     ?west_lookup
@@ -207,15 +198,13 @@ let auto_body
   Sides.auto
     ?d1
     ?d2
-    ?thickness
-    ?index_thickness
     ?north_clearance
     ?south_clearance
     ?side_clearance
     ?n_steps
-    ?n_facets
     ?scale
     ?scale_ez
+    ?index_scale
     ?north_lookup
     ?south_lookup
     ?west_lookup
@@ -227,15 +216,12 @@ let auto_body
 let auto_thumb
     ?(d1 = 1.)
     ?(d2 = 3.)
-    ?(thickness = 3.5)
-    ?index_thickness
     ?(north_clearance = 2.5)
     ?(south_clearance = 2.5)
     ?(side_clearance = 3.0)
     ?(n_steps = `PerZ 4.)
     ?scale
     ?scale_ez
-    ?(n_facets = 1)
     ?(north_lookup = fun i -> if i = 0 then Yes else No)
     ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
     ?(west_lookup = fun i -> if i = 0 then Yes else No)
@@ -246,15 +232,12 @@ let auto_thumb
   Sides.auto
     ~d1
     ~d2
-    ~thickness
-    ?index_thickness
     ~north_clearance
     ~south_clearance
     ~side_clearance
     ~n_steps
     ?scale
     ?scale_ez
-    ~n_facets
     ~north_lookup
     ~south_lookup
     ~west_lookup

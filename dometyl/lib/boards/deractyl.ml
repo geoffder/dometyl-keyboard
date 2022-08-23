@@ -70,10 +70,8 @@ let wall_builder plate =
           ~west_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~east_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~n_steps:(`Flat 5)
-          ~n_facets:2
           ~north_clearance:7.
           ~side_clearance:2.
-          ~index_thickness:5.
           plate
     ; thumb =
         auto_thumb
@@ -81,7 +79,6 @@ let wall_builder plate =
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then Eye else Yes)
           ~n_steps:(`Flat 5)
-          ~n_facets:4
           plate
     }
 

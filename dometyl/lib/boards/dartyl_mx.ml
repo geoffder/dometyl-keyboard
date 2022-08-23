@@ -18,7 +18,6 @@ let wall_builder plate =
           ~west_lookup:(fun i -> if i = 0 then Yes else No)
           ~north_lookup:(fun _ -> Yes)
           ~south_lookup:(fun i -> if i = 0 then No else Yes)
-          ~thickness:5.0
           ~eyelet_config:bumpon
           plate
     ; thumb =
@@ -30,7 +29,6 @@ let wall_builder plate =
           ~side_clearance:0.5
           ~d1:3.
           ~d2:4.75
-          ~n_facets:60
           ~eyelet_config:bumpon
           ~n_steps:(`Flat 15)
           plate

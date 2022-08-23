@@ -86,7 +86,6 @@ let wall_builder plate =
 
 let base_connector =
   Connect.skeleton
-    ~n_facets:1
     ~height:9.
     ~index_height:12.
     ~thumb_height:12.

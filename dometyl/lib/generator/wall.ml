@@ -26,7 +26,7 @@ module Steps = struct
   let to_int t z =
     match t with
     | `PerZ mm -> Int.max 2 (Float.to_int (z /. mm))
-    | `Flat n  -> n
+    | `Flat n -> n
 end
 
 module Edge = struct
@@ -99,6 +99,36 @@ module EdgeDrawer = struct
   let affine m = map ~f:(fun d start -> d start >> V3.affine m)
 end
 
+module Drawer = struct
+  type t =
+    [ `BL
+    | `BR
+    | `TL
+    | `TR
+    | `B of float
+    | `T of float
+    | `L of float
+    | `R of float
+    | `XY of float * float
+    ]
+    -> Path3.t
+
+  let map ~f (t : t) : t = t >> f
+  let translate p t loc = Path3.translate p (t loc)
+  let xtrans x t loc = Path3.xtrans x (t loc)
+  let ytrans y t loc = Path3.ytrans y (t loc)
+  let ztrans z t loc = Path3.ztrans z (t loc)
+  let scale s t loc = Path3.scale s (t loc)
+  let mirror ax t loc = Path3.mirror ax (t loc)
+  let rotate ?about r t loc = Path3.rotate ?about r (t loc)
+  let xrot ?about r t loc = Path3.xrot ?about r (t loc)
+  let yrot ?about r t loc = Path3.yrot ?about r (t loc)
+  let zrot ?about r t loc = Path3.zrot ?about r (t loc)
+  let axis_rotate ?about ax r t loc = Path3.axis_rotate ?about ax r (t loc)
+  let quaternion ?about q t loc = Path3.quaternion ?about q (t loc)
+  let affine m t loc = Path3.affine m (t loc)
+end
+
 module Edges = struct
   type t =
     { top_left : Edge.t [@scad.d3]
@@ -134,22 +164,18 @@ end
 type config =
   { d1 : float
   ; d2 : float
-  ; thickness : float
   ; clearance : float
   ; n_steps : Steps.t
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
-  ; n_facets : int
   ; eyelet_config : Eyelet.config option
   }
 
 let default =
   { d1 = 2.
   ; d2 = 5.
-  ; thickness = 3.5
   ; clearance = 1.5
   ; n_steps = `Flat 4
-  ; n_facets = 1
   ; scale = None
   ; scale_ez = None
   ; eyelet_config = None
@@ -158,9 +184,9 @@ let default =
 type t =
   { scad : Scad.d3
   ; start : Points.t
+  ; cleared : Points.t
   ; foot : Points.t
-  ; edge_drawer : EdgeDrawer.t
-  ; edges : Edges.t
+  ; drawer : Drawer.t
   ; screw : Eyelet.t option
   }
 [@@deriving scad]
@@ -185,105 +211,41 @@ let swing_face key_origin face =
   Key.Face.quaternion ~about q face, V3.quaternion q ortho
 
 (* TODO: Think of scaling d1 based on how high the key is, though maybe should
- * do so in the higher level functions in walls that call this one. Having a larger
- * d1 value will improve the clearance for the tall columns, which aren't in such a
- * hurry to move in xy (since they have a larger distance to do it).
- *
- * NOTE: `Flat and `ZRatio as the type for d1? `ZRatio being a % of Z that should
- * be assigned as d1. Would that make the bow of the curve more consistent without
- * implementing and switching to splines?
-   Update: Clearance not using d1 has been added, so this is more of a cosmetic
-   consideration now. *)
+   do so in the higher level functions in walls that call this one. Having a larger
+   d1 value will improve the clearance for the tall columns, which aren't in such a
+   hurry to move in xy (since they have a larger distance to do it).
+
+   NOTE: `Flat and `ZRatio as the type for d1? `ZRatio being a % of Z that should
+   be assigned as d1. Would that make the bow of the curve more consistent? *)
 
 let poly_siding
     ?(x_off = 0.)
     ?(y_off = 0.)
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
-    ?(n_facets = 1)
     ?(d1 = 2.)
     ?(d2 = 5.)
-    ?thickness
     ?scale
     ?scale_ez
     ?eyelet_config
     side
     (key : Key.t)
   =
-  let z_off = 0. in
-  (* dummy, removing z_off from interface *)
-  let start_face = Key.Faces.face key.faces side
-  and thickness = Option.value ~default:key.config.thickness thickness in
+  let start_face = Key.Faces.face key.faces side in
   let pivoted_face, ortho = swing_face key.origin start_face in
   let cleared_face = Key.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face in
-  let xy = V3.(normalize (mul ortho (v3 1. 1. 0.)))
-  and z_hop = (Float.max 0. (V3.get_z ortho) *. key.config.thickness) +. z_off
-  and top_offset =
-    V3.(
-      mul (v3 1. 1. 0.) (cleared_face.points.bot_right -@ cleared_face.points.top_right))
-  in
-  let get_bez top ({ x; y; z } as start) =
-    let jog, d1, plus =
-      let half_delta = (d2 -. d1) /. 2. in
-      if top
-      then thickness, d1 +. Float.max half_delta 0., top_offset
-      else 0., d1 +. Float.min half_delta 0., v3 0. 0. 0.
-    in
-    let p1 = V3.(start -@ (ortho *$ 0.01)) (* fudge for union *)
-    and p2 =
-      V3.(
-        mul xy (v3 (d1 +. jog) (d1 +. jog) 0.)
-        |> add (v3 (x +. x_off) (y +. y_off) (z +. z_hop))
-        |> add plus)
-    and p3 =
-      V3.(
-        add (mul xy (v3 (d2 +. jog) (d2 +. jog) 0.)) (v3 (x +. x_off) (y +. y_off) 0.)
-        |> add plus)
-    in
-    p3, Bezier3.make [ p1; p2; p3 ]
-  in
-  let cw_points =
-    let n = n_facets - 1 in
-    Util.fill_points
-      ~init:
-        (Util.fill_points ~n cleared_face.points.bot_left cleared_face.points.bot_right)
-      ~n
-      cleared_face.points.top_right
-      cleared_face.points.top_left
-  in
-  let corners =
-    (* drop the extra non-corner elements for intermediate facets *)
-    List.filteri ~f:(fun i _ ->
-        i = 0 || i = n_facets || i = n_facets + 1 || i = 3 + ((n_facets - 1) * 2) )
-  and steps =
-    let adjust V3.{ z; _ } =
-      let lowest_z =
-        let f m p = Float.min m p.z in
-        Points.fold ~f ~init:Float.max_value cleared_face.points
-      in
-      Float.(to_int ((1. +. ((z -. lowest_z) /. z)) *. of_int (Steps.to_int n_steps z)))
-    in
-    `Ragged (List.map ~f:adjust cw_points)
-  and _end_ps, bezs =
-    List.foldi
-      ~f:(fun i (ends, bs) p ->
-        let e, b = get_bez (i > n_facets) p in
-        e :: ends, b :: bs )
-      ~init:([], [])
-      (List.rev cw_points)
-  in
+  let xy = V3.(normalize (mul ortho (v3 1. 1. 0.))) in
+  let fn = Steps.to_int n_steps cleared_face.points.centre.z in
   let bz end_z =
     let d1 = d1 *. 7. in
     let d2 = d2 *. 2. in
-    let x_off = 0. in
-    let y_off = 0. in
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
     and p2 = V3.((xy *@ v3 d1 d1 0.) +@ v3 (x +. x_off) (y +. y_off) z)
     and p3 = V3.((xy *@ v3 d2 d2 0.) +@ v3 (x +. x_off) (y +. y_off) end_z) in
     Bezier3.make [ p1; p2; p3 ]
   in
-  let fn = 12 in
+  (* let fn = 12 in *)
   let dir = Points.direction cleared_face.points in
   let counter =
     (* counter the rotation created by the z tilt of the face, such that the
@@ -306,7 +268,7 @@ let poly_siding
       and ez =
         match scale_ez with
         | Some (a, b) -> Easing.make a b
-        | None        -> Fn.id
+        | None -> Fn.id
       in
       let factor i = V2.lerp (v2 1. 1.) s (ez (Float.of_int i *. step)) in
       fun i pt ->
@@ -315,13 +277,13 @@ let poly_siding
         |> V2.scale (factor i)
         |> V2.rotate (-.a)
         |> V2.lift p
-    | None   -> fun _ pt -> pt
+    | None -> fun _ pt -> pt
   in
   let end_z = None in
   let transforms =
     match end_z with
     | Some z -> Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz z))
-    | None   ->
+    | None ->
       let trans =
         Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz 0.))
         |> List.last_exn
@@ -330,8 +292,9 @@ let poly_siding
       let last_shape = Path3.affine trans (List.map ~f:(scaler fn) centred) in
       let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.001 in
       Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
+      |> List.map2_exn ~f:(fun c m -> Affine3.(c %> m)) counter
   in
-  let transforms = List.map2_exn ~f:(fun c m -> Affine3.(c %> m)) counter transforms in
+  let last_transform = List.last_exn transforms in
   let mesh =
     let rows =
       List.mapi
@@ -347,15 +310,48 @@ let poly_siding
     Mesh.of_rows (List.concat [ clearing; List.tl_exn rows; List.tl_exn final ])
   in
   let foot =
-    let m = List.last_exn transforms in
     let f p =
-      let { x; y; z = _ } = V3.(affine m (scaler fn (p -@ cleared_face.points.centre))) in
+      let { x; y; z = _ } =
+        V3.(affine last_transform (scaler fn (p -@ cleared_face.points.centre)))
+      in
       v3 x y 0.
     in
     Points.map ~f cleared_face.points
   in
-  let screw =
-    let f config =
+  let drawer pt =
+    let p0, p1 =
+      let f x y =
+        let g (p : Points.t) =
+          let bot = V3.lerp p.bot_left p.bot_right x
+          and top = V3.lerp p.top_left p.top_right x in
+          V3.lerp bot top y
+        in
+        g start_face.points, g cleared_face.points
+      in
+      match pt with
+      | `TL -> start_face.points.top_left, cleared_face.points.top_left
+      | `TR -> start_face.points.top_right, cleared_face.points.top_right
+      | `BL -> start_face.points.bot_left, cleared_face.points.bot_left
+      | `BR -> start_face.points.bot_right, cleared_face.points.bot_right
+      | `T x -> f x 1.
+      | `B x -> f x 0.
+      | `L y -> f 0. y
+      | `R y -> f 1. y
+      | `XY (x, y) -> f x y
+    in
+    let c1 = V3.sub p1 cleared_face.points.centre in
+    let trans = List.rev transforms
+    and f i m = V3.affine m (scaler i c1) in
+    let path =
+      List.foldi
+        ~f:(fun i acc m -> f i m :: acc)
+        ~init:[ V3.(f fn (List.hd_exn trans) *@ v3 1. 1. 0.) ]
+        trans
+    in
+    p0 :: List.rev path
+  and screw =
+    match eyelet_config with
+    | Some config ->
       let open Eyelet in
       let placement =
         let n = V3.negate xy in
@@ -365,66 +361,34 @@ let poly_siding
           let offset = outer_rad +. V3.(norm (sub foot.top_left foot.bot_left) /. 4.) in
           Point V3.(to_v2 (mid foot.top_left foot.top_right +@ (n *$ offset)))
       in
-      make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right)
-    in
-    Option.map ~f eyelet_config
+      Some (make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right))
+    | None -> None
   in
-  ignore steps;
-  (* TODO: new record should have cleared face as well, for being able to get
-    the full  trajectory of points (start and cleared point interpolated with
-    relative position, then transformer function provides the full sweep for
-    that point). Usually, this will just be a face corner though. transformer
-    replaces edge_drawer, taking a start point which should be on the edge of
-    the cleared face, draws the path to the ground. Or, rather than requiring
-    this to be done by the caller, perhaps a variant could specify the point
-    via tags and relative floats, and the function produces the full path from
-    the start face? *)
   { scad =
-      (* Scad.hull [ start_face.scad; cleared_face.scad ] *)
-      (* :: Path3.show_points (Fn.const @@ Scad.sphere 1.) bz_pts *)
-      (* :: Path3.show_points *)
-      (*      (Fn.const @@ Scad.sphere 1.) *)
-      (*      Bezier3.(curve ~fn:16 @@ translate cleared_face.points.centre _mbz) *)
       Mesh.to_scad mesh :: Option.value_map ~default:[] ~f:(fun s -> [ s.scad ]) screw
       |> Scad.union
       |> Fn.flip
            Scad.difference
            (Option.value_map ~default:[] ~f:(fun s -> Option.to_list s.cut) screw)
   ; start = start_face.points
+  ; cleared = cleared_face.points
   ; foot
-  ; edge_drawer =
-      EdgeDrawer.make
-        ~get_bez:(fun top start -> snd (get_bez top start))
-        cleared_face.points
-  ; edges = Edges.of_cw_path_exn (corners bezs)
+  ; drawer
   ; screw
   }
 
 let poly_of_config
     ?x_off
     ?y_off
-    { d1; d2; thickness; clearance; n_steps; n_facets; scale; scale_ez; eyelet_config }
+    { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config }
   =
-  poly_siding
-    ~d1
-    ~d2
-    ?x_off
-    ?y_off
-    ~thickness
-    ~clearance
-    ~n_steps
-    ~n_facets
-    ?eyelet_config
-    ?scale
-    ?scale_ez
+  poly_siding ~d1 ~d2 ?x_off ?y_off ~clearance ~n_steps ?eyelet_config ?scale ?scale_ez
 
 let column_drop
     ?clearance
     ?n_steps
-    ?n_facets
     ?d1
     ?d2
-    ?thickness
     ?scale
     ?scale_ez
     ?eyelet_config
@@ -456,37 +420,23 @@ let column_drop
         else -.spacing
       in
       if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
-    | _           -> 0.
+    | _ -> 0.
   in
   poly_siding
     ~x_off:(x_dodge *. -1.)
     ?clearance
     ?d1
     ?d2
-    ?thickness
     ?n_steps
-    ?n_facets
     ?eyelet_config
     ?scale
     ?scale_ez
     side
     key
 
-let drop_of_config
-    ~spacing
-    { d1; d2; thickness; clearance; n_steps; scale; scale_ez; n_facets; eyelet_config }
+let drop_of_config ~spacing { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config }
   =
-  column_drop
-    ~d1
-    ~d2
-    ~thickness
-    ~clearance
-    ~n_steps
-    ~n_facets
-    ~spacing
-    ?scale
-    ?scale_ez
-    ?eyelet_config
+  column_drop ~d1 ~d2 ~clearance ~n_steps ~spacing ?scale ?scale_ez ?eyelet_config
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   V3.normalize V3.(top_left -@ top_right)

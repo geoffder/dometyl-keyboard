@@ -54,6 +54,24 @@ module EdgeDrawer : sig
   val map : f:(drawer -> drawer) -> t -> t
 end
 
+module Drawer : sig
+  type t =
+    [ `BL
+    | `BR
+    | `TL
+    | `TR
+    | `B of float
+    | `T of float
+    | `L of float
+    | `R of float
+    | `XY of float * float
+    ]
+    -> Path3.t
+  [@@deriving scad]
+
+  val map : f:(Path3.t -> Path3.t) -> t -> t
+end
+
 (** Bezier curves representing the four edges running from the start to the foot of each
     {!Wall.t} *)
 module Edges : sig
@@ -85,12 +103,10 @@ end
 type config =
   { d1 : float
   ; d2 : float
-  ; thickness : float
   ; clearance : float
   ; n_steps : Steps.t
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
-  ; n_facets : int
   ; eyelet_config : Eyelet.config option
   }
 
@@ -100,11 +116,12 @@ val default : config
 type t =
   { scad : Scad.d3 (** Aggregate scad, including screw outshoot if included *)
   ; start : Points.t (** Corner points of the {!Key.Face.t} this wall emerged from *)
+  ; cleared : Points.t
+        (** Corner points of the swung (vertical) and cleared [start] face *)
   ; foot : Points.t (** Terminal points where the wall meets the XY plane. *)
-  ; edge_drawer : EdgeDrawer.t
-        (** Generate {!Edge.t}'s emerging from point along top and bottom starting edges
-            of the wall closest to the provided {!V3.t} on the XY plane. *)
-  ; edges : Edges.t (** Bezier curves that specify the edge vertices. *)
+  ; drawer : Drawer.t
+        (** Generate {!Path3.t}s emerging from a point on the [start] face that
+             follow along the same sweeping transforms as the wall. *)
   ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }
@@ -118,8 +135,7 @@ type t =
     {!V3.t}. *)
 val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
 
-(** [poly_siding ?x_off ?y_off ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness
-      ?eyelet_config side keyhole]
+(** [poly_siding side keyhole]
 
     Generate a {!type:t} using an OpenScad polyhedron, drawn from a set of bezier curves
     from the [side] facing edges of [keyhole]. Optional parameters influence the shape of
@@ -142,7 +158,8 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
     - [d1] and [d2] set the distance projected outward along the orthogonal of the [side]
       of the [keyhole] on the xy-plane used to for the second and third quadratic bezier
       control points respectively.
-    - [thickness] influences the thickness of the wall (from inside to outside face)
+    - [scale] specifies width ([x]), and thickness ([y]) scaling to apply along
+      the sweep of the projected wall (linearly, or easing according to [scale_ez])
     - If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
       to the bottom of the generated wall. *)
 val poly_siding
@@ -150,10 +167,8 @@ val poly_siding
   -> ?y_off:float
   -> ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
-  -> ?thickness:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?eyelet_config:Eyelet.config
@@ -169,8 +184,7 @@ val poly_of_config
   -> Key.t
   -> t
 
-(** [column_drop ?clearance ?n_steps ?n_facets ?d1 ?d2 ?thickness ?eyelet_config
-      ~spacing ~columns idx]
+(** [column_drop ~spacing ~columns idx]
 
     Wrapper function for {!val:poly_siding} specifically for (north and south) column end
     walls. Unlike {!val:poly_siding}, which takes a {!Key.t}, this takes the map
@@ -181,10 +195,8 @@ val poly_of_config
 val column_drop
   :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?n_facets:int
   -> ?d1:float
   -> ?d2:float
-  -> ?thickness:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?eyelet_config:Eyelet.config
