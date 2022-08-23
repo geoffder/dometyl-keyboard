@@ -58,3 +58,4 @@ val magnet_6x3_config : config
 val m4_countersunk_fastener : fastener
 val make : ?fn:int -> placement:placement -> config -> V2.t -> V2.t -> t
 val to_scad : t -> Scad.d3
+val apply : t -> Scad.d3 -> Scad.d3

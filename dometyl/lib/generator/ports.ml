@@ -92,7 +92,7 @@ let place_tray
   let x =
     match Option.first_some left right with
     | Some w -> V3.get_x w.foot.bot_left +. x_off
-    | None   -> 0.
+    | None -> 0.
   and y =
     let outer =
       let f (ps : Points.t) = V3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
@@ -103,7 +103,7 @@ let place_tray
   Scad.zrot z_rot scad |> Scad.translate (v3 x y 0.)
 
 let carbonfet_stl micro =
-  let import s = Scad.import_3d (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
+  let import s = Scad.import3 (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
   Scad.color Color.FireBrick
   @@
   if micro
@@ -133,7 +133,7 @@ let carbonfet_holder ?(micro = false) ?x_off ?y_off ?z_rot () ~walls ~connection
 let derek_reversible_stl reset_button =
   (if reset_button then "elite-c_holder_w_reset" else "elite-c_holder")
   |> Printf.sprintf "../things/holders/dereknheiley/%s.stl"
-  |> Scad.import_3d
+  |> Scad.import3
   |> Scad.translate (v3 15.3 0. 0.)
   |> Scad.color Color.FireBrick
 

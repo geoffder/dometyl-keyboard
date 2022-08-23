@@ -5,7 +5,7 @@ open! Scad_ml
    For rough visualization. It does not seem to line up with the holes, even
    when holes are positioned more exactly according to specifications. *)
 let kailh_socket =
-  Scad.import_3d "../things/switches/mx_hotswap_socket.stl"
+  Scad.import3 "../things/switches/mx_hotswap_socket.stl"
   |> Scad.translate (v3 0.65 (-4.8) (-5.15))
   |> Scad.color ~alpha:0.4 Color.Silver
 
@@ -125,7 +125,7 @@ let make_hole
       in
       let clip hole = Scad.union [ teeth ~inner_h ~thickness hole; swap ] in
       clearance +. 3., clip, Some cutout
-    | None        -> clearance, teeth ~inner_h ~thickness, None
+    | None -> clearance, teeth ~inner_h ~thickness, None
   and cap_cutout =
     Option.map
       ~f:(fun h ->

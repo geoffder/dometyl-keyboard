@@ -72,7 +72,7 @@ let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as conf
   let hole_offset, foot_offset =
     match placement with
     | Normal n -> V2.smul n outer_rad, V2.smul n (-0.1)
-    | Point p  ->
+    | Point p ->
       let diff = V2.(p -@ base_centre) in
       diff, V2.smul (V2.normalize diff) (-0.1)
   in
@@ -93,7 +93,7 @@ let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as conf
   let outline = Scad.union [ outer; swoop p1; swoop p2 ] in
   let scad, cut =
     match hole with
-    | Through     ->
+    | Through ->
       Scad.difference outline [ inner ] |> Scad.linear_extrude ~height:thickness, None
     | Inset depth ->
       let inset =
@@ -108,3 +108,8 @@ let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as conf
   { scad; cut; centre = V3.of_v2 hole_centre; config }
 
 let to_scad t = t.scad
+
+let apply t scad =
+  match t.cut with
+  | Some cut -> Scad.sub (Scad.add scad t.scad) cut
+  | None -> Scad.add scad t.scad

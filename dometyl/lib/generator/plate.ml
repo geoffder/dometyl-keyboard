@@ -213,7 +213,7 @@ let make
 
 let join_thumb ?in_d ?out_d1 ?out_d2 thumb =
   let join = Bridge.cols ~ax:`NS ?in_d ?out_d1 ?out_d2 ~columns:thumb in
-  Scad.union_3d (List.init ~f:(fun i -> join i (i + 1)) (Map.length thumb - 1))
+  Scad.union3 (List.init ~f:(fun i -> join i (i + 1)) (Map.length thumb - 1))
 
 let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_body_cols; _ }; body; thumb; _ } =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns:body in
@@ -255,7 +255,7 @@ let collect ~f t =
   let col_fold =
     Map.fold ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
   in
-  Scad.union_3d @@ col_fold ~init:(col_fold ~init:[] t.body) t.thumb
+  Scad.union3 @@ col_fold ~init:(col_fold ~init:[] t.body) t.thumb
 
 let collect_caps t =
   collect

@@ -235,7 +235,7 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
   ; heading
   ; normal = V3.rotate (v3 (Float.pi /. 2.) 0. 0.) heading
   }
-  |> translate (V3.negate origin)
+  |> translate (V3.neg origin)
 
 let of_config { index; middle; ring; pinky; thumb; carpal_len; knuckle_rad } =
   let fingers = Fingers.of_configs ~index ~middle ~ring ~pinky

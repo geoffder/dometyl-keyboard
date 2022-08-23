@@ -110,7 +110,7 @@ let build ?reset_button ?right_hand ?hotswap () =
     keyhole
 
 let compactyl =
-  Scad.import_3d "../things/others/dereknheiley_compactyl_5x6.stl"
+  Scad.import3 "../things/others/dereknheiley_compactyl_5x6.stl"
   |> Scad.rotate (v3 0. (Float.pi /. -8.) 0.)
   |> Scad.translate (v3 70. (-2.) (-10.))
   |> Scad.color ~alpha:0.25 Color.DarkSlateBlue

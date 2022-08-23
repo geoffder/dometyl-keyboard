@@ -22,19 +22,20 @@ end
 (** Type providing a means to obtain the path from a particular point on the
     originating face of a wall and the ground. *)
 module Drawer : sig
-  type t =
+  type loc =
     [ `BL
     | `BR
     | `TL
     | `TR
+    | `CN
     | `B of float
     | `T of float
     | `L of float
     | `R of float
     | `XY of float * float
     ]
-    -> Path3.t
-  [@@deriving scad]
+
+  type t = loc -> Path3.t [@@deriving scad]
 
   val map : f:(Path3.t -> Path3.t) -> t -> t
 end

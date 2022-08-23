@@ -37,8 +37,8 @@ module Faces = struct
   let face t = function
     | `North -> t.north
     | `South -> t.south
-    | `East  -> t.east
-    | `West  -> t.west
+    | `East -> t.east
+    | `West -> t.west
 end
 
 type config =
@@ -89,12 +89,12 @@ let make
   =
   let front =
     let sq =
-      Path3.square ~center:true ~plane:Plane.(negate xz) (v2 outer_w thickness)
+      Path3.square ~center:true ~plane:Plane.(neg xz) (v2 outer_w thickness)
       |> Path3.ytrans (outer_h /. -2.)
     in
     match corner with
     | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
-    | None        -> sq
+    | None -> sq
   in
   let hole =
     let outer = Mesh.to_scad @@ Mesh.of_rows [ front; Path3.ytrans outer_h front ]
@@ -126,7 +126,7 @@ let make
               segs
           in
           if Float.(a.a.z > 0.) then a, b else b, a
-        | _                -> failwith "unreachable"
+        | _ -> failwith "unreachable"
       in
       let points =
         Points.
@@ -154,7 +154,7 @@ let make
       let path =
         match corner with
         | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
-        | None        -> sq
+        | None -> sq
       in
       Face.{ path; points }
     in

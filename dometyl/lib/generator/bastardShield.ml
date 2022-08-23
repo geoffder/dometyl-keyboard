@@ -23,7 +23,7 @@ let to_scad ?(show_screws = false) t =
 let print_pcb ?(right_hand = true) thickness =
   let import n =
     let hand = if right_hand then "right" else "left" in
-    Scad.import_2d (Printf.sprintf "../things/holders/bastardkb/%s/%s.svg" hand n)
+    Scad.import2 (Printf.sprintf "../things/holders/bastardkb/%s/%s.svg" hand n)
   in
   Scad.difference
     (import "shield_plate")

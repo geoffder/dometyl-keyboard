@@ -3,7 +3,7 @@ open! Scad_ml
 
 (* https://grabcad.com/library/kailh-1350-socket-2 *)
 let kailh_socket =
-  Scad.import_3d "../things/switches/choc_hotswap_socket.stl"
+  Scad.import3 "../things/switches/choc_hotswap_socket.stl"
   |> Scad.translate (v3 7. 0. 0.)
   |> Scad.rotate (v3 (Float.pi /. 2.) 0. Float.pi)
   |> Scad.translate (v3 2.0 3.7 (-3.5))
@@ -11,7 +11,7 @@ let kailh_socket =
 
 (* https://grabcad.com/library/kailh-low-profile-mechanical-keyboard-switch-1 *)
 let switch =
-  Scad.import_3d "../things/switches/kailh_choc.stl"
+  Scad.import3 "../things/switches/kailh_choc.stl"
   |> Scad.rotate Float.(v3 (pi / 2.) 0. (pi / 2.))
   |> Scad.translate (v3 0. 0. 0.4)
   |> Scad.color ~alpha:0.5 Color.SkyBlue
@@ -141,7 +141,7 @@ let make_hole
       in
       let clip hole = Scad.union [ teeth ~inner_w ~thickness hole; swap ] in
       clearance +. 1.5, clip, Some cutout
-    | None        -> clearance, teeth ~inner_w ~thickness, None
+    | None -> clearance, teeth ~inner_w ~thickness, None
   and cap_cutout =
     Option.map
       ~f:(fun h ->

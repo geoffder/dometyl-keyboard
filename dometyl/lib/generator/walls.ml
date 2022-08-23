@@ -169,7 +169,7 @@ module Sides = struct
 
   let to_scad t =
     let f ~key:_ ~data l = Wall.to_scad data :: l in
-    Scad.union_3d (fold ~init:[] ~f t)
+    Scad.union3 (fold ~init:[] ~f t)
 
   let collect_screws ?(init = []) (t : t) =
     let f ~key:_ ~data l =
