@@ -10,17 +10,17 @@ type t =
 [@@deriving scad]
 
 (* Assumes lists are lead with the outer (top) line along the xy plane. *)
-let prism_connection bezs steps =
-  let n_steps =
-    match steps with
-    | `Uniform n -> n
-    | `Ragged ns -> List.hd_exn ns
-  in
-  (* { scad = Bezier.prism_exn bezs steps *)
-  { scad = Scad.union_3d []
-  ; outline = Bezier3.curve ~fn:n_steps (List.hd_exn bezs)
-  ; inline = Bezier3.curve ~fn:n_steps (List.last_exn bezs)
-  }
+(* let prism_connection bezs steps = *)
+(*   let n_steps = *)
+(*     match steps with *)
+(*     | `Uniform n -> n *)
+(*     | `Ragged ns -> List.hd_exn ns *)
+(*   in *)
+(*   (\* { scad = Bezier.prism_exn bezs steps *\) *)
+(*   { scad = Scad.union3 [] *)
+(*   ; outline = Bezier3.curve ~fn:n_steps (List.hd_exn bezs) *)
+(*   ; inline = Bezier3.curve ~fn:n_steps (List.last_exn bezs) *)
+(*   } *)
 
 let clockwise_union ts =
   let collect ~init line = List.fold ~init ~f:(fun ps p -> p :: ps) line in
@@ -28,424 +28,452 @@ let clockwise_union ts =
     scad :: scads, collect ~init:out_pts outline, collect ~init:in_pts inline
   in
   let scads, out_pts, in_pts = List.fold ~init:([], [], []) ~f ts in
-  { scad = Scad.union_3d scads; outline = List.rev out_pts; inline = List.rev in_pts }
+  { scad = Scad.union3 scads; outline = List.rev out_pts; inline = List.rev in_pts }
 
-let outline_2d t = List.map ~f:V3.to_v2 t.outline
-let inline_2d t = List.map ~f:V3.to_v2 t.inline
+let outline_2d t = Path3.to_path2 t.outline
+let inline_2d t = Path3.to_path2 t.inline
 
-let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez =
-  let step = height /. Float.of_int n_facets
-  and start, continue, next =
-    if rev then 1, ( >= ) n_facets, ( + ) 1 else n_facets, ( < ) 0, ( + ) (-1)
-  in
-  let rec loop ps i =
-    if continue i
-    then loop (Wall.Edge.point_at_z bez (Float.of_int i *. step) :: ps) (next i)
-    else ps
-  in
-  loop init start
+(* let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez = *)
+(*   let step = height /. Float.of_int n_facets *)
+(*   and start, continue, next = *)
+(*     if rev then 1, ( >= ) n_facets, ( + ) 1 else n_facets, ( < ) 0, ( + ) (-1) *)
+(*   in *)
+(*   let rec loop ps i = *)
+(*     if continue i *)
+(*     then loop (Wall.Edge.point_at_z bez (Float.of_int i *. step) :: ps) (next i) *)
+(*     else ps *)
+(*   in *)
+(*   loop init start *)
 
-let endpoints ?n_facets ~height top top_bez bot_bez bot =
-  top
-  :: facet_points
-       ?n_facets
-       ~height
-       ~init:(facet_points ~rev:true ?n_facets ~height ~init:[ bot ] bot_bez)
-       top_bez
+(* let endpoints ?n_facets ~height top top_bez bot_bez bot = *)
+(*   top *)
+(*   :: facet_points *)
+(*        ?n_facets *)
+(*        ~height *)
+(*        ~init:(facet_points ~rev:true ?n_facets ~height ~init:[ bot ] bot_bez) *)
+(*        top_bez *)
 
-let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) =
-  let top, bot =
-    match hand with
-    | `Left  -> `TL, `BL
-    | `Right -> `TR, `BR
-  in
-  endpoints
-    ~n_facets
-    ~height
-    (Points.get w.foot top)
-    (Wall.Edges.get w.edges top)
-    (Wall.Edges.get w.edges bot)
-    (Points.get w.foot bot)
+(* let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) = *)
+(*   let top, bot = *)
+(*     match hand with *)
+(*     | `Left -> `TL, `BL *)
+(*     | `Right -> `TR, `BR *)
+(*   in *)
+(*   endpoints *)
+(*     ~n_facets *)
+(*     ~height *)
+(*     (Points.get w.foot top) *)
+(*     (Wall.Edges.get w.edges top) *)
+(*     (Wall.Edges.get w.edges bot) *)
+(*     (Points.get w.foot bot) *)
 
-let base_steps ~n_steps starts dests =
-  let norms = List.map2_exn ~f:V3.distance starts dests in
-  let lowest_norm = List.fold ~init:Float.max_value ~f:Float.min norms in
-  let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in
-  `Ragged (List.map ~f:adjust norms)
+(* let base_steps ~n_steps starts dests = *)
+(*   let norms = List.map2_exn ~f:V3.distance starts dests in *)
+(*   let lowest_norm = List.fold ~init:Float.max_value ~f:Float.min norms in *)
+(*   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in *)
+(*   `Ragged (List.map ~f:adjust norms) *)
 
-let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
-  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
+let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+  let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let mask = if Float.(abs dx > abs dy) then v3 1. 0. 0. else v3 0. 1. 0. in
-  let get_bez start dest =
-    let diff = V3.(dest -@ start) in
-    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
-    and p2 = V3.(start +@ mul mask diff)
-    and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
-    Bezier3.make [ p1; p2; p3 ]
+  let f (w : Wall.t) (corner : [ `TL | `TR | `BL | `BR | `CN ]) =
+    let edge = w.drawer (corner :> Wall.Drawer.loc) in
+    let u =
+      Path3.continuous_closest_point
+        (Path3.to_continuous edge)
+        (V3.add (Points.get w.foot corner) (v3 0. 0. height))
+    in
+    snd @@ Path3.split ~distance:(`Rel u) edge
   in
-  let starts = base_endpoints ~n_facets ~height `Right w1 in
-  let dests = base_endpoints ~n_facets ~height `Left w2 in
-  let steps = base_steps ~n_steps starts dests
-  and bezs = List.map2_exn ~f:get_bez starts dests in
-  prism_connection bezs steps
+  let a = List.rev_append (f w1 `BR) (f w1 `TR)
+  and b = List.rev_append (f w2 `BL) (f w2 `TL) in
+  let p0 = Path3.centroid a
+  and p3 = Path3.centroid b in
+  let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) /. 4. in
+  let p1 = V3.(p0 +@ (dir1 *$ d))
+  and p2 = V3.(p3 +@ (dir2 *$ d)) in
+  let path = Bezier3.curve ~fn:n_steps @@ Bezier3.of_path [ p0; p1; p2; p3 ] in
+  let transforms = Path3.to_transforms ~mode:(`Align dir1) path in
+  let a' = Poly2.make @@ Path3.project (Path3.to_plane a) a
+  and b' = Poly2.make @@ Path3.project (Path3.to_plane b) b in
+  let scad = Mesh.to_scad @@ Mesh.morph ~transforms a' b'
+  and inline = List.map ~f:(fun m -> V3.affine m w1.foot.bot_right) transforms
+  and outline = List.map ~f:(fun m -> V3.affine m w1.foot.top_right) transforms in
+  { scad; inline; outline }
 
-let cubic_base
-    ?(n_facets = 1)
-    ?(height = 10.)
-    ?(scale = 1.1)
-    ?(d = 2.)
-    ?(n_steps = 10)
-    ?(bow_out = true)
-    (w1 : Wall.t)
-    (w2 : Wall.t)
-  =
-  let dir1 = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2
-  and dist = v3 d d 0.
-  and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in
-  let get_bez top start dest =
-    let outward =
-      if Bool.equal top bow_out then V3.add (v3 width width 0.) dist else dist
-    in
-    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
-    and p2 = V3.(start -@ mul dir1 outward)
-    and p3 = V3.(dest +@ mul dir2 outward)
-    and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
-    Bezier3.make [ p1; p2; p3; p4 ]
-  in
-  let starts = base_endpoints ~n_facets ~height `Right w1 in
-  let dests = base_endpoints ~n_facets ~height `Left w2 in
-  let steps = base_steps ~n_steps starts dests
-  and bezs =
-    List.fold2_exn
-      ~init:(0, [])
-      ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs)
-      starts
-      dests
-    |> snd
-    |> List.rev
-  in
-  prism_connection bezs steps
+(* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
+(*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 in *)
+(*   let mask = if Float.(abs dx > abs dy) then v3 1. 0. 0. else v3 0. 1. 0. in *)
+(*   let get_bez start dest = *)
+(*     let diff = V3.(dest -@ start) in *)
+(*     let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (\* fudge for union *\) *)
+(*     and p2 = V3.(start +@ mul mask diff) *)
+(*     and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in *)
+(*     Bezier3.make [ p1; p2; p3 ] *)
+(*   in *)
+(*   let starts = base_endpoints ~n_facets ~height `Right w1 in *)
+(*   let dests = base_endpoints ~n_facets ~height `Left w2 in *)
+(*   let steps = base_steps ~n_steps starts dests *)
+(*   and bezs = List.map2_exn ~f:get_bez starts dests in *)
+(*   prism_connection bezs steps *)
 
-let snake_base
-    ?(n_facets = 1)
-    ?(height = 11.)
-    ?(scale = 1.5)
-    ?(d = 2.)
-    ?(n_steps = 12)
-    (w1 : Wall.t)
-    (w2 : Wall.t)
-  =
-  let dir1 = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2
-  and dist = v3 d d 0.
-  and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in
-  let get_bez top start dest =
-    let outward = V3.add (v3 width width 0.) dist in
-    let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (* fudge for union *)
-    and p2 = V3.(start -@ mul dir1 (if top then dist else outward))
-    and p3 = V3.(dest +@ mul dir2 (if top then outward else dist))
-    and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
-    Bezier3.make [ p1; p2; p3; p4 ]
-  in
-  let starts = base_endpoints ~n_facets ~height `Right w1 in
-  let dests = base_endpoints ~n_facets ~height `Left w2 in
-  let steps = base_steps ~n_steps starts dests
-  and bezs =
-    List.fold2_exn
-      ~init:(0, [])
-      ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs)
-      starts
-      dests
-    |> snd
-    |> List.rev
-  in
-  prism_connection bezs steps
+(* let cubic_base *)
+(*     ?(n_facets = 1) *)
+(*     ?(height = 10.) *)
+(*     ?(scale = 1.1) *)
+(*     ?(d = 2.) *)
+(*     ?(n_steps = 10) *)
+(*     ?(bow_out = true) *)
+(*     (w1 : Wall.t) *)
+(*     (w2 : Wall.t) *)
+(*   = *)
+(*   let dir1 = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 *)
+(*   and dist = v3 d d 0. *)
+(*   and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in *)
+(*   let get_bez top start dest = *)
+(*     let outward = *)
+(*       if Bool.equal top bow_out then V3.add (v3 width width 0.) dist else dist *)
+(*     in *)
+(*     let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (\* fudge for union *\) *)
+(*     and p2 = V3.(start -@ mul dir1 outward) *)
+(*     and p3 = V3.(dest +@ mul dir2 outward) *)
+(*     and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in *)
+(*     Bezier3.make [ p1; p2; p3; p4 ] *)
+(*   in *)
+(*   let starts = base_endpoints ~n_facets ~height `Right w1 in *)
+(*   let dests = base_endpoints ~n_facets ~height `Left w2 in *)
+(*   let steps = base_steps ~n_steps starts dests *)
+(*   and bezs = *)
+(*     List.fold2_exn *)
+(*       ~init:(0, []) *)
+(*       ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs) *)
+(*       starts *)
+(*       dests *)
+(*     |> snd *)
+(*     |> List.rev *)
+(*   in *)
+(*   prism_connection bezs steps *)
 
-let inward_elbow_base
-    ?(n_facets = 1)
-    ?(height = 11.)
-    ?(n_steps = 6)
-    ?(d = 0.)
-    (w1 : Wall.t)
-    (w2 : Wall.t)
-  =
-  (* Quad bezier, but starting from the bottom (inside face) of the wall and
-   * projecting inward. This is so similar to bez_base that some generalization may
-   * be possible to spare the duplication. Perhaps an option of whether the start is
-   * the inward face (on the right) or the usual CW facing right side. *)
-  let dir1 = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2
-  and ({ x = inx; y = iny; z = _ } as inward_dir) =
-    V3.normalize V3.(w1.foot.bot_right -@ w1.foot.top_right)
-  in
-  let mask = if Float.(abs inx > abs iny) then v3 1. 0. 0. else v3 0. 1. 0. in
-  let get_bez start dest =
-    let diff = V3.(dest -@ start) in
-    let p1 = V3.(start -@ mul inward_dir (v3 0.01 0.01 0.)) (* fudge for union *)
-    and p2 = V3.(start +@ mul mask diff +@ map (( *. ) d) dir2)
-    and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in
-    Bezier3.make [ p1; p2; p3 ]
-  in
-  let starts =
-    let w = V3.distance w1.foot.bot_right w1.foot.top_right in
-    let slide p = V3.(add p (mul dir1 (v3 w w 0.))) in
-    endpoints
-      ~n_facets
-      ~height
-      w1.foot.bot_right
-      w1.edges.bot_right
-      (w1.edges.bot_right >> slide)
-      (slide w1.foot.bot_right)
-  and dests = base_endpoints ~n_facets ~height `Left w2 in
-  let steps = base_steps ~n_steps starts dests
-  and bezs = List.map2_exn ~f:get_bez starts dests in
-  let t = prism_connection bezs steps in
-  { t with outline = w1.foot.top_right :: t.outline }
+(* let snake_base *)
+(*     ?(n_facets = 1) *)
+(*     ?(height = 11.) *)
+(*     ?(scale = 1.5) *)
+(*     ?(d = 2.) *)
+(*     ?(n_steps = 12) *)
+(*     (w1 : Wall.t) *)
+(*     (w2 : Wall.t) *)
+(*   = *)
+(*   let dir1 = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 *)
+(*   and dist = v3 d d 0. *)
+(*   and width = V3.distance w1.foot.top_right w1.foot.bot_right *. scale in *)
+(*   let get_bez top start dest = *)
+(*     let outward = V3.add (v3 width width 0.) dist in *)
+(*     let p1 = V3.(start +@ mul dir1 (v3 0.01 0.01 0.)) (\* fudge for union *\) *)
+(*     and p2 = V3.(start -@ mul dir1 (if top then dist else outward)) *)
+(*     and p3 = V3.(dest +@ mul dir2 (if top then outward else dist)) *)
+(*     and p4 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in *)
+(*     Bezier3.make [ p1; p2; p3; p4 ] *)
+(*   in *)
+(*   let starts = base_endpoints ~n_facets ~height `Right w1 in *)
+(*   let dests = base_endpoints ~n_facets ~height `Left w2 in *)
+(*   let steps = base_steps ~n_steps starts dests *)
+(*   and bezs = *)
+(*     List.fold2_exn *)
+(*       ~init:(0, []) *)
+(*       ~f:(fun (i, bs) s d -> i + 1, get_bez (i <= n_facets) s d :: bs) *)
+(*       starts *)
+(*       dests *)
+(*     |> snd *)
+(*     |> List.rev *)
+(*   in *)
+(*   prism_connection bezs steps *)
 
-let straight_base
-    ?(n_facets = 1)
-    ?(height = 11.)
-    ?(fudge_factor = 6.)
-    ?(overlap_factor = 1.2)
-    ?(min_width = 4.5)
-    (w1 : Wall.t)
-    (w2 : Wall.t)
-  =
-  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2
-  and ({ x = lx; y = ly; z = _ } as line) =
-    V3.(mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left)
-  in
-  let major_diff, minor_diff = if Float.(abs dx > abs dy) then lx, ly else ly, lx in
-  let fudge d =
-    (* For adjustment of bottom (inside face) points to account for steep angles
-     * that would otherwise cause the polyhedron to fail. Distance moved is a
-     * function of how far apart the walls are along the major axis of the first. *)
-    let angle_extra =
-      if Float.(abs minor_diff > abs major_diff)
-      then Float.(abs (min (abs major_diff -. fudge_factor) 0.)) /. 2.
-      else 0.
-    and width_extra =
-      (* Check now thick the connection is in the middle, and create a rough adjustment
-         if it is less than the specified minimum. *)
-      let mid_top = V3.mid w1.foot.top_right w2.foot.top_left
-      and mid_bot = V3.mid w1.foot.bot_right w2.foot.bot_left in
-      let mid_diff = V3.(mid_top -@ mid_bot) in
-      let align = 1. -. V3.(norm @@ cross (normalize mid_diff) (normalize line)) in
-      let thickness =
-        Float.max
-          0.
-          V3.(norm mid_diff -. (distance w1.foot.top_right w1.foot.bot_right *. align))
-      in
-      if Float.(thickness < min_width) then min_width -. thickness else 0.
-    in
-    let extra = Float.max angle_extra width_extra in
-    V3.(add (mul d (v3 extra extra 0.)))
-  and overlap =
-    let major_ax = if Float.(abs dx > abs dy) then dx else dy
-    and intersect = Points.overlapping_bounds w1.foot w2.foot in
-    if Float.(
-         ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
-         && abs major_diff > abs minor_diff )
-         || intersect > 0.)
-    then (
-      let rough_area =
-        V3.(
-          distance w1.foot.top_right w1.foot.top_left
-          *. distance w1.foot.top_right w1.foot.bot_right)
-      in
-      Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
-    else 0.01
-  (* If the walls are overlapping, move back the start positions to counter. *)
-  and outward =
-    (* away from the centre of mass, or not? *)
-    Float.(
-      V3.distance w1.foot.top_right w2.foot.top_left
-      > V3.distance w1.foot.top_right w2.foot.bot_left)
-  in
-  (* The connector has two parts, and is drawn depending on whether it is going
-     outward (away from plate). If moving inward, the straight move (along wall
-     axis) occurs before turning towards the next wall, for outward, the
-     opposite. `og` indicates whether the points include the true inner wall
-     start/end positions, or are intermediaries. *)
-  let starts og =
-    let bot_bez =
-      if og
-      then w1.edges.bot_right
-      else if not outward
-      then w1.edges.bot_right >> fudge dir1
-      else w1.edges.bot_right >> fudge (V3.negate dir1)
-    and bot_pt =
-      if og
-      then w1.foot.bot_right
-      else if not outward
-      then fudge dir1 w1.foot.bot_right
-      else fudge (V3.negate dir1) w1.foot.bot_right
-    in
-    endpoints ~n_facets ~height w1.foot.top_right w1.edges.top_right bot_bez bot_pt
-    |> List.map ~f:V3.(add (mul dir1 (v3 overlap overlap 0.)))
-  and dests og =
-    let slide = fudge (V3.negate dir2) in
-    let bot_bez =
-      if og
-      then w2.edges.bot_left
-      else if outward
-      then w2.edges.bot_left >> slide
-      else w2.edges.bot_left >> fudge dir2
-    and bot_pt =
-      if og
-      then w2.foot.bot_left
-      else if not outward
-      then fudge dir2 w2.foot.bot_left
-      else fudge (V3.negate dir2) w2.foot.bot_left
-    in
-    endpoints ~n_facets ~height w2.foot.top_left w2.edges.top_left bot_bez bot_pt
-    |> List.map ~f:V3.(add (mul dir2 (v3 (-0.05) (-0.05) 0.)))
-  in
-  let extra_starts = starts false
-  and extra_dests = dests false in
-  { scad =
-      Scad.union
-        [ Util.prism_exn extra_starts extra_dests
-        ; ( if outward
-          then Util.prism_exn (starts true) extra_starts
-          else Util.prism_exn extra_dests (dests true) )
-        ]
-  ; outline = [ w1.foot.top_right; w2.foot.top_left ]
-  ; inline =
-      List.map
-        ~f:List.last_exn
-        ( if outward
-        then [ starts true; extra_starts; extra_dests ]
-        else [ extra_starts; extra_dests; dests true ] )
-  }
+(* let inward_elbow_base *)
+(*     ?(n_facets = 1) *)
+(*     ?(height = 11.) *)
+(*     ?(n_steps = 6) *)
+(*     ?(d = 0.) *)
+(*     (w1 : Wall.t) *)
+(*     (w2 : Wall.t) *)
+(*   = *)
+(*   (\* Quad bezier, but starting from the bottom (inside face) of the wall and *)
+(*    * projecting inward. This is so similar to bez_base that some generalization may *)
+(*    * be possible to spare the duplication. Perhaps an option of whether the start is *)
+(*    * the inward face (on the right) or the usual CW facing right side. *\) *)
+(*   let dir1 = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 *)
+(*   and ({ x = inx; y = iny; z = _ } as inward_dir) = *)
+(*     V3.normalize V3.(w1.foot.bot_right -@ w1.foot.top_right) *)
+(*   in *)
+(*   let mask = if Float.(abs inx > abs iny) then v3 1. 0. 0. else v3 0. 1. 0. in *)
+(*   let get_bez start dest = *)
+(*     let diff = V3.(dest -@ start) in *)
+(*     let p1 = V3.(start -@ mul inward_dir (v3 0.01 0.01 0.)) (\* fudge for union *\) *)
+(*     and p2 = V3.(start +@ mul mask diff +@ map (( *. ) d) dir2) *)
+(*     and p3 = V3.(dest -@ mul dir2 (v3 0.01 0.01 0.)) in *)
+(*     Bezier3.make [ p1; p2; p3 ] *)
+(*   in *)
+(*   let starts = *)
+(*     let w = V3.distance w1.foot.bot_right w1.foot.top_right in *)
+(*     let slide p = V3.(add p (mul dir1 (v3 w w 0.))) in *)
+(*     endpoints *)
+(*       ~n_facets *)
+(*       ~height *)
+(*       w1.foot.bot_right *)
+(*       w1.edges.bot_right *)
+(*       (w1.edges.bot_right >> slide) *)
+(*       (slide w1.foot.bot_right) *)
+(*   and dests = base_endpoints ~n_facets ~height `Left w2 in *)
+(*   let steps = base_steps ~n_steps starts dests *)
+(*   and bezs = List.map2_exn ~f:get_bez starts dests in *)
+(*   let t = prism_connection bezs steps in *)
+(*   { t with outline = w1.foot.top_right :: t.outline } *)
 
-let join_walls
-    ?(n_steps = `Flat 6)
-    ?(fudge_factor = 3.)
-    ?(overlap_factor = 1.2)
-    (w1 : Wall.t)
-    (w2 : Wall.t)
-  =
-  let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2
-  and n_steps =
-    let summit (w : Wall.t) =
-      Points.fold ~f:(fun m p -> Float.max (V3.get_z p) m) ~init:Float.min_value w.start
-    in
-    Wall.Steps.to_int n_steps (Float.max (summit w1) (summit w2))
-  in
-  let major_diff, minor_diff =
-    let { x; y; z = _ } =
-      V3.(
-        mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left)
-    in
-    if Float.(abs dx > abs dy) then x, y else y, x
-  in
-  let outward =
-    (* away from the centre of mass, or not? *)
-    Float.(
-      V3.distance w1.foot.top_right w2.foot.top_left
-      > V3.distance w1.foot.top_right w2.foot.bot_left)
-  and overhang =
-    (* Obtuse angle between wall top difference and the foot difference indicates
-       that the start wall is likely dodging the column below. If this is a corner,
-       don't flag. *)
-    let foot_diff = V3.(w1.foot.top_right -@ w2.foot.top_right)
-    and top_diff = V3.(mul (w1.start.top_right -@ w2.start.top_left) (v3 1. 1. 0.)) in
-    let mag = V3.norm top_diff in
-    if Float.(mag > 0.1 && V3.dot foot_diff top_diff < 0.) then Some mag else None
-  in
-  (* Move the start or destination points along the outer face of the wall to improve angle. *)
-  let fudge start =
-    if (not outward) && not start
-    then (
-      let extra =
-        if Float.(V3.(get_z w1.start.top_right > get_z w2.start.top_left))
-        then Float.(abs (max (fudge_factor -. major_diff) 0.))
-        else 0.
-      in
-      V3.(add (mul dir2 (v3 (-.extra) (-.extra) 0.))) )
-    else Fn.id
-  and overlap =
-    match overhang with
-    | Some over -> over *. overlap_factor
-    | None      ->
-      let major_ax = if Float.(abs dx > abs dy) then dx else dy
-      and intersect = Points.overlapping_bounds w1.foot w2.foot in
-      if Float.(
-           ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax)))
-           && abs major_diff > abs minor_diff )
-           || intersect > 0.)
-      then (
-        let rough_area =
-          V3.(
-            distance w1.foot.top_right w1.foot.top_left
-            *. distance w1.foot.top_right w1.foot.bot_right)
-        in
-        Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor )
-      else 0.01
-    (* If the walls are overlapping, move back the start positions to counter. *)
-  in
-  (* HACK: The way I am using the overhang flag here seemed to partially rescue one case,
-     but I am not confident that it is a solid fix. *)
-  let top_start, starts =
-    let shove = V3.(add (mul dir1 (v3 overlap overlap 0.))) in
-    let top =
-      w1.edges.top_right 0.
-      |> fudge true
-      |> (if Option.is_some overhang then Fn.id else shove)
-      |> w1.edge_drawer.top
-    in
-    ( top
-    , Bezier3.curve
-        ~rev:true
-        ~fn:n_steps
-        ~init:
-          (Bezier3.curve
-             ~fn:n_steps
-             (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)) )
-        top )
-  and top_dest, dests =
-    let shove = V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.))) in
-    let top =
-      w2.edges.top_left 0.
-      |> fudge false
-      |> (if Option.is_some overhang then Fn.id else shove)
-      |> w2.edge_drawer.top
-    in
-    ( top
-    , Bezier3.curve
-        ~rev:true
-        ~fn:n_steps
-        ~init:
-          (Bezier3.curve ~fn:n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.)))
-        top )
-  in
-  let wedge =
-    (* Fill in the volume between the "wedge" hulls that are formed by swinging the
-     * key face and moving it out for clearance prior to drawing the walls. *)
-    Util.prism_exn
-      (List.map
-         ~f:V3.(add (mul (Wall.start_direction w1) (v3 overlap overlap 0.)))
-         [ w1.start.top_right
-         ; w1.start.bot_right
-         ; w1.edges.bot_right 0.
-         ; top_start 0.001
-         ] )
-      (List.map
-         ~f:V3.(add (mul (Wall.start_direction w2) (v3 (-0.01) (-0.01) 0.)))
-         [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.001 ] )
-  in
-  { scad = Scad.union [ Util.prism_exn starts dests; wedge ]
-  ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ]
-  ; inline =
-      [ V3.(add (mul dir1 (v3 overlap overlap 0.)) w1.foot.bot_right)
-      ; V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.)) w2.foot.bot_left)
-      ]
-  }
+(* let straight_base *)
+(*     ?(n_facets = 1) *)
+(*     ?(height = 11.) *)
+(*     ?(fudge_factor = 6.) *)
+(*     ?(overlap_factor = 1.2) *)
+(*     ?(min_width = 4.5) *)
+(*     (w1 : Wall.t) *)
+(*     (w2 : Wall.t) *)
+(*   = *)
+(*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 *)
+(*   and ({ x = lx; y = ly; z = _ } as line) = *)
+(*     V3.(mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left) *)
+(*   in *)
+(*   let major_diff, minor_diff = if Float.(abs dx > abs dy) then lx, ly else ly, lx in *)
+(*   let fudge d = *)
+(*     (\* For adjustment of bottom (inside face) points to account for steep angles *)
+(*      * that would otherwise cause the polyhedron to fail. Distance moved is a *)
+(*      * function of how far apart the walls are along the major axis of the first. *\) *)
+(*     let angle_extra = *)
+(*       if Float.(abs minor_diff > abs major_diff) *)
+(*       then Float.(abs (min (abs major_diff -. fudge_factor) 0.)) /. 2. *)
+(*       else 0. *)
+(*     and width_extra = *)
+(*       (\* Check now thick the connection is in the middle, and create a rough adjustment *)
+(*          if it is less than the specified minimum. *\) *)
+(*       let mid_top = V3.mid w1.foot.top_right w2.foot.top_left *)
+(*       and mid_bot = V3.mid w1.foot.bot_right w2.foot.bot_left in *)
+(*       let mid_diff = V3.(mid_top -@ mid_bot) in *)
+(*       let align = 1. -. V3.(norm @@ cross (normalize mid_diff) (normalize line)) in *)
+(*       let thickness = *)
+(*         Float.max *)
+(*           0. *)
+(*           V3.(norm mid_diff -. (distance w1.foot.top_right w1.foot.bot_right *. align)) *)
+(*       in *)
+(*       if Float.(thickness < min_width) then min_width -. thickness else 0. *)
+(*     in *)
+(*     let extra = Float.max angle_extra width_extra in *)
+(*     V3.(add (mul d (v3 extra extra 0.))) *)
+(*   and overlap = *)
+(*     let major_ax = if Float.(abs dx > abs dy) then dx else dy *)
+(*     and intersect = Points.overlapping_bounds w1.foot w2.foot in *)
+(*     if Float.( *)
+(*          ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax))) *)
+(*          && abs major_diff > abs minor_diff ) *)
+(*          || intersect > 0.) *)
+(*     then ( *)
+(*       let rough_area = *)
+(*         V3.( *)
+(*           distance w1.foot.top_right w1.foot.top_left *)
+(*           *. distance w1.foot.top_right w1.foot.bot_right) *)
+(*       in *)
+(*       Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor ) *)
+(*     else 0.01 *)
+(*   (\* If the walls are overlapping, move back the start positions to counter. *\) *)
+(*   and outward = *)
+(*     (\* away from the centre of mass, or not? *\) *)
+(*     Float.( *)
+(*       V3.distance w1.foot.top_right w2.foot.top_left *)
+(*       > V3.distance w1.foot.top_right w2.foot.bot_left) *)
+(*   in *)
+(*   (\* The connector has two parts, and is drawn depending on whether it is going *)
+(*      outward (away from plate). If moving inward, the straight move (along wall *)
+(*      axis) occurs before turning towards the next wall, for outward, the *)
+(*      opposite. `og` indicates whether the points include the true inner wall *)
+(*      start/end positions, or are intermediaries. *\) *)
+(*   let starts og = *)
+(*     let bot_bez = *)
+(*       if og *)
+(*       then w1.edges.bot_right *)
+(*       else if not outward *)
+(*       then w1.edges.bot_right >> fudge dir1 *)
+(*       else w1.edges.bot_right >> fudge (V3.neg dir1) *)
+(*     and bot_pt = *)
+(*       if og *)
+(*       then w1.foot.bot_right *)
+(*       else if not outward *)
+(*       then fudge dir1 w1.foot.bot_right *)
+(*       else fudge (V3.neg dir1) w1.foot.bot_right *)
+(*     in *)
+(*     endpoints ~n_facets ~height w1.foot.top_right w1.edges.top_right bot_bez bot_pt *)
+(*     |> List.map ~f:V3.(add (mul dir1 (v3 overlap overlap 0.))) *)
+(*   and dests og = *)
+(*     let slide = fudge (V3.neg dir2) in *)
+(*     let bot_bez = *)
+(*       if og *)
+(*       then w2.edges.bot_left *)
+(*       else if outward *)
+(*       then w2.edges.bot_left >> slide *)
+(*       else w2.edges.bot_left >> fudge dir2 *)
+(*     and bot_pt = *)
+(*       if og *)
+(*       then w2.foot.bot_left *)
+(*       else if not outward *)
+(*       then fudge dir2 w2.foot.bot_left *)
+(*       else fudge (V3.neg dir2) w2.foot.bot_left *)
+(*     in *)
+(*     endpoints ~n_facets ~height w2.foot.top_left w2.edges.top_left bot_bez bot_pt *)
+(*     |> List.map ~f:V3.(add (mul dir2 (v3 (-0.05) (-0.05) 0.))) *)
+(*   in *)
+(*   let extra_starts = starts false *)
+(*   and extra_dests = dests false in *)
+(*   { scad = *)
+(*       Scad.union *)
+(*         [ Util.prism_exn extra_starts extra_dests *)
+(*         ; ( if outward *)
+(*           then Util.prism_exn (starts true) extra_starts *)
+(*           else Util.prism_exn extra_dests (dests true) ) *)
+(*         ] *)
+(*   ; outline = [ w1.foot.top_right; w2.foot.top_left ] *)
+(*   ; inline = *)
+(*       List.map *)
+(*         ~f:List.last_exn *)
+(*         ( if outward *)
+(*         then [ starts true; extra_starts; extra_dests ] *)
+(*         else [ extra_starts; extra_dests; dests true ] ) *)
+(*   } *)
+
+(* let join_walls *)
+(*     ?(n_steps = `Flat 6) *)
+(*     ?(fudge_factor = 3.) *)
+(*     ?(overlap_factor = 1.2) *)
+(*     (w1 : Wall.t) *)
+(*     (w2 : Wall.t) *)
+(*   = *)
+(*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
+(*   and dir2 = Wall.foot_direction w2 *)
+(*   and n_steps = *)
+(*     let summit (w : Wall.t) = *)
+(*       Points.fold ~f:(fun m p -> Float.max (V3.get_z p) m) ~init:Float.min_value w.start *)
+(*     in *)
+(*     Wall.Steps.to_int n_steps (Float.max (summit w1) (summit w2)) *)
+(*   in *)
+(*   let major_diff, minor_diff = *)
+(*     let { x; y; z = _ } = *)
+(*       V3.( *)
+(*         mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left) *)
+(*     in *)
+(*     if Float.(abs dx > abs dy) then x, y else y, x *)
+(*   in *)
+(*   let outward = *)
+(*     (\* away from the centre of mass, or not? *\) *)
+(*     Float.( *)
+(*       V3.distance w1.foot.top_right w2.foot.top_left *)
+(*       > V3.distance w1.foot.top_right w2.foot.bot_left) *)
+(*   and overhang = *)
+(*     (\* Obtuse angle between wall top difference and the foot difference indicates *)
+(*        that the start wall is likely dodging the column below. If this is a corner, *)
+(*        don't flag. *\) *)
+(*     let foot_diff = V3.(w1.foot.top_right -@ w2.foot.top_right) *)
+(*     and top_diff = V3.(mul (w1.start.top_right -@ w2.start.top_left) (v3 1. 1. 0.)) in *)
+(*     let mag = V3.norm top_diff in *)
+(*     if Float.(mag > 0.1 && V3.dot foot_diff top_diff < 0.) then Some mag else None *)
+(*   in *)
+(*   (\* Move the start or destination points along the outer face of the wall to improve angle. *\) *)
+(*   let fudge start = *)
+(*     if (not outward) && not start *)
+(*     then ( *)
+(*       let extra = *)
+(*         if Float.(V3.(get_z w1.start.top_right > get_z w2.start.top_left)) *)
+(*         then Float.(abs (max (fudge_factor -. major_diff) 0.)) *)
+(*         else 0. *)
+(*       in *)
+(*       V3.(add (mul dir2 (v3 (-.extra) (-.extra) 0.))) ) *)
+(*     else Fn.id *)
+(*   and overlap = *)
+(*     match overhang with *)
+(*     | Some over -> over *. overlap_factor *)
+(*     | None -> *)
+(*       let major_ax = if Float.(abs dx > abs dy) then dx else dy *)
+(*       and intersect = Points.overlapping_bounds w1.foot w2.foot in *)
+(*       if Float.( *)
+(*            ( (not (Sign.equal (sign_exn major_diff) (sign_exn major_ax))) *)
+(*            && abs major_diff > abs minor_diff ) *)
+(*            || intersect > 0.) *)
+(*       then ( *)
+(*         let rough_area = *)
+(*           V3.( *)
+(*             distance w1.foot.top_right w1.foot.top_left *)
+(*             *. distance w1.foot.top_right w1.foot.bot_right) *)
+(*         in *)
+(*         Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor ) *)
+(*       else 0.01 *)
+(*     (\* If the walls are overlapping, move back the start positions to counter. *\) *)
+(*   in *)
+(*   (\* HACK: The way I am using the overhang flag here seemed to partially rescue one case, *)
+(*      but I am not confident that it is a solid fix. *\) *)
+(*   let top_start, starts = *)
+(*     let shove = V3.(add (mul dir1 (v3 overlap overlap 0.))) in *)
+(*     let top = *)
+(*       w1.edges.top_right 0. *)
+(*       |> fudge true *)
+(*       |> (if Option.is_some overhang then Fn.id else shove) *)
+(*       |> w1.edge_drawer.top *)
+(*     in *)
+(*     ( top *)
+(*     , Bezier3.curve *)
+(*         ~rev:true *)
+(*         ~fn:n_steps *)
+(*         ~init: *)
+(*           (Bezier3.curve *)
+(*              ~fn:n_steps *)
+(*              (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)) ) *)
+(*         top ) *)
+(*   and top_dest, dests = *)
+(*     let shove = V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.))) in *)
+(*     let top = *)
+(*       w2.edges.top_left 0. *)
+(*       |> fudge false *)
+(*       |> (if Option.is_some overhang then Fn.id else shove) *)
+(*       |> w2.edge_drawer.top *)
+(*     in *)
+(*     ( top *)
+(*     , Bezier3.curve *)
+(*         ~rev:true *)
+(*         ~fn:n_steps *)
+(*         ~init: *)
+(*           (Bezier3.curve ~fn:n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.))) *)
+(*         top ) *)
+(*   in *)
+(*   let wedge = *)
+(*     (\* Fill in the volume between the "wedge" hulls that are formed by swinging the *)
+(*      * key face and moving it out for clearance prior to drawing the walls. *\) *)
+(*     Util.prism_exn *)
+(*       (List.map *)
+(*          ~f:V3.(add (mul (Wall.start_direction w1) (v3 overlap overlap 0.))) *)
+(*          [ w1.start.top_right *)
+(*          ; w1.start.bot_right *)
+(*          ; w1.edges.bot_right 0. *)
+(*          ; top_start 0.001 *)
+(*          ] ) *)
+(*       (List.map *)
+(*          ~f:V3.(add (mul (Wall.start_direction w2) (v3 (-0.01) (-0.01) 0.))) *)
+(*          [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.001 ] ) *)
+(*   in *)
+(*   { scad = Scad.union [ Util.prism_exn starts dests; wedge ] *)
+(*   ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ] *)
+(*   ; inline = *)
+(*       [ V3.(add (mul dir1 (v3 overlap overlap 0.)) w1.foot.bot_right) *)
+(*       ; V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.)) w2.foot.bot_left) *)
+(*       ] *)
+(*   } *)
 
 type config =
   | Straight of
@@ -486,6 +514,10 @@ type config =
       ; n_steps : int option
       ; d : float option
       }
+  | Spline of
+      { height : float option
+      ; n_steps : int option
+      }
 
 let straight ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width () =
   Straight { n_facets; height; fudge_factor; overlap_factor; min_width }
@@ -502,25 +534,28 @@ let full_join ?n_steps ?fudge_factor ?overlap_factor () =
   FullJoin { n_steps; fudge_factor; overlap_factor }
 
 let elbow ?n_facets ?height ?n_steps ?d () = InwardElbow { n_facets; height; n_steps; d }
+let spline ?height ?n_steps () = Spline { height; n_steps }
 
 let connect = function
-  | Straight { n_facets; height; fudge_factor; overlap_factor; min_width } ->
-    straight_base ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width
-  | Bez { n_facets; height; n_steps } -> bez_base ?n_facets ?height ?n_steps
-  | Cubic { n_facets; height; scale; d; n_steps; bow_out } ->
-    cubic_base ?n_facets ?height ?scale ?d ?n_steps ?bow_out
-  | Snake { n_facets; height; scale; d; n_steps } ->
-    snake_base ?n_facets ?height ?scale ?d ?n_steps
-  | FullJoin { n_steps; fudge_factor; overlap_factor } ->
-    join_walls ?n_steps ?fudge_factor ?overlap_factor
-  | InwardElbow { n_facets; height; n_steps; d } ->
-    inward_elbow_base ?n_facets ?height ?n_steps ?d
+  | Spline { height; n_steps } -> spline_base ?height ?n_steps
+  | _ -> failwith "only spline implemented"
+(* | Straight { n_facets; height; fudge_factor; overlap_factor; min_width } -> *)
+(*   straight_base ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width *)
+(* | Bez { n_facets; height; n_steps } -> bez_base ?n_facets ?height ?n_steps *)
+(* | Cubic { n_facets; height; scale; d; n_steps; bow_out } -> *)
+(*   cubic_base ?n_facets ?height ?scale ?d ?n_steps ?bow_out *)
+(* | Snake { n_facets; height; scale; d; n_steps } -> *)
+(*   snake_base ?n_facets ?height ?scale ?d ?n_steps *)
+(* | FullJoin { n_steps; fudge_factor; overlap_factor } -> *)
+(*   join_walls ?n_steps ?fudge_factor ?overlap_factor *)
+(* | InwardElbow { n_facets; height; n_steps; d } -> *)
+(*   inward_elbow_base ?n_facets ?height ?n_steps ?d *)
 
 let manual_joiner ~join ~key ~data:next (i, last, scads) =
   let scads' =
     match Option.map ~f:(fun l -> connect (join i) l next) last with
     | Some j -> j :: scads
-    | None   -> scads
+    | None -> scads
   in
   key, Some next, scads'
 
@@ -572,7 +607,7 @@ let manual
       let last_idx, last =
         match Map.min_elt body.east with
         | Some (i, w) -> i, Some w
-        | None        -> 0, None
+        | None -> 0, None
       in
       Option.map2 ~f:(connect (east last_idx)) last southeast
     and _, _, side =
@@ -699,12 +734,12 @@ let skeleton
     let last_idx = Option.value_map ~f:fst ~default:0 (Map.max_elt body.north) in
     fun i ->
       match last_idx = i, north_joins i with
-      | true, _     ->
+      | true, _ ->
         if Map.is_empty body.east
         then cubic ~n_facets ?height ?d:cubic_d ?scale:cubic_scale ?n_steps ()
         else bez ?height ?n_steps ()
       | false, true -> body_join
-      | _           -> body_straight (i < 2)
+      | _ -> body_straight (i < 2)
   in
   let east =
     let last_idx = Option.value_map ~f:fst ~default:0 (Map.min_elt body.east) in
@@ -714,9 +749,9 @@ let skeleton
     let last_idx = Option.value_map ~f:fst ~default:0 (Map.min_elt body.south) in
     fun i ->
       match last_idx = i, south_joins i with
-      | true, _     -> east_link
+      | true, _ -> east_link
       | false, true -> body_join
-      | _           ->
+      | _ ->
         if i = pinky_idx && pinky_elbow
         then elbow ~n_facets ~d:1.5 ?height ?n_steps ()
         else body_straight false
