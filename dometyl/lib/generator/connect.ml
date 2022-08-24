@@ -76,7 +76,7 @@ let inline_2d t = Path3.to_path2 t.inline
 let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let f (w : Wall.t) (corner : [ `TL | `TR | `BL | `BR | `CN ]) =
+  let edger (w : Wall.t) (corner : [ `TL | `TR | `BL | `BR | `CN ]) =
     let edge = w.drawer (corner :> Wall.Drawer.loc) in
     let u =
       Path3.continuous_closest_point
@@ -85,21 +85,119 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     in
     snd @@ Path3.split ~distance:(`Rel u) edge
   in
-  let a = List.rev_append (f w1 `BR) (f w1 `TR)
-  and b = List.rev_append (f w2 `BL) (f w2 `TL) in
-  let p0 = Path3.centroid a
-  and p3 = Path3.centroid b in
+  let a = List.rev_append (edger w1 `BR) (edger w1 `TR)
+  and b = List.rev_append (edger w2 `BL) (edger w2 `TL) in
+  (* let p0 = Path3.centroid a *)
+  (* and p3 = Path3.centroid b in *)
+  (* FIXME: these are of course not coplanar, so I need to somehow transition to
+   a coplanar version that can be swept. The only way to fill in a shape between
+   the original and the straight vertical shape is a I think a vertical column
+   of rows where the 2 corners on one side of the row are the edges used in a
+   and b, and the other side is the vertical version (shifted out by foot
+    direction, with xy restrained to the plane of the shifted foot corners).
+    This does not preclude starting on some form of rounding as the flat side
+    goes up in z. Though this could be a very thin slice, which is then finally
+    skinned to the actual shape for sweeping (not morphed, as the transition has
+    already made.). This way, the sweep profile can be stereotypical and
+    predictably rounded over on the top edges, and scaled to achieve a fillet
+    where it joins back up with the walls. *)
+  let () =
+    let show = Path3.show_points (fun _ -> Scad.sphere 0.5) in
+    Scad.to_file "test_feet.scad"
+    @@ Scad.add (show (Points.to_ccw_path w1.foot)) (show (Points.to_ccw_path w2.foot))
+  in
+  let wedger left =
+    let w, dir, b_loc, t_loc =
+      if left
+      then w1, V3.neg @@ Wall.foot_direction w1, `BR, `TR
+      else w2, Wall.foot_direction w2, `BL, `TL
+    in
+    let plane = Plane.of_normal ~point:(Points.get w.foot b_loc) dir
+    and bot = Array.of_list @@ edger w b_loc
+    and top = Array.of_list @@ edger w t_loc in
+    (* and bot =  edger w b_loc *)
+    (* and top =  edger w t_loc in *)
+    let bot, top =
+      let len_b = Array.length bot
+      and len_t = Array.length top in
+      if len_b = len_t && len_b >= 5
+      then bot, top
+      else (
+        let f = Path3.subdivide ~freq:(`N (Int.max 5 (Int.max len_b len_t), `ByLen)) in
+        Array.of_list @@ f (Array.to_list bot), Array.of_list @@ f (Array.to_list top) )
+    in
+    let d, bot', top' =
+      let planer (d, acc) p =
+        let p' = Plane.lift plane (Plane.project plane p) in
+        Float.max (Plane.distance_to_point plane p) d, p' :: acc
+      in
+      let d, top' = Array.fold ~f:planer ~init:(0., []) top in
+      let d, bot' = Array.fold ~f:planer ~init:(d, []) bot in
+      let f = V3.(translate (dir *$ (d +. 0.01))) in
+      d, Array.of_list_rev_map ~f bot', Array.of_list_rev_map ~f top'
+    in
+    let shim =
+      let f =
+        if left
+        then fun i -> [ bot'.(i); top'.(i); top.(i); bot.(i) ]
+        else fun i -> [ bot.(i); top.(i); top'.(i); bot'.(i) ]
+      in
+      List.init (Array.length bot) ~f |> Mesh.of_rows |> Mesh.to_scad
+    and prof =
+      (* Path3.Round.( *)
+      (*   mix *)
+      (*     V3. *)
+      (*       [ Points.get w.foot b_loc, None *)
+      (*       ; Points.get w.foot t_loc, None *)
+      (*         ; ztrans 8. (Points.get w.foot t_loc), Some (chamf (`Cut 0.1)) *)
+      (*         ; ztrans 8. (Points.get w.foot b_loc), Some (chamf (`Cut 0.1)) *)
+      (*       ]) *)
+      (* |> Path3.roundover *)
+      [ Points.get w.foot b_loc
+      ; Points.get w.foot t_loc
+      ; V3.ztrans 5. (Points.get w.foot t_loc)
+      ; V3.ztrans 5. (Points.get w.foot b_loc)
+        (* ; V3.((dir *$ d) +@ (top'.(Array.length top' - 1) *@ v3 1. 1. 0.8)) *)
+        (* ; V3.((dir *$ d) +@ (bot'.(Array.length bot' - 1) *@ v3 1. 1. 0.8)) *)
+        (* ; V3.(top'.(0) *@ v3 1. 1. 0.6) *)
+        (* ; V3.(bot'.(0) *@ v3 1. 1. 0.6) *)
+      ]
+      |> Path3.translate V3.(dir *$ (d +. 1.))
+    and start =
+      List.init
+        (Array.length top' + Array.length bot')
+        ~f:(fun i ->
+          if i < Array.length bot'
+          then bot'.(i)
+          else top'.(Array.length top' - 1 - (i - Array.length bot')) )
+    in
+    (* TODO: can the skinning be better if the prof and start are matched up
+    more appropriately without relying on reindex so hard? *)
+    let mesh =
+      let s =
+        Mesh.skin_between ~refine:2 ~mapping:(`Reindex `ByLen) ~slices:5 start prof
+      in
+      Mesh.to_scad (if left then Mesh.rev_faces s else s)
+    in
+    Scad.union [ shim; mesh ]
+  in
+  let wedges = Scad.add (wedger false) (wedger true) in
+  let () = Scad.to_file "init_proj_test_mesh.scad" wedges in
+  let p0 = V3.mean a
+  and p3 = V3.mean b in
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) /. 4. in
   let p1 = V3.(p0 +@ (dir1 *$ d))
   and p2 = V3.(p3 +@ (dir2 *$ d)) in
   let path = Bezier3.curve ~fn:n_steps @@ Bezier3.of_path [ p0; p1; p2; p3 ] in
   let transforms = Path3.to_transforms ~mode:(`Align dir1) path in
-  let a' = Poly2.make @@ Path3.project (Path3.to_plane a) a
-  and b' = Poly2.make @@ Path3.project (Path3.to_plane b) b in
-  let scad = Mesh.to_scad @@ Mesh.morph ~transforms a' b'
-  and inline = List.map ~f:(fun m -> V3.affine m w1.foot.bot_right) transforms
+  (* let a' = Poly2.make @@ Path3.project (Path3.to_plane a) a *)
+  (* and b' = Poly2.make @@ Path3.project (Path3.to_plane b) b in *)
+  (* let scad = Mesh.to_scad @@ Mesh.morph ~transforms a' b' *)
+  let inline = List.map ~f:(fun m -> V3.affine m w1.foot.bot_right) transforms
   and outline = List.map ~f:(fun m -> V3.affine m w1.foot.top_right) transforms in
-  { scad; inline; outline }
+  ignore wedges;
+  { scad = wedges; inline; outline }
+(* { scad = Scad.union3 []; inline; outline } *)
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
@@ -538,7 +636,8 @@ let spline ?height ?n_steps () = Spline { height; n_steps }
 
 let connect = function
   | Spline { height; n_steps } -> spline_base ?height ?n_steps
-  | _ -> failwith "only spline implemented"
+  (* | _ -> failwith "only spline implemented" *)
+  | _ -> spline_base ~height:11. ~n_steps:6
 (* | Straight { n_facets; height; fudge_factor; overlap_factor; min_width } -> *)
 (*   straight_base ?n_facets ?height ?fudge_factor ?overlap_factor ?min_width *)
 (* | Bez { n_facets; height; n_steps } -> bez_base ?n_facets ?height ?n_steps *)

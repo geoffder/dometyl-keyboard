@@ -55,7 +55,9 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~n_steps:(`Flat 3)
+          ~d1:12.
+          ~d2:8.
+          ~n_steps:(`Flat 10)
             (* ~north_clearance:2.5 *)
             (* ~south_clearance:2.5 *)
             (* ~side_clearance:1.5 *)
@@ -68,6 +70,8 @@ let wall_builder plate =
           plate
     ; thumb =
         auto_thumb (* ~south_lookup:(fun _ -> Yes) *)
+          ~d1:12.
+          ~d2:8.
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye )
@@ -79,7 +83,7 @@ let wall_builder plate =
           ~north_clearance:1.
           ~south_clearance:1.
           ~side_clearance:1.
-          ~n_steps:(`Flat 3)
+          ~n_steps:(`Flat 10)
           ~eyelet_config
           plate
     }

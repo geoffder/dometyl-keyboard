@@ -262,6 +262,16 @@ let poly_siding
       Some (make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right))
     | None -> None
   in
+  (* FIXME: as can be seen from this in combination with the WIP connectors, the
+      current way that the foot is created is not appropriate for walls that
+    come out of the side of the keys. The way that the points are defined for
+    the side faces of the keyholes must be altered, or the feet must be not
+    simply a transform of the points from the face. *)
+  let scad =
+    Scad.add
+      scad
+      (Path3.show_points (Fn.const (Scad.sphere 0.5)) (Points.to_ccw_path foot))
+  in
   { scad = Option.value_map ~default:scad ~f:(fun s -> Eyelet.apply s scad) screw
   ; start = start_face.points
   ; cleared = cleared_face.points
