@@ -241,11 +241,11 @@ let poly_siding
     and f i m = V3.affine m (scaler i c1) in
     let path =
       List.foldi
-        ~f:(fun i acc m -> f i m :: acc)
+        ~f:(fun i acc m -> f (fn - i) m :: acc)
         ~init:[ V3.(f fn (List.hd_exn trans) *@ v3 1. 1. 0.) ]
         trans
     in
-    p0 :: List.rev path
+    p0 :: path
   in
   let screw =
     match eyelet_config with
