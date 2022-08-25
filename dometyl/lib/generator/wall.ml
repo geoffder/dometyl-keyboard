@@ -138,8 +138,6 @@ let poly_siding
   and dir = Points.direction cleared_face.points
   and fn = Steps.to_int n_steps cleared_face.points.centre.z in
   let bz end_z =
-    (* let d1 = d1 *. 7. in *)
-    (* let d2 = d2 *. 2. in *)
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
     and p2 = V3.((xy *@ v3 d1 d1 0.) +@ v3 (x +. x_off) (y +. y_off) z)
@@ -261,16 +259,6 @@ let poly_siding
       in
       Some (make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right))
     | None -> None
-  in
-  (* FIXME: as can be seen from this in combination with the WIP connectors, the
-      current way that the foot is created is not appropriate for walls that
-    come out of the side of the keys. The way that the points are defined for
-    the side faces of the keyholes must be altered, or the feet must be not
-    simply a transform of the points from the face. *)
-  let scad =
-    Scad.add
-      scad
-      (Path3.show_points (Fn.const (Scad.sphere 0.5)) (Points.to_ccw_path foot))
   in
   { scad = Option.value_map ~default:scad ~f:(fun s -> Eyelet.apply s scad) screw
   ; start = start_face.points
