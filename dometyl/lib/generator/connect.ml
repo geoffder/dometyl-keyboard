@@ -235,10 +235,20 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       in
       let d, top' = Array.fold ~f:planer ~init:(0., []) top in
       let d, bot' = Array.fold ~f:planer ~init:(d, []) bot in
-      let f = V3.(translate (dir *$ (d +. 0.01))) in
+      let f = V3.(translate (dir *$ d)) in
       List.rev_map ~f bot', List.rev_map ~f top'
     in
-    List.rev_append bot' top'
+    let corners =
+      (* TODO: configurable, with ability to autocalculate cut/joint based on
+         the distance between the upper (first) points of bot' and top'? *)
+      let c = Path3.Round.(chamf (`Joint 0.7)) in
+      (* let c = Path3.Round.(bez (`Joint 1.)) in *)
+      Some c :: List.init (Array.length bot - 1) ~f:(Fn.const None)
+    in
+    (* List.rev_append bot' top' *)
+    List.rev_append (List.zip_exn bot' corners) (List.zip_exn top' corners)
+    |> Path3.Round.mix
+    |> Path3.roundover
   in
   let a = end_path true
   and b = end_path false in
@@ -251,8 +261,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let p0 = Path3.centroid a
   and p3 = Path3.centroid b in
-  let a = Path3.translate (V3.neg p0) a
-  and b = Path3.translate (V3.neg p3) b in
+  let a = Path3.translate (V3.neg p0) a |> Path3.scale (v3 0.97 0.97 1.)
+  and b = Path3.translate (V3.neg p3) b |> Path3.scale (v3 0.97 0.97 1.) in
   let align_q = Quaternion.align (Path3.normal b) (Path3.normal a) in
   let b = Path3.quaternion align_q b in
   let a, b =
@@ -266,32 +276,39 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
   let n_steps =
     ignore n_steps;
-    16
+    12
   in
+  (* TODO: calculate min distance based on the out d parameter? *)
+  (* TODO: feasible to calculate the "kink" angle that will be caused by the
+    out d param and adjust it to avoid broken meshes from self-intersection
+    bunching? Also dependent on number of steps, could adjust either d or fn to
+    try and produce a curve that will not result in failure. Keep in mind that
+    the width of the shape being swept also plays into whether a given kink
+    angle will result in failure. *)
+  let out = 2.5 in
   let path =
     if Float.(d > min_spline_dist)
     then (
-      (* let p1 = V3.(p0 +@ (dir1 *$ (d /. -4.))) *)
-      (* and p2 = V3.(p3 +@ (dir2 *$ (d /. 4.))) in *)
-      let p1 = V3.(p0 +@ (dir1 *$ -3.))
-      and p2 = V3.(p3 +@ (dir2 *$ 3.)) in
+      let p1 = V3.(p0 +@ (dir1 *$ -.out))
+      and p2 = V3.(p3 +@ (dir2 *$ out)) in
       Bezier3.curve ~fn:n_steps @@ Bezier3.of_path [ p0; p1; p2; p3 ] )
-    else [ p0; V3.lerp p0 p3 0.25; V3.lerp p0 p3 0.75; p3 ]
+    else [ p0; p3 ]
   in
   let transforms = Path3.to_transforms ~mode:`NoAlign path in
-  let scad =
-    let step = 1. /. Float.of_int n_steps in
-    let transition i =
-      List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
-    in
-    List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms
-    |> Mesh.of_rows
-    |> Mesh.to_scad
+  let mesh =
+    if Float.(d > min_spline_dist)
+    then (
+      let step = 1. /. Float.of_int n_steps in
+      let transition i =
+        List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
+      in
+      List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows )
+    else Mesh.skin_between ~slices:n_steps (Path3.translate p0 a) (Path3.translate p3 b)
   in
   let foot = Points.translate (V3.neg w1.foot.centre) w1.foot in
   let inline = List.map ~f:(fun m -> V3.affine m foot.bot_right) transforms
   and outline = List.map ~f:(fun m -> V3.affine m foot.top_right) transforms in
-  { scad; inline; outline }
+  { scad = Mesh.to_scad mesh; inline; outline }
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
