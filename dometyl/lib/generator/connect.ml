@@ -73,7 +73,7 @@ let inline_2d t = Path3.to_path2 t.inline
 (*   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in *)
 (*   `Ragged (List.map ~f:adjust norms) *)
 
-let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+let _spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let edger (w : Wall.t) (corner : [ `TL | `TR | `BL | `BR | `CN ]) =
@@ -101,11 +101,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     already made.). This way, the sweep profile can be stereotypical and
     predictably rounded over on the top edges, and scaled to achieve a fillet
     where it joins back up with the walls. *)
-  let () =
-    let show = Path3.show_points (fun _ -> Scad.sphere 0.5) in
-    Scad.to_file "test_feet.scad"
-    @@ Scad.add (show (Points.to_ccw_path w1.foot)) (show (Points.to_ccw_path w2.foot))
-  in
   let wedger left =
     let w, dir, b_loc, t_loc =
       if left
@@ -115,8 +110,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     let plane = Plane.of_normal ~point:(Points.get w.foot b_loc) dir
     and bot = Array.of_list @@ edger w b_loc
     and top = Array.of_list @@ edger w t_loc in
-    (* and bot =  edger w b_loc *)
-    (* and top =  edger w t_loc in *)
     let bot, top =
       let len_b = Array.length bot
       and len_t = Array.length top in
@@ -171,15 +164,22 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           then bot'.(i)
           else top'.(Array.length top' - 1 - (i - Array.length bot')) )
     in
+    let () =
+      if left
+      then (
+        let show = Path3.show_points (Fn.const (Scad.sphere 0.5)) in
+        show start |> Scad.to_file "end_path_old.scad" )
+    in
     (* TODO: can the skinning be better if the prof and start are matched up
     more appropriately without relying on reindex so hard? *)
-    let mesh =
+    let _mesh =
       let s =
         Mesh.skin_between ~refine:2 ~mapping:(`Reindex `ByLen) ~slices:5 start prof
       in
       Mesh.to_scad (if left then Mesh.rev_faces s else s)
     in
-    Scad.union [ shim; mesh ]
+    Scad.union [ shim; _mesh ]
+    (* shim *)
   in
   let wedges = Scad.add (wedger false) (wedger true) in
   let () = Scad.to_file "init_proj_test_mesh.scad" wedges in
@@ -197,7 +197,101 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and outline = List.map ~f:(fun m -> V3.affine m w1.foot.top_right) transforms in
   ignore wedges;
   { scad = wedges; inline; outline }
-(* { scad = Scad.union3 []; inline; outline } *)
+
+let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
+  let dir1 = Wall.foot_direction w1
+  and dir2 = Wall.foot_direction w2 in
+  let edger (w : Wall.t) (corner : [ `TL | `TR | `BL | `BR | `CN ]) =
+    let edge = w.drawer (corner :> Wall.Drawer.loc) in
+    let u =
+      Path3.continuous_closest_point
+        (Path3.to_continuous edge)
+        (V3.add (Points.get w.foot corner) (v3 0. 0. height))
+    in
+    snd @@ Path3.split ~distance:(`Rel u) edge
+  in
+  let end_path left =
+    let w, dir, b_loc, t_loc =
+      if left
+      then w1, V3.neg @@ Wall.foot_direction w1, `BR, `TR
+      else w2, Wall.foot_direction w2, `BL, `TL
+    in
+    let plane = Plane.of_normal ~point:(Points.get w.foot b_loc) dir
+    and bot = Array.of_list @@ edger w b_loc
+    and top = Array.of_list @@ edger w t_loc in
+    let bot, top =
+      let len_b = Array.length bot
+      and len_t = Array.length top in
+      if len_b = len_t && len_b >= 5
+      then bot, top
+      else (
+        let f = Path3.subdivide ~freq:(`N (Int.max 5 (Int.max len_b len_t), `ByLen)) in
+        Array.of_list @@ f (Array.to_list bot), Array.of_list @@ f (Array.to_list top) )
+    in
+    let bot', top' =
+      let planer (d, acc) p =
+        let p' = Plane.lift plane (Plane.project plane p) in
+        Float.max (Plane.distance_to_point plane p) d, p' :: acc
+      in
+      let d, top' = Array.fold ~f:planer ~init:(0., []) top in
+      let d, bot' = Array.fold ~f:planer ~init:(d, []) bot in
+      let f = V3.(translate (dir *$ (d +. 0.01))) in
+      List.rev_map ~f bot', List.rev_map ~f top'
+    in
+    List.rev_append bot' top'
+  in
+  let a = end_path true
+  and b = end_path false in
+  let () =
+    let show = Path3.show_points (Fn.const (Scad.sphere 0.5)) in
+    Scad.add (Scad.color Color.Red @@ show a) (show b)
+    |> Scad.add (Points.mark w1.foot)
+    |> Scad.add (Points.mark w2.foot)
+    |> Scad.to_file "end_paths.scad"
+  in
+  let p0 = Path3.centroid a
+  and p3 = Path3.centroid b in
+  let a = Path3.translate (V3.neg p0) a
+  and b = Path3.translate (V3.neg p3) b in
+  let align_q = Quaternion.align (Path3.normal b) (Path3.normal a) in
+  let b = Path3.quaternion align_q b in
+  let a, b =
+    let len_a = List.length a
+    and len_b = List.length b in
+    if len_a > len_b
+    then a, Path3.subdivide ~closed:true ~freq:(`N (len_a, `ByLen)) b
+    else Path3.subdivide ~closed:true ~freq:(`N (len_b, `ByLen)) a, b
+  in
+  let min_spline_dist = 10. in
+  let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
+  let n_steps =
+    ignore n_steps;
+    16
+  in
+  let path =
+    if Float.(d > min_spline_dist)
+    then (
+      (* let p1 = V3.(p0 +@ (dir1 *$ (d /. -4.))) *)
+      (* and p2 = V3.(p3 +@ (dir2 *$ (d /. 4.))) in *)
+      let p1 = V3.(p0 +@ (dir1 *$ -3.))
+      and p2 = V3.(p3 +@ (dir2 *$ 3.)) in
+      Bezier3.curve ~fn:n_steps @@ Bezier3.of_path [ p0; p1; p2; p3 ] )
+    else [ p0; V3.lerp p0 p3 0.25; V3.lerp p0 p3 0.75; p3 ]
+  in
+  let transforms = Path3.to_transforms ~mode:`NoAlign path in
+  let scad =
+    let step = 1. /. Float.of_int n_steps in
+    let transition i =
+      List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
+    in
+    List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms
+    |> Mesh.of_rows
+    |> Mesh.to_scad
+  in
+  let foot = Points.translate (V3.neg w1.foot.centre) w1.foot in
+  let inline = List.map ~f:(fun m -> V3.affine m foot.bot_right) transforms
+  and outline = List.map ~f:(fun m -> V3.affine m foot.top_right) transforms in
+  { scad; inline; outline }
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
