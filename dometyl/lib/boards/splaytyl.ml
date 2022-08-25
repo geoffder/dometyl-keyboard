@@ -72,6 +72,7 @@ let wall_builder plate =
         auto_thumb (* ~south_lookup:(fun _ -> Yes) *)
           ~d1:12.
           ~d2:8.
+          ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye )
