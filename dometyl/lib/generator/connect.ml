@@ -17,7 +17,7 @@ type t =
 (*     | `Ragged ns -> List.hd_exn ns *)
 (*   in *)
 (*   (\* { scad = Bezier.prism_exn bezs steps *\) *)
-(*   { scad = Scad.union3 [] *)
+(*   { scad = Scad.empty3 *)
 (*   ; outline = Bezier3.curve ~fn:n_steps (List.hd_exn bezs) *)
 (*   ; inline = Bezier3.curve ~fn:n_steps (List.last_exn bezs) *)
 (*   } *)
@@ -245,10 +245,10 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       (* let c = Path3.Round.(bez (`Joint 1.)) in *)
       Some c :: List.init (Array.length bot - 1) ~f:(Fn.const None)
     in
-    (* List.rev_append bot' top' *)
     List.rev_append (List.zip_exn bot' corners) (List.zip_exn top' corners)
     |> Path3.Round.mix
     |> Path3.roundover
+    (* List.rev_append bot' top' *)
   in
   let a = end_path true
   and b = end_path false in
@@ -268,30 +268,40 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let a, b =
     let len_a = List.length a
     and len_b = List.length b in
-    if len_a > len_b
-    then a, Path3.subdivide ~closed:true ~freq:(`N (len_a, `ByLen)) b
-    else Path3.subdivide ~closed:true ~freq:(`N (len_b, `ByLen)) a, b
+    (* if len_a > len_b *)
+    (* then a, Path3.subdivide ~closed:true ~freq:(`N (len_a, `ByLen)) b *)
+    (* else Path3.subdivide ~closed:true ~freq:(`N (len_b, `ByLen)) a, b *)
+    let f = Path3.subdivide ~closed:true ~freq:(`N (Int.max len_a len_b * 3, `ByLen)) in
+    f a, f b
   in
   let min_spline_dist = 10. in
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
   let n_steps =
     ignore n_steps;
-    12
+    16
   in
   (* TODO: calculate min distance based on the out d parameter? *)
-  (* TODO: feasible to calculate the "kink" angle that will be caused by the
-    out d param and adjust it to avoid broken meshes from self-intersection
-    bunching? Also dependent on number of steps, could adjust either d or fn to
-    try and produce a curve that will not result in failure. Keep in mind that
-    the width of the shape being swept also plays into whether a given kink
-    angle will result in failure. *)
-  let out = 2.5 in
+  (* TODO: feasible to calculate the "kink" angle / approximate "kink" factor
+     that will be caused by the out d param and adjust it to avoid broken meshes
+     from self-intersection bunching? Also dependent on number of steps, could
+     adjust either d or fn to try and produce a curve that will not result in
+     failure. Keep in mind that the width of the shape being swept also plays into
+     whether a given kink angle will result in failure. *)
+  let out = 2. in
   let path =
     if Float.(d > min_spline_dist)
     then (
       let p1 = V3.(p0 +@ (dir1 *$ -.out))
       and p2 = V3.(p3 +@ (dir2 *$ out)) in
-      Bezier3.curve ~fn:n_steps @@ Bezier3.of_path [ p0; p1; p2; p3 ] )
+      (* TODO: related to above, the size param of of_path may be useful for
+           automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
+      let _tangents =
+        `Tangents
+          [ V3.neg dir1; V3.normalize V3.(p2 -@ p1); V3.normalize V3.(p2 -@ p1); dir2 ]
+      in
+      Bezier3.curve ~fn:n_steps
+      (* @@ Bezier3.of_path [ p0;  p1; p2;  p3 ] ) *)
+      @@ Bezier3.of_path ~size:(`Abs [ out *. 0.1; 5.; out *. 0.1 ]) [ p0; p1; p2; p3 ] )
     else [ p0; p3 ]
   in
   let transforms = Path3.to_transforms ~mode:`NoAlign path in
@@ -299,11 +309,21 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     if Float.(d > min_spline_dist)
     then (
       let step = 1. /. Float.of_int n_steps in
+      (* let b = Path3.reindex_polygon a b in *)
       let transition i =
         List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
       in
-      List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows )
-    else Mesh.skin_between ~slices:n_steps (Path3.translate p0 a) (Path3.translate p3 b)
+      List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows
+      (* |> ignore; *)
+      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) ) *) )
+    else (
+      Mesh.skin_between
+        ~refine:3
+        ~slices:n_steps
+        (Path3.translate p0 a)
+        (Path3.translate p3 b)
+      |> ignore;
+      Mesh.linear_extrude ~height:1. (Poly2.circle 1.) )
   in
   let foot = Points.translate (V3.neg w1.foot.centre) w1.foot in
   let inline = List.map ~f:(fun m -> V3.affine m foot.bot_right) transforms
@@ -878,7 +898,9 @@ let manual
   in
   (* unions separately, followed by final union so failures in CGAL can be narrowed
      down more easily (a section disappears, rather than the whole thing) *)
+  ignore (south, thumb_swoop, west, north, east);
   List.map ~f:clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
+(* List.map ~f:clockwise_union [ west; north; east ] |> clockwise_union *)
 
 let skeleton
     ?(n_facets = 1)
