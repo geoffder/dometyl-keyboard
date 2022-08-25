@@ -56,7 +56,7 @@ let overlapping_bounds a b =
     and area_a = (a.max.x -. a.min.x) *. (a.max.y -. a.min.y)
     and area_b = (b.max.x -. b.min.x) *. (b.max.y -. b.min.y) in
     area_inter /. (area_a +. area_b -. area_inter)
-  | None       -> 0.
+  | None -> 0.
 
 let get t = function
   | `TL -> t.top_left
@@ -68,5 +68,13 @@ let get t = function
 let direction { top_left; top_right; _ } = V3.normalize V3.(top_left -@ top_right)
 
 let mark t =
-  let f p = Scad.cube ~center:true (v3 1. 1. 1.) |> Scad.translate p in
-  Scad.union [ f t.centre; f t.top_right; f t.top_left; f t.bot_right; f t.bot_left ]
+  let f p = Scad.translate p (Scad.sphere 0.5) in
+  Scad.(
+    union
+      Color.
+        [ color Black @@ f t.centre
+        ; color Red @@ f t.top_right
+        ; color Green @@ f t.top_left
+        ; color Blue @@ f t.bot_right
+        ; color Purple @@ f t.bot_left
+        ])
