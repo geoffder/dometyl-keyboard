@@ -102,32 +102,28 @@ let make
     clip @@ Scad.sub outer inner
   in
   let faces =
-    (* TODO: make top and bot edge finding into a function, since I think I
-         should apply rounding to the paths generated for the east and west
-         faces as well. So the points from north and south make a rectangle,
-         which is then rounded. Then top and bot edge of that would be used to
-         calculate the corner points for the face. *)
+    let edges path =
+      match Path3.segment ~closed:true path with
+      | s0 :: s1 :: segs ->
+        let f ((a, a_len, b, b_len) as acc) (s : V3.line) =
+          let s_len = V3.distance s.a s.b in
+          if Float.(a_len > b_len) && Float.(s_len > b_len)
+          then a, a_len, s, s_len
+          else if Float.(s_len > a_len)
+          then s, s_len, b, b_len
+          else acc
+        in
+        let a, _, b, _ =
+          List.fold_left
+            ~f
+            ~init:(s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b)
+            segs
+        in
+        if Float.(a.a.z > 0.) then a, b else b, a
+      | _ -> failwith "unreachable"
+    in
     let south =
-      let top_edge, bot_edge =
-        match Path3.segment ~closed:true front with
-        | s0 :: s1 :: segs ->
-          let f ((a, a_len, b, b_len) as acc) (s : V3.line) =
-            let s_len = V3.distance s.a s.b in
-            if Float.(s_len > a_len)
-            then s, s_len, b, b_len
-            else if Float.(s_len > b_len)
-            then a, a_len, s, s_len
-            else acc
-          in
-          let a, _, b, _ =
-            List.fold_left
-              ~f
-              ~init:(s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b)
-              segs
-          in
-          if Float.(a.a.z > 0.) then a, b else b, a
-        | _ -> failwith "unreachable"
-      in
+      let top_edge, bot_edge = edges front in
       let points =
         Points.
           { top_left = top_edge.b
@@ -141,20 +137,27 @@ let make
     in
     let north = Face.zrot Float.pi south in
     let east =
-      let points =
-        Points.
-          { bot_left = north.points.bot_right
-          ; bot_right = south.points.bot_left
-          ; top_left = north.points.top_right
-          ; top_right = south.points.top_left
-          ; centre = v3 (outer_w /. 2.) 0. 0.
-          }
+      let sq =
+        [ north.points.bot_right
+        ; south.points.bot_left
+        ; south.points.top_left
+        ; north.points.top_right
+        ]
       in
-      let sq = Points.to_ccw_path points in
       let path =
         match corner with
         | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
         | None -> sq
+      in
+      let top_edge, bot_edge = edges path in
+      let points =
+        Points.
+          { top_left = top_edge.b
+          ; top_right = top_edge.a
+          ; bot_left = bot_edge.a
+          ; bot_right = bot_edge.b
+          ; centre = v3 (outer_w /. 2.) 0. 0.
+          }
       in
       Face.{ path; points }
     in
