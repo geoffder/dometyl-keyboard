@@ -249,13 +249,16 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       (* let c = Path3.Round.(bez (`Joint 1.)) in *)
       Some c :: List.init (Array.length bot - 1) ~f:(Fn.const None)
     in
-    List.rev_append (List.zip_exn bot' corners) (List.zip_exn top' corners)
-    |> Path3.Round.mix
-    |> Path3.roundover
+    let path =
+      List.rev_append (List.zip_exn bot' corners) (List.zip_exn top' corners)
+      |> Path3.Round.mix
+      |> Path3.roundover
+    in
+    List.last_exn bot', List.last_exn top', path
     (* List.rev_append bot' top' *)
   in
-  let a = end_path true
-  and b = end_path false in
+  let in_start, out_start, a = end_path true
+  and _, _, b = end_path false in
   let () =
     let show = Path3.show_points (Fn.const (Scad.sphere 0.5)) in
     Scad.add (Scad.color Color.Red @@ show a) (show b)
@@ -265,8 +268,11 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let p0 = Path3.centroid a
   and p3 = Path3.centroid b in
-  let a = Path3.translate (V3.neg p0) a |> Path3.scale (v3 0.97 0.97 1.)
-  and b = Path3.translate (V3.neg p3) b |> Path3.scale (v3 0.97 0.97 1.) in
+  let s = v3 0.97 0.97 1. in
+  let a = Path3.translate (V3.neg p0) a |> Path3.scale s
+  and b = Path3.translate (V3.neg p3) b |> Path3.scale s in
+  let in_start = V3.add (V3.neg p0) in_start |> V3.scale s
+  and out_start = V3.add (V3.neg p0) out_start |> V3.scale s in
   let align_q = Quaternion.align (Path3.normal b) (Path3.normal a) in
   let b = Path3.quaternion align_q b in
   let a, b =
@@ -299,15 +305,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       and p2 = V3.(p3 +@ (dir2 *$ out)) in
       (* TODO: related to above, the size param of of_path may be useful for
            automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
-      let _tangents =
-        Path3.tangents ~uniform:false [ p0; p1; p2; p3 ]
-        |> List.tl_exn
-        |> List.cons (V3.neg dir1)
-        |> List.rev
-        |> List.tl_exn
-        |> List.cons dir2
-        |> List.rev
-      in
       Bezier3.curve ~fn:n_steps
       (* @@ Bezier3.of_path [ p0;  p1; p2;  p3 ] ) *)
       @@ Bezier3.of_path ~size:(`Abs [ out *. 0.1; 5.; out *. 0.1 ]) [ p0; p1; p2; p3 ] )
@@ -318,7 +315,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     if Float.(d > min_spline_dist)
     then (
       let step = 1. /. Float.of_int n_steps in
-      (* let b = Path3.reindex_polygon a b in *)
       let _ez = Easing.make (v2 0.05 1.) (v2 1. 1.) in
       let transition i =
         (* let p = List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b in *)
@@ -344,10 +340,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id);
         id := !id + 1
       in
-      mesh
-      (* |> ignore; *)
-      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) *)
-      (* ) *) )
+      mesh )
     else (
       let skin =
         Mesh.skin_between
@@ -370,9 +363,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (* |> ignore; *)
     (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) ) *)
   in
-  let foot = Points.translate (V3.neg w1.foot.centre) w1.foot in
-  let inline = List.map ~f:(fun m -> V3.affine m foot.bot_right) transforms
-  and outline = List.map ~f:(fun m -> V3.affine m foot.top_right) transforms in
+  let inline = List.map ~f:(fun m -> V3.affine m in_start) transforms
+  and outline = List.map ~f:(fun m -> V3.affine m out_start) transforms in
   { scad = Mesh.to_scad mesh; inline; outline }
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
