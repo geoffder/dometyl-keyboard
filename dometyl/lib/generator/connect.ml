@@ -198,6 +198,8 @@ let _spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   ignore wedges;
   { scad = wedges; inline; outline }
 
+let id = ref 0
+
 let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
@@ -208,7 +210,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         (Path3.to_continuous edge)
         (V3.add (Points.get w.foot corner) (v3 0. 0. height))
     in
-    snd @@ Path3.split ~distance:(`Rel u) edge
+    List.rev @@ snd @@ Path3.split ~distance:(`Rel u) edge
   in
   let end_path left =
     let w, dir, b_loc, t_loc =
@@ -217,8 +219,10 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       else w2, Wall.foot_direction w2, `BL, `TL
     in
     let plane = Plane.of_normal ~point:(Points.get w.foot b_loc) dir
-    and bot = Array.of_list @@ edger w b_loc
-    and top = Array.of_list @@ edger w t_loc in
+    and bot = Array.of_list_rev @@ Path3.deduplicate_consecutive ~eps:0.1 @@ edger w b_loc
+    and top =
+      Array.of_list_rev @@ Path3.deduplicate_consecutive ~eps:0.1 @@ edger w t_loc
+    in
     let bot, top =
       let len_b = Array.length bot
       and len_t = Array.length top in
@@ -296,8 +300,13 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       (* TODO: related to above, the size param of of_path may be useful for
            automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
       let _tangents =
-        `Tangents
-          [ V3.neg dir1; V3.normalize V3.(p2 -@ p1); V3.normalize V3.(p2 -@ p1); dir2 ]
+        Path3.tangents ~uniform:false [ p0; p1; p2; p3 ]
+        |> List.tl_exn
+        |> List.cons (V3.neg dir1)
+        |> List.rev
+        |> List.tl_exn
+        |> List.cons dir2
+        |> List.rev
       in
       Bezier3.curve ~fn:n_steps
       (* @@ Bezier3.of_path [ p0;  p1; p2;  p3 ] ) *)
@@ -310,20 +319,56 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     then (
       let step = 1. /. Float.of_int n_steps in
       (* let b = Path3.reindex_polygon a b in *)
+      let _ez = Easing.make (v2 0.05 1.) (v2 1. 1.) in
       let transition i =
+        (* let p = List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b in *)
+        (* let z = (Path3.bbox p).min.z in *)
+        (* let s = *)
+        (*   if i < n_steps / 2 *)
+        (*   then v3 1. 1. (1. -. (_ez (Float.of_int i *. step) /. 2.)) *)
+        (*   else v3 1. 1. (1. -. (_ez (1. -. (Float.of_int i *. step)) /. 2.)) *)
+        (* in *)
+        (* Path3.scale s (Path3.ztrans (Float.neg z) p) |> Path3.ztrans z *)
         List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
       in
-      List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows
+      let mesh =
+        List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows
+      in
+      let () =
+        let show =
+          Fn.compose (Scad.color Color.Red)
+          @@ Path3.show_points (Fn.const (Scad.sphere 0.2))
+        in
+        Scad.union
+          [ Mesh.to_scad mesh; show (Path3.translate p0 a); show (Path3.translate p3 b) ]
+        |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id);
+        id := !id + 1
+      in
+      mesh
       (* |> ignore; *)
-      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) ) *) )
+      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) *)
+      (* ) *) )
     else (
-      Mesh.skin_between
-        ~refine:3
-        ~slices:n_steps
-        (Path3.translate p0 a)
-        (Path3.translate p3 b)
-      |> ignore;
-      Mesh.linear_extrude ~height:1. (Poly2.circle 1.) )
+      let skin =
+        Mesh.skin_between
+          ~refine:3
+          ~slices:n_steps
+          (Path3.translate p0 a)
+          (Path3.translate p3 b)
+      in
+      let () =
+        let show =
+          Fn.compose (Scad.color Color.Red)
+          @@ Path3.show_points (Fn.const (Scad.sphere 0.2))
+        in
+        Scad.union
+          [ Mesh.to_scad skin; show (Path3.translate p0 a); show (Path3.translate p3 b) ]
+        |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id);
+        id := !id + 1
+      in
+      skin )
+    (* |> ignore; *)
+    (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) ) *)
   in
   let foot = Points.translate (V3.neg w1.foot.centre) w1.foot in
   let inline = List.map ~f:(fun m -> V3.affine m foot.bot_right) transforms
@@ -901,6 +946,7 @@ let manual
   ignore (south, thumb_swoop, west, north, east);
   List.map ~f:clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
 (* List.map ~f:clockwise_union [ west; north; east ] |> clockwise_union *)
+(* List.map ~f:clockwise_union [ west; north; east; south ] |> clockwise_union *)
 
 let skeleton
     ?(n_facets = 1)
