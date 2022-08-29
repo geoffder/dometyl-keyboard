@@ -210,27 +210,38 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         (Path3.to_continuous edge)
         (V3.add (Points.get w.foot corner) (v3 0. 0. height))
     in
-    List.rev @@ snd @@ Path3.split ~distance:(`Rel u) edge
+    snd @@ Path3.split ~distance:(`Rel u) edge
   in
-  let end_path left =
+  let end_edges left =
     let w, dir, b_loc, t_loc =
       if left
       then w1, V3.neg @@ Wall.foot_direction w1, `BR, `TR
       else w2, Wall.foot_direction w2, `BL, `TL
     in
     let plane = Plane.of_normal ~point:(Points.get w.foot b_loc) dir
-    and bot = Array.of_list_rev @@ Path3.deduplicate_consecutive ~eps:0.1 @@ edger w b_loc
+    and bot =
+      Array.of_list
+      @@ Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eps:1.
+      @@ edger w b_loc
     and top =
-      Array.of_list_rev @@ Path3.deduplicate_consecutive ~eps:0.1 @@ edger w t_loc
+      Array.of_list
+      @@ Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eps:1.
+      @@ edger w t_loc
     in
+    plane, bot, top
+  in
+  let plane_l, bot_l, top_l = end_edges true
+  and plane_r, bot_r, top_r = end_edges false in
+  let edge_len =
+    Int.(
+      max
+        (max (Array.length bot_l) (Array.length top_l))
+        (max (Array.length bot_r) (Array.length top_r)))
+  in
+  let end_path plane bot top =
     let bot, top =
-      let len_b = Array.length bot
-      and len_t = Array.length top in
-      if len_b = len_t && len_b >= 5
-      then bot, top
-      else (
-        let f = Path3.subdivide ~freq:(`N (Int.max 5 (Int.max len_b len_t), `ByLen)) in
-        Array.of_list @@ f (Array.to_list bot), Array.of_list @@ f (Array.to_list top) )
+      let f = Path3.subdivide ~freq:(`N (edge_len, `BySeg)) in
+      Array.of_list @@ f (Array.to_list bot), Array.of_list @@ f (Array.to_list top)
     in
     let bot', top' =
       let planer (d, acc) p =
@@ -239,7 +250,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       in
       let d, top' = Array.fold ~f:planer ~init:(0., []) top in
       let d, bot' = Array.fold ~f:planer ~init:(d, []) bot in
-      let f = V3.(translate (dir *$ d)) in
+      let f = V3.(translate (Plane.normal plane *$ d)) in
       List.rev_map ~f bot', List.rev_map ~f top'
     in
     let corners =
@@ -247,7 +258,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
          the distance between the upper (first) points of bot' and top'? *)
       let c = Path3.Round.(chamf (`Joint 0.7)) in
       (* let c = Path3.Round.(bez (`Joint 1.)) in *)
-      Some c :: List.init (Array.length bot - 1) ~f:(Fn.const None)
+      Some c :: List.init (edge_len - 1) ~f:(Fn.const None)
     in
     let path =
       List.rev_append (List.zip_exn bot' corners) (List.zip_exn top' corners)
@@ -255,10 +266,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       |> Path3.roundover
     in
     List.last_exn bot', List.last_exn top', path
-    (* List.rev_append bot' top' *)
   in
-  let in_start, out_start, a = end_path true
-  and _, _, b = end_path false in
+  let in_start, out_start, a = end_path plane_l bot_l top_l
+  and _, _, b = end_path plane_r bot_r top_r in
   let () =
     let show = Path3.show_points (Fn.const (Scad.sphere 0.5)) in
     Scad.add (Scad.color Color.Red @@ show a) (show b)
@@ -275,16 +285,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and out_start = V3.add (V3.neg p0) out_start |> V3.scale s in
   let align_q = Quaternion.align (Path3.normal b) (Path3.normal a) in
   let b = Path3.quaternion align_q b in
-  let a, b =
-    let len_a = List.length a
-    and len_b = List.length b in
-    (* if len_a > len_b *)
-    (* then a, Path3.subdivide ~closed:true ~freq:(`N (len_a, `ByLen)) b *)
-    (* else Path3.subdivide ~closed:true ~freq:(`N (len_b, `ByLen)) a, b *)
-    let f = Path3.subdivide ~closed:true ~freq:(`N (Int.max len_a len_b * 3, `ByLen)) in
-    f a, f b
-  in
   let min_spline_dist = 10. in
+  (* let min_spline_dist = 5. in *)
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
   let n_steps =
     ignore n_steps;
@@ -307,7 +309,10 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
            automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
       Bezier3.curve ~fn:n_steps
       (* @@ Bezier3.of_path [ p0;  p1; p2;  p3 ] ) *)
-      @@ Bezier3.of_path ~size:(`Abs [ out *. 0.1; 5.; out *. 0.1 ]) [ p0; p1; p2; p3 ] )
+      @@ Bezier3.of_path
+           ~tangents:`NonUniform
+           ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ])
+           [ p0; p1; p2; p3 ] )
     else [ p0; p3 ]
   in
   let transforms = Path3.to_transforms ~mode:`NoAlign path in
@@ -327,8 +332,12 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         (* Path3.scale s (Path3.ztrans (Float.neg z) p) |> Path3.ztrans z *)
         List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a b
       in
+      Stdio.printf "pruning id#%i:\n" !id;
+      let pruned = Util.prune_transforms ~shape:transition transforms in
+      (* let pruned = List.mapi ~f:(fun i m -> i, m) transforms in *)
       let mesh =
-        List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows
+        (* List.mapi ~f:(fun i m -> Path3.affine m (transition i)) transforms |> Mesh.of_rows *)
+        List.map ~f:(fun (i, m) -> Path3.affine m (transition i)) pruned |> Mesh.of_rows
       in
       let () =
         let show =
@@ -337,35 +346,37 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         in
         Scad.union
           [ Mesh.to_scad mesh; show (Path3.translate p0 a); show (Path3.translate p3 b) ]
-        |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id);
-        id := !id + 1
+        |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
       in
       mesh )
     else (
       let skin =
         Mesh.skin_between
-          ~refine:3
-          ~slices:n_steps
-          (Path3.translate p0 a)
-          (Path3.translate p3 b)
+          ~slices:(n_steps * 2)
+          (* (Path3.translate p0 a) *)
+          (* (Path3.translate p3 b) *)
+          (Path3.translate V3.(p0 +@ (dir1 *$ 0.01)) a)
+          (Path3.translate V3.(p3 +@ (dir2 *$ -0.01)) b)
       in
       let () =
         let show =
           Fn.compose (Scad.color Color.Red)
-          @@ Path3.show_points (Fn.const (Scad.sphere 0.2))
+          @@ Path3.show_points (Fn.const (Scad.sphere 0.5))
         in
         Scad.union
           [ Mesh.to_scad skin; show (Path3.translate p0 a); show (Path3.translate p3 b) ]
-        |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id);
-        id := !id + 1
+        |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
+        (* Mesh.to_scad skin |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id) *)
       in
       skin )
-    (* |> ignore; *)
-    (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) ) *)
   in
+  id := !id + 1;
   let inline = List.map ~f:(fun m -> V3.affine m in_start) transforms
-  and outline = List.map ~f:(fun m -> V3.affine m out_start) transforms in
-  { scad = Mesh.to_scad mesh; inline; outline }
+  and outline =
+    List.map ~f:(fun m -> V3.affine m out_start) transforms
+    (* and scad = (if !id <> 7 && !id <> 9 && !id <> 8 then Mesh.to_scad mesh else Scad.empty3) in *)
+  and scad = if !id <> 7 && !id <> 9 then Mesh.to_scad mesh else Scad.empty3 in
+  { scad; inline; outline }
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
@@ -939,6 +950,7 @@ let manual
   List.map ~f:clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
 (* List.map ~f:clockwise_union [ west; north; east ] |> clockwise_union *)
 (* List.map ~f:clockwise_union [ west; north; east; south ] |> clockwise_union *)
+(* List.map ~f:clockwise_union [ west; north; east; thumb_swoop ] |> clockwise_union *)
 
 let skeleton
     ?(n_facets = 1)

@@ -22,3 +22,4 @@ val prepend_opt : 'a option -> 'a list -> 'a list
 val prepend_opt_map : f:('a -> 'b) -> 'a option -> 'b list -> 'b list
 val fill_points : ?init:Path3.t -> n:int -> V3.t -> V3.t -> Path3.t
 val idx_to_find : idx -> (int, 'a, 'cmp) Map.t -> 'a option
+val prune_transforms : shape:(int -> Path3.t) -> Affine3.t list -> (int * Affine3.t) list

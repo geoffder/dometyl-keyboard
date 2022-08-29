@@ -50,12 +50,12 @@ let bisection_exn ?(max_iter = 100) ~tolerance ~f lower upper =
 let prepend_opt opt l =
   match opt with
   | Some a -> a :: l
-  | None   -> l
+  | None -> l
 
 let prepend_opt_map ~f opt l =
   match opt with
   | Some a -> f a :: l
-  | None   -> l
+  | None -> l
 
 let fill_points ?(init = []) ~n a b =
   if n < 1
@@ -72,5 +72,46 @@ let fill_points ?(init = []) ~n a b =
 
 let idx_to_find = function
   | First -> Map.min_elt >> Option.map ~f:snd
-  | Last  -> Map.max_elt >> Option.map ~f:snd
+  | Last -> Map.max_elt >> Option.map ~f:snd
   | Idx i -> Fn.flip Map.find i
+
+(* let prune_transforms ~shape = function *)
+(*   | [] -> [] *)
+(*   | [ m ] -> [ 0, m ] *)
+(*   | m0 :: m1 :: transforms -> *)
+(*     let s0 = Path3.affine m0 (shape 0) in *)
+(*     let s1 = Path3.affine m1 (shape 1) in *)
+(*     let vecs = List.map2_exn ~f:(fun a b -> V3.(b -@ a)) s0 s1 in *)
+(*     let f (acc, i, s, vecs) m = *)
+(*       let s' = Path3.affine m (shape i) in *)
+(*       let vecs' = List.map2_exn ~f:(fun a b -> V3.(b -@ a)) s s' in *)
+(*       let valid = *)
+(*         List.for_all2_exn ~f:(fun a b -> Float.(abs (V3.angle a b) < pi)) vecs vecs' *)
+(*       in *)
+(*       if valid then (i, m) :: acc, i + 1, s', vecs' else acc, i + 1, s, vecs *)
+(*       (\* if valid then (i, m) :: acc, i + 1, s', vecs' else acc, i + 1, s', vecs' *\) *)
+(*     in *)
+(*     let transforms, _, _, _ = List.fold ~f ~init:([], 2, s1, vecs) transforms in *)
+(*     (0, m0) :: (1, m1) :: List.rev transforms *)
+
+let prune_transforms ~shape = function
+  | [] -> []
+  | [ m ] -> [ 0, m ]
+  | m0 :: transforms ->
+    let s0 = Path3.affine m0 (shape 0) in
+    let f (acc, i, s) m =
+      let s' = Path3.affine m (shape i) in
+      let plane = Path3.to_plane s in
+      let valid =
+        let f _a b =
+          let above = Plane.is_point_above plane b in
+          if not above then Stdio.printf " <> transform #%i\n" i;
+          above
+        in
+        List.for_all2_exn ~f s s'
+      in
+      if valid then (i, m) :: acc, i + 1, s' else acc, i + 1, s
+      (* if valid then (i, m) :: acc, i + 1, s' else acc, i + 1, s' *)
+    in
+    let transforms, _, _ = List.fold ~f ~init:([ 0, m0 ], 1, s0) transforms in
+    List.rev transforms
