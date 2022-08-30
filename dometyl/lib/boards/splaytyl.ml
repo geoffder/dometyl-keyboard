@@ -55,9 +55,9 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~d1:12.
-          ~d2:8.
-          ~n_steps:(`Flat 10)
+          ~d1:13.
+          ~d2:8. (* ~n_steps:(`Flat 10) *)
+          ~n_steps:(`PerZ 3.5)
             (* ~north_clearance:2.5 *)
             (* ~south_clearance:2.5 *)
             (* ~side_clearance:1.5 *)
