@@ -38,6 +38,7 @@ let is_outward (w1 : Wall.t) (w2 : Wall.t) =
   Float.(
     V3.distance w1.foot.top_right w2.foot.top_left
     > V3.distance w1.foot.top_right w2.foot.bot_left)
+
 (* let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez = *)
 (*   let step = height /. Float.of_int n_facets *)
 (*   and start, continue, next = *)
@@ -154,12 +155,47 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   (* and p3 = V3.(mean b *@ v3 1. 1. 0.)  *)
   let p0 = V3.(mean a' *@ v3 1. 1. 0.)
   and p3 = V3.(mean b' *@ v3 1. 1. 0.) in
+  Stdio.printf "id %i: ang = %f\n" !id (V3.angle (V3.neg dir1) V3.(p3 -@ p0));
   let a' = Path3.translate (V3.neg p0) a'
   and b' = Path3.translate (V3.neg p3) b' in
   let in_start = V3.add (V3.neg p0) in_start
   and out_start = V3.add (V3.neg p0) out_start in
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
+  let heading = V3.angle (V3.neg dir1) V3.(p3 -@ p0) in
+  let is_bow = Float.(heading > pi /. 2.) in
+  let ang =
+    (* account for whether this connection moves away from centre of mass
+              (positive) or inward (negative) to set angle  polarity  *)
+    (* let ang = V3.angle (V3.neg dir1) V3.(p3 -@ p0) in *)
+    let sign =
+      (* (if is_outward w1 w2 then 1. else -1.) *. if Float.(ang > pi /. 2.) then -1. else 1. *)
+      (* (if Float.(V2.ccw_theta V3.(to_v2 @@ (p3 -@ p0)) < 0.) then 1. else -1.) *)
+      (if is_outward w1 w2 then 1. else -1.) *. if is_bow then -1. else 1.
+    in
+    heading *. sign *. 0.25
+    (* V2.ccw_theta V3.(to_v2 @@ (normalize (p3 -@ p0) -@ dir1)) *)
+  and d plane =
+    List.fold ~f:(fun d p -> Float.min d @@ Plane.distance_to_point plane p) ~init:0.
+  in
+  (* Stdio.printf "id %i: ang = %f\n" !id ang; *)
+  let ab =
+    let rot = Path3.zrot ang a' in
+    let plane = Path3.to_plane a' in
+    Path3.translate V3.((dir1 *$ (d plane rot -. 0.2)) +@ p0) rot
+  and ba =
+    (* let rot = Path3.zrot ang b' in *)
+    let rot = Path3.zrot (ang *. if is_bow then -1. else 1.) b' in
+    let plane = Path3.to_plane b' in
+    Path3.translate V3.((dir2 *$ (-.d plane rot +. 0.2)) +@ p3) rot
+  in
+  let p0' = V3.(mean ab *@ v3 1. 1. 0.)
+  and p3' = V3.(mean ba *@ v3 1. 1. 0.) in
+  let ab' = Path3.translate (V3.neg p0') ab
+  and ba' = Path3.translate (V3.neg p3') ba in
+  let ba' =
+    Path3.quaternion (Quaternion.align (Path3.normal ba') (Path3.normal ab')) ba'
+  in
   let min_spline_dist = 10. in
   (* let min_spline_dist = 5. in *)
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
@@ -184,7 +220,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
            is it possible to make that mode less separate? (replicate with transforms,
            thus distance conditional is handled above, rather than here.) *)
   let transition i =
-    let p = List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
+    (* let p = List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in *)
+    let p = List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) ab' ba' in
     let s =
       let u = Float.of_int i *. step in
       let z = 1. -. (ez (if i < n_steps / 2 then u else 1. -. u) *. fillet_h) in
@@ -195,8 +232,12 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let transforms =
     let path extra =
-      let p1 = V3.(p0 +@ (dir1 *$ -.out))
-      and p2 = V3.(p3 +@ (dir2 *$ (out +. extra))) in
+      (* let p1 = V3.(p0 +@ (dir1 *$ -.out)) *)
+      (* and p2 = V3.(p3 +@ (dir2 *$ (out +. extra))) in *)
+      let dir1' = Path3.normal ab'
+      and dir2' = Path3.normal ba' in
+      let p1 = V3.(p0' +@ (dir1' *$ out))
+      and p2 = V3.(p3' +@ (dir2' *$ ((out +. extra) *. if is_bow then 1. else -1.))) in
       (* TODO: related to above, the size param of of_path may be useful for
            automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
       Bezier3.curve ~fn:n_steps
@@ -205,7 +246,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
            ~tangents:`NonUniform
            ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ])
            (* [ p0; p1; p2; V3.(p3 +@ (dir2 *$ extra)) ] *)
-           [ p0; p1; p2; p3 ]
+           (* [ p0; p1; p2; p3 ] *)
+           [ p0'; p1; p2; p3' ]
     in
     (* let ps = path 0. in *)
     (* let m = List.last_exn @@ Path3.to_transforms ~mode:`NoAlign ps in *)
@@ -272,13 +314,22 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           |> Path3.scale (v3 0.9 0.9 1.) (* shrink to hide edge *)
           |> Path3.translate p
         in
+        (* Mesh.join *)
+        (*   [ Mesh.skin_between ~endcaps:`Bot ~slices:5 a (List.hd_exn rows) *)
+        (*   ; Mesh.of_rows ~endcaps:`None rows *)
+        (*   ; Mesh.skin_between ~endcaps:`Top ~slices:5 (List.last_exn rows) b *)
+        (*     (\* ; Mesh.skin_between ~endcaps:`None ~slices:5 last last' *\) *)
+        (*     (\* ; Mesh.skin_between ~endcaps:`Top ~slices:5 last' b *\) *)
+        (*   ] *)
         Mesh.join
-          [ Mesh.skin_between ~endcaps:`Bot ~slices:5 a (List.hd_exn rows)
+          [ Mesh.skin_between ~endcaps:`Bot ~slices:5 a ab
           ; Mesh.of_rows ~endcaps:`None rows
           ; Mesh.skin_between ~endcaps:`Top ~slices:5 (List.last_exn rows) b
             (* ; Mesh.skin_between ~endcaps:`None ~slices:5 last last' *)
             (* ; Mesh.skin_between ~endcaps:`Top ~slices:5 last' b *)
           ]
+        |> Mesh.to_scad
+        |> Scad.add Mesh.(to_scad @@ Mesh.skin_between ~slices:5 ba b)
         (* Mesh.of_rows rows *)
       in
       let () =
@@ -286,8 +337,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           Fn.compose (Scad.color Color.Red)
           @@ Path3.show_points (Fn.const (Scad.sphere 0.2))
         in
-        Scad.union
-          [ Mesh.to_scad mesh; show (Path3.translate p0 a); show (Path3.translate p3 b) ]
+        Scad.union [ mesh; show a; show b ]
         |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
       in
       mesh )
@@ -300,7 +350,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       and d plane =
         List.fold ~f:(fun d p -> Float.min d @@ Plane.distance_to_point plane p) ~init:0.
       in
-      Stdio.printf "id %i: ang = %f\n" !id ang;
+      (* Stdio.printf "id %i: ang = %f\n" !id ang; *)
       let ab =
         let rot = Path3.zrot ang a' in
         let plane = Path3.to_plane a' in
@@ -322,7 +372,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       in
       (* ignore d; *)
       (* let skin = Mesh.linear_extrude ~height:1. (Poly2.circle 1.) in *)
-      skin )
+      Mesh.to_scad skin )
   in
   id := !id + 1;
   (* FIXME: transforms are not relevant to linear skins, should move inline and
@@ -332,11 +382,11 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and scad =
     (* if !id <> 7 && !id <> 9 && !id <> 8 then Mesh.to_scad mesh else Scad.empty3 *)
     (* if !id <> 7 && !id <> 9 then Mesh.to_scad mesh else Scad.empty3 *)
-    if !id <> 7 then Mesh.to_scad mesh else Scad.empty3
+    if !id <> 7 then mesh else Scad.empty3
     (* Mesh.to_scad mesh *)
   in
-  (* { scad = Scad.ztrans (-10.) scad; inline; outline } *)
-  { scad; inline; outline }
+  { scad = Scad.ztrans (-10.) scad; inline; outline }
+(* { scad; inline; outline } *)
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
