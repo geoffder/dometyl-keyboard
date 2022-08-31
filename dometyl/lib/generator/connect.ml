@@ -38,6 +38,7 @@ let is_outward (w1 : Wall.t) (w2 : Wall.t) =
   Float.(
     V3.distance w1.foot.top_right w2.foot.top_left
     > V3.distance w1.foot.top_right w2.foot.bot_left)
+
 (* let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez = *)
 (*   let step = height /. Float.of_int n_facets *)
 (*   and start, continue, next = *)
@@ -78,21 +79,49 @@ let is_outward (w1 : Wall.t) (w2 : Wall.t) =
 (*   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in *)
 (*   `Ragged (List.map ~f:adjust norms) *)
 
+(* Apply the roundover corner to the two topmost points of the connector drawn
+   by bot_edge and top_edge. Edges must have the same length. *)
+let rounder ~corner bot_edge top_edge =
+  (* TODO: ability to autocalculate cut/joint based on
+      the distance between the upper (first) points of bot' and top'?
+    (corner as a poly variant e.g. [`AutoBez | `AutoChamf | `Corner of corner]) *)
+  let corners = Some corner :: List.init (List.length bot_edge - 1) ~f:(Fn.const None) in
+  List.rev_append (List.zip_exn bot_edge corners) (List.zip_exn top_edge corners)
+  |> Path3.Round.mix
+  |> Path3.roundover
+
+let fillet ~d ~h rows =
+  let rel_dists =
+    let f (dists, sum, last) row =
+      let p = V3.(mean row *@ v 1. 1. 0.) in
+      let sum = sum +. V3.distance p last in
+      sum :: dists, sum, p
+    and start = V3.(mean (List.hd_exn rows) *@ v 1. 1. 0.) in
+    let dists, sum, _ = List.fold ~f ~init:([ 0. ], 0., start) (List.tl_exn rows) in
+    List.rev_map ~f:(fun d -> d /. sum) dists
+  in
+  let ez = Easing.make (v2 d 1.) (v2 d 1.) in
+  let f u row =
+    let u = if Float.(u > 0.5) then 1. -. u else u in
+    Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
+  in
+  List.map2_exn ~f rel_dists rows
+
 let id = ref 0
 
 let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let edger (w : Wall.t) corner =
-    let edge = w.drawer corner in
-    let u =
-      Path3.continuous_closest_point
-        (Path3.to_continuous edge)
-        (V3.add (List.last_exn edge) (v3 0. 0. height))
-    in
-    snd @@ Path3.split ~distance:(`Rel u) edge
-  in
   let end_edges ?frac left =
+    let edger (w : Wall.t) corner =
+      let edge = w.drawer corner in
+      let u =
+        Path3.continuous_closest_point
+          (Path3.to_continuous edge)
+          (V3.add (List.last_exn edge) (v3 0. 0. height))
+      in
+      snd @@ Path3.split ~distance:(`Rel u) edge
+    in
     let w, dir =
       if left then w1, V3.neg @@ Wall.foot_direction w1 else w2, Wall.foot_direction w2
     in
@@ -132,24 +161,14 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let bot_l', top_l' = planer plane_l bot_l top_l
   and bot_r', top_r' = planer plane_r bot_r top_r in
-  let rounder bot top =
-    let corners =
-      (* TODO: configurable, with ability to autocalculate cut/joint based on
-         the distance between the upper (first) points of bot' and top'? *)
-      let c = Path3.Round.(chamf (`Joint 0.7)) in
-      (* let c = Path3.Round.(bez (`Joint 1.)) in *)
-      Some c :: List.init (edge_len - 1) ~f:(Fn.const None)
-    in
-    List.rev_append (List.zip_exn bot corners) (List.zip_exn top corners)
-    |> Path3.Round.mix
-    |> Path3.roundover
-  in
   let in_start = List.last_exn bot_l'
   and out_start = List.last_exn top_l' in
-  let a = rounder bot_l top_l
-  and a' = rounder bot_l' top_l'
-  and b = rounder bot_r top_r
-  and b' = rounder bot_r' top_r' in
+  let corner = Path3.Round.(chamf (`Joint 0.7)) in
+  (* let corner = Path3.Round.(bez (`Joint 1.)) in *)
+  let a = rounder ~corner bot_l top_l
+  and a' = rounder ~corner bot_l' top_l'
+  and b = rounder ~corner bot_r top_r
+  and b' = rounder ~corner bot_r' top_r' in
   let p0 = V3.(mean a' *@ v3 1. 1. 0.)
   and p3 = V3.(mean b' *@ v3 1. 1. 0.) in
   let a' = Path3.translate (V3.neg p0) a'
@@ -180,23 +199,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let fillet_h = 0.4 in
   let transition i =
     List.map2_exn ~f:(fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b'
-  in
-  let fillet ~d ~h rows =
-    let rel_dists =
-      let f (dists, sum, last) row =
-        let p = V3.(mean row *@ v 1. 1. 0.) in
-        let sum = sum +. V3.distance p last in
-        sum :: dists, sum, p
-      and start = V3.(mean (List.hd_exn rows) *@ v 1. 1. 0.) in
-      let dists, sum, _ = List.fold ~f ~init:([ 0. ], 0., start) (List.tl_exn rows) in
-      List.rev_map ~f:(fun d -> d /. sum) dists
-    in
-    let ez = Easing.make (v2 d 1.) (v2 d 1.) in
-    let f u row =
-      let u = if Float.(u > 0.5) then 1. -. u else u in
-      Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
-    in
-    List.map2_exn ~f rel_dists rows
   in
   let transforms =
     let path =
@@ -236,7 +238,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           in
           let rel = d *. 2. /. V3.distance w2.foot.top_left w2.foot.top_right in
           let _, bot, top = end_edges ~frac:rel false in
-          let pth = rounder (subdiv bot) (subdiv top) in
+          let pth = rounder ~corner (subdiv bot) (subdiv top) in
           let p = V3.(mean pth *@ v3 1. 1. 0.) in
           Path3.translate (V3.neg p) pth
           |> Path3.scale (v3 0.9 0.9 1.) (* shrink to hide edge *)
