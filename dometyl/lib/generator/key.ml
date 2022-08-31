@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 
 module Face = struct
@@ -13,12 +12,6 @@ module Face = struct
 end
 
 module Faces = struct
-  (* type face = *)
-  (*   { path : Path3.t *)
-  (*   ; points : Points.t *)
-  (*   } *)
-  (* [@@deriving scad] *)
-
   type t =
     { north : Face.t [@scad.d3]
     ; south : Face.t
@@ -27,11 +20,10 @@ module Faces = struct
     }
   [@@deriving scad]
 
-  let map ~f t =
-    { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
+  let map f t = { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
 
-  let fold ~f ~init t =
-    let f' = Fn.flip f in
+  let fold f init t =
+    let f' = Fun.flip f in
     f init t.north |> f' t.south |> f' t.east |> f' t.west
 
   let face t = function
@@ -107,19 +99,16 @@ let make
       | s0 :: s1 :: segs ->
         let f ((a, a_len, b, b_len) as acc) (s : V3.line) =
           let s_len = V3.distance s.a s.b in
-          if Float.(a_len > b_len) && Float.(s_len > b_len)
+          if a_len > b_len && s_len > b_len
           then a, a_len, s, s_len
-          else if Float.(s_len > a_len)
+          else if s_len > a_len
           then s, s_len, b, b_len
           else acc
         in
         let a, _, b, _ =
-          List.fold_left
-            ~f
-            ~init:(s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b)
-            segs
+          List.fold_left f (s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b) segs
         in
-        if Float.(a.a.z > 0.) then a, b else b, a
+        if a.a.z > 0. then a, b else b, a
       | _ -> failwith "unreachable"
     in
     let south =
@@ -168,14 +157,14 @@ let make
   ; scad = (if render then Scad.render hole else hole)
   ; origin = v3 0. 0. 0.
   ; faces
-  ; cap = Option.map ~f:(Scad.translate (v3 0. 0. (cap_height +. (thickness /. 2.)))) cap
-  ; cutout = (if render then Option.map ~f:Scad.render cutout else cutout)
+  ; cap = Option.map (Scad.translate (v3 0. 0. (cap_height +. (thickness /. 2.)))) cap
+  ; cutout = (if render then Option.map Scad.render cutout else cutout)
   }
 
 let mirror_internals t =
   { t with
     scad = Scad.mirror (v3 1. 0. 0.) t.scad
-  ; cutout = Option.map ~f:(Scad.mirror (v3 1. 0. 0.)) t.cutout
+  ; cutout = Option.map (Scad.mirror (v3 1. 0. 0.)) t.cutout
   }
 
 let cutout_scad = function

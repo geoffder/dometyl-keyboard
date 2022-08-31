@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 type t =
@@ -119,8 +118,8 @@ let place
     Walls.{ body = { north; _ }; _ }
     t
   =
-  let left_foot = (Map.find_exn north 0).foot
-  and right_foot = (Map.find_exn north 1).foot in
+  let left_foot = (IMap.find 0 north).foot
+  and right_foot = (IMap.find 1 north).foot in
   let x = V3.get_x left_foot.bot_left +. x_off
   and y =
     let inner (ps : Points.t) = V3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
@@ -137,16 +136,16 @@ let eyelets
   =
   let perim = Array.of_list inline
   and half_width =
-    Option.value_map ~default:(eyelet_config.outer_rad +. 3.) ~f:(( *. ) 0.5) width
+    Util.value_map_opt ~default:(eyelet_config.outer_rad +. 3.) (( *. ) 0.5) width
   in
   let n_pts = Array.length perim in
   let dist a b = V3.(norm (a -@ b)) in
   let find a =
-    let f i (m, idx, closest) b =
+    let f (i, m, idx, closest) b =
       let m' = dist a b in
-      if Float.(m' < m) then m', i, b else m, idx, closest
+      if m' < m then i + 1, m', i, b else i + 1, m, idx, closest
     in
-    let _, idx, closest = Array.foldi ~init:(Float.max_value, 0, V3.zero) ~f perim in
+    let _, _, idx, closest = Array.fold_left f (0, Float.max_float, 0, V3.zero) perim in
     idx, closest
   in
   let wrap i = if i < 0 then n_pts + i else if i >= n_pts then n_pts - i else i in
@@ -158,7 +157,7 @@ let eyelets
       and cw_idx = wrap (idx + 1) in
       let ccw = budge perim.(ccw_idx)
       and cw = budge perim.(cw_idx) in
-      if Float.(dist loc cw < dist loc ccw) then true, cw else false, ccw
+      if dist loc cw < dist loc ccw then true, cw else false, ccw
     in
     let centre =
       let diff = V3.sub neighbour closest
@@ -166,7 +165,7 @@ let eyelets
       let rec loop last_dist last frac =
         let next = V3.((diff *$ frac) +@ closest) in
         let next_dist = dist loc next in
-        if Float.(next_dist > last_dist) then last else loop next_dist next (frac +. step)
+        if next_dist > last_dist then last else loop next_dist next (frac +. step)
       in
       loop (dist loc closest) closest step
     in
@@ -175,7 +174,7 @@ let eyelets
       let rec loop acc_dist last_pos i =
         let pos = perim.(i) in
         let acc_dist' = dist pos last_pos +. acc_dist in
-        if Float.(acc_dist' < half_width)
+        if acc_dist' < half_width
         then loop acc_dist' pos (step i)
         else (
           let vec = V3.(normalize (pos -@ last_pos)) in
@@ -184,7 +183,7 @@ let eyelets
       (* Check that we aren't too far from the original closest point before
            stepping over it. *)
       let drift = V3.sub perim.(idx) centre in
-      if (not neighbour_wise) && Float.(V3.norm drift > half_width)
+      if (not neighbour_wise) && V3.norm drift > half_width
       then V2.of_v3 V3.(centre +@ (V3.normalize drift *$ half_width))
       else V2.of_v3 @@ loop 0. centre (step idx)
     in

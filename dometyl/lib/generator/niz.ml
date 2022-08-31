@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 module Bottom = struct
@@ -215,7 +214,7 @@ let hole_of_config
             (Scad.cube ~center:true (v3 20. 20. 7.))
         ; internals
         ]
-    | None   -> internals
+    | None -> internals
   and clip hole = Scad.union [ base; hole; pillars ] in
   Key.(
     make

@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 module Bone = struct
@@ -30,7 +29,7 @@ module Bone = struct
   let make ?(fn = 5) ?alpha ?colour ?(angle = 0.) ~rad len =
     let scad =
       Scad.cylinder ~fn ~height:len rad
-      |> Option.value_map ~default:Fn.id ~f:(Scad.color ?alpha) colour
+      |> Util.value_map_opt ~default:Fun.id (Scad.color ?alpha) colour
     in
     { scad
     ; base = v3 0. 0. 0.
@@ -102,22 +101,22 @@ module Fingers = struct
     }
   [@@deriving scad]
 
-  let map ~f t =
+  let map f t =
     { index = f t.index; middle = f t.middle; ring = f t.ring; pinky = f t.pinky }
 
-  let fold ~f ~init { index; middle; ring; pinky } =
-    let flipped = Fn.flip f in
+  let fold f init { index; middle; ring; pinky } =
+    let flipped = Fun.flip f in
     f init index |> flipped middle |> flipped ring |> flipped pinky
 
-  let update ?(index = Fn.id) ?(ring = Fn.id) ?(middle = Fn.id) ?(pinky = Fn.id) t =
+  let update ?(index = Fun.id) ?(ring = Fun.id) ?(middle = Fun.id) ?(pinky = Fun.id) t =
     { index = index t.index
     ; middle = middle t.middle
     ; ring = ring t.ring
     ; pinky = pinky t.pinky
     }
 
-  let extend ?mult a = map ~f:(Finger.extend ?mult a)
-  let flex ?mult a = map ~f:(Finger.flex ?mult a)
+  let extend ?mult a = map (Finger.extend ?mult a)
+  let flex ?mult a = map (Finger.flex ?mult a)
 
   let of_configs ~index ~middle ~ring ~pinky =
     { index = Finger.of_config index
@@ -126,7 +125,7 @@ module Fingers = struct
     ; pinky = Finger.of_config pinky
     }
 
-  let to_scad t = Scad.union @@ (fold ~init:[] ~f:(fun l a -> Finger.to_scad a :: l)) t
+  let to_scad t = Scad.union @@ (fold (fun l a -> Finger.to_scad a :: l) []) t
 end
 
 module Thumb = struct
@@ -199,11 +198,11 @@ let radial_dev a t = quaternion ~about:t.origin (Quaternion.make t.normal a) t
 let ulnar_dev a = radial_dev (-.a)
 
 let update_digits
-    ?(index = Fn.id)
-    ?(ring = Fn.id)
-    ?(middle = Fn.id)
-    ?(pinky = Fn.id)
-    ?(thumb = Fn.id)
+    ?(index = Fun.id)
+    ?(ring = Fun.id)
+    ?(middle = Fun.id)
+    ?(pinky = Fun.id)
+    ?(thumb = Fun.id)
     t
   =
   { t with
@@ -220,8 +219,8 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
   let { x = mid_x; y = mid_y; z = _ } = fingers.middle.prox.base
   and z =
     Fingers.fold
-      ~init:(V3.get_z thumb.bones.prox.base)
-      ~f:(fun m a -> Float.min m (V3.get_z a.prox.base))
+      (fun m a -> Float.min m (V3.get_z a.prox.base))
+      (V3.get_z thumb.bones.prox.base)
       fingers
   in
   let heading = V3.normalize (v3 0. mid_y (-.z))
@@ -251,8 +250,8 @@ let to_scad
     Scad.hull
       [ carpals
       ; Fingers.fold
-          ~init:[]
-          ~f:(fun l fgr -> Scad.translate fgr.prox.base (Scad.sphere knuckle_rad) :: l)
+          (fun l fgr -> Scad.translate fgr.prox.base (Scad.sphere knuckle_rad) :: l)
+          []
           fingers
         |> Scad.union
       ; thumb.bones.prox.scad

@@ -4,7 +4,6 @@
     This is is a good place to start from if you'd like to have something like the
     skeletyl, but with some more pinky stagger. Though, it will never be as pretty. *)
 
-open! Base
 open! Scad_ml
 open Generator
 

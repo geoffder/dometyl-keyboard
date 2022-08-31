@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 open! Generator
 open! Infix
@@ -33,7 +32,7 @@ let thumb_lookups =
       | 2 ->
         Key.quaternion_about_origin (Float.pi /. 30.)
         >> Key.translate (v3 (-0.5) (-0.8) 1.)
-      | _ -> Fn.id
+      | _ -> Fun.id
     in
     Curvature.(
       post_tweak

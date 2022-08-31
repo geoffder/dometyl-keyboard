@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 open! Generator
 open! Boards
@@ -13,9 +12,9 @@ let splaytyl_right = Splaytyl.build ~hotswap:`South ()
 let splaytyl_left = Splaytyl.build ~right_hand:false ~hotswap:`South ()
 
 let () =
-  Stdio.print_endline "Building (and maybe exporting) scads...";
+  print_endline "Building (and maybe exporting) scads...";
   Write.thing "splaytyl_right" (Case.to_scad ~show_caps:false splaytyl_right);
   Write.thing "splaytyl_left" (Case.to_scad splaytyl_left);
   Write.thing "bottom_plate_right" (Bottom.make splaytyl_right);
   Write.thing "tent_right" (Tent.make splaytyl_right);
-  Stdio.print_endline "Done!"
+  print_endline "Done!"

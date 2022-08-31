@@ -1,7 +1,6 @@
 (** A lower profile skeletyl, with curvatures adjusted for chocs, and bumpon eyelets built
     in to the case. *)
 
-open! Base
 open! Scad_ml
 open Generator
 
@@ -52,7 +51,7 @@ let wall_builder plate =
     { body =
         auto_body
           ~n_steps:(`Flat 3)
-          ~north_lookup:(fun i -> if i % 2 = 0 then Eye else Yes)
+          ~north_lookup:(fun i -> if i mod 2 = 0 then Eye else Yes)
           ~north_clearance:1.5
           ~south_clearance:1.5
           ~side_clearance:1.5

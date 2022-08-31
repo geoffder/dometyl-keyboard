@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 module Bottom : sig

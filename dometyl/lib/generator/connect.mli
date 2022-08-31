@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 (** Shape(s) connecting walls together, and the points along the outside and inside of the

@@ -1,5 +1,5 @@
-open! Base
 open! Scad_ml
+open! Util
 
 type t =
   { plus : Scad.d3 option
@@ -9,10 +9,8 @@ type t =
 type cutter = walls:Walls.t -> connections:Connect.t -> t
 
 let apply t scad =
-  let added =
-    Option.value_map ~default:scad ~f:(fun s -> Scad.union [ s; scad ]) t.plus
-  in
-  Option.value_map ~default:added ~f:(fun s -> Scad.difference added [ s ]) t.minus
+  let added = value_map_opt ~default:scad (fun s -> Scad.union [ s; scad ]) t.plus in
+  value_map_opt ~default:added (fun s -> Scad.difference added [ s ]) t.minus
 
 let make
     ?(length = 2.)
@@ -30,8 +28,8 @@ let make
     ~walls:Walls.{ body = { north; _ }; _ }
     ~connections:_
   =
-  let left_foot = (Map.find_exn north 0).foot
-  and right_foot = (Map.find_exn north 1).foot in
+  let left_foot = (IMap.find 0 north).foot
+  and right_foot = (IMap.find 1 north).foot in
   let inner_y (foot : Points.t) =
     V3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2.
   in
@@ -87,16 +85,16 @@ let place_tray
     Walls.{ body = { north; _ }; _ }
     scad
   =
-  let left = Map.find north 0
-  and right = Map.find north 1 in
+  let left = IMap.find_opt 0 north
+  and right = IMap.find_opt 1 north in
   let x =
-    match Option.first_some left right with
-    | Some w -> V3.get_x w.foot.bot_left +. x_off
-    | None -> 0.
+    match left, right with
+    | Some w, _ | None, Some w -> V3.get_x w.foot.bot_left +. x_off
+    | None, None -> 0.
   and y =
     let outer =
       let f (ps : Points.t) = V3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
-      Option.value_map ~default:0. ~f:(fun w -> f w.Wall.foot)
+      value_map_opt ~default:0. (fun w -> f w.Wall.foot)
     in
     y_off +. ((outer left +. outer right) /. 2.)
   in

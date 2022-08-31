@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 open Infix
 
@@ -9,14 +8,14 @@ type bump_loc =
 
 let locate_bump (plate : Plate.t) = function
   | Thumb (c, k) ->
-    let%bind.Option col = Util.idx_to_find c plate.thumb in
-    let%map.Option key = Util.idx_to_find k col.keys in
+    let* col = Util.idx_to_find c plate.thumb in
+    let+ key = Util.idx_to_find k col.keys in
     V3.mul (v3 1. 1. 0.) key.origin
-  | Body (c, k)  ->
-    let%bind.Option col = Util.idx_to_find c plate.body in
-    let%map.Option key = Util.idx_to_find k col.keys in
+  | Body (c, k) ->
+    let* col = Util.idx_to_find c plate.body in
+    let+ key = Util.idx_to_find k col.keys in
     V3.mul (v3 1. 1. 0.) key.origin
-  | Point p      -> Some p
+  | Point p -> Some p
 
 let default_bumps =
   [ Thumb (Last, First)
@@ -36,14 +35,14 @@ let make
     case
   =
   let screws = Walls.collect_screws case.Case.walls in
-  let screw_config = (List.hd_exn screws).config in
+  let screw_config = (List.hd screws).config in
   let thickness, screw_hole =
     let fastener =
       match fastener with
-      | None          ->
+      | None ->
         ( match screw_config with
         | { hole = Through; _ } -> Eyelet.screw_fastener ()
-        | _                     -> SameMagnet )
+        | _ -> SameMagnet )
       | Some fastener -> fastener
     and magnetize rad h =
       let thickness = Float.max thickness (h +. 0.6) in
@@ -70,14 +69,14 @@ let make
       let h =
         match hole with
         | Eyelet.Inset inset -> inset
-        | _                  -> failwith "Case eyelet expected to be magnet inset."
+        | _ -> failwith "Case eyelet expected to be magnet inset."
       in
       magnetize inner_rad h
     | Magnet { rad; thickness } -> magnetize rad thickness
   and insets =
     let cut = Scad.cylinder ~height:bumpon_inset bumpon_rad in
     List.filter_map
-      ~f:(locate_bump case.plate >> Option.map ~f:(Fn.flip Scad.translate cut))
+      (locate_bump case.plate >> Option.map (Fun.flip Scad.translate cut))
       bump_locs
     |> Scad.union
   in
@@ -87,4 +86,4 @@ let make
   in
   Scad.difference
     plate
-    (insets :: List.map ~f:(fun l -> Scad.translate l.centre screw_hole) screws)
+    (insets :: List.map (fun l -> Scad.translate l.Eyelet.centre screw_hole) screws)

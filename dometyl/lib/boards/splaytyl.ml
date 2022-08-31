@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 open! Generator
 
@@ -126,7 +125,7 @@ let bottom ?(chonk = false) case =
      Bottom.make will default to the same magnet used for the case.
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
   let fastener =
-    Option.some_if (not chonk) @@ Eyelet.Magnet { rad = 2.65; thickness = 1.2 }
+    if not chonk then Some (Eyelet.Magnet { rad = 2.65; thickness = 1.2 }) else None
   in
   Bottom.make ?fastener case
 

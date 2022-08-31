@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 open Infix
 
@@ -45,7 +44,7 @@ module Drawer = struct
 
   type t = loc -> Path3.t
 
-  let map ~f (t : t) : t = t >> f
+  let map f (t : t) : t = t >> f
   let translate p t loc = Path3.translate p (t loc)
   let xtrans x t loc = Path3.xtrans x (t loc)
   let ytrans y t loc = Path3.ytrans y (t loc)
@@ -99,7 +98,7 @@ let swing_face key_origin face =
   let dir = Key.Face.direction face in
   let ortho = V3.(normalize (face.points.centre -@ key_origin)) in
   let about, z_sign =
-    if Float.(V3.get_z ortho > 0.)
+    if V3.get_z ortho > 0.
     then V3.mid face.points.bot_left face.points.bot_right, 1.
     else V3.mid face.points.top_left face.points.top_right, -1.
   in
@@ -151,7 +150,7 @@ let poly_siding
     let step = 1. /. Float.of_int fn
     and ez = Easing.make (v2 0.42 0.) (v2 1. 1.) in
     let f i = Affine3.of_quaternion @@ s (ez (Float.of_int i *. step)) in
-    List.init (fn + 1) ~f
+    List.init (fn + 1) f
   and centred =
     Path3.translate (V3.neg @@ cleared_face.points.centre) cleared_face.path
   in
@@ -164,7 +163,7 @@ let poly_siding
       and ez =
         match scale_ez with
         | Some (a, b) -> Easing.make a b
-        | None -> Fn.id
+        | None -> Fun.id
       in
       let factor i = V2.lerp (v2 1. 1.) s (ez (Float.of_int i *. step)) in
       fun i pt ->
@@ -182,36 +181,35 @@ let poly_siding
     | None ->
       let trans =
         Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz 0.))
-        |> List.last_exn
-        |> Affine3.compose (List.last_exn counter)
+        |> Util.last
+        |> Affine3.compose (Util.last counter)
       in
-      let last_shape = Path3.affine trans (List.map ~f:(scaler fn) centred) in
+      let last_shape = Path3.affine trans (List.map (scaler fn) centred) in
       let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.001 in
       Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
-      |> List.map2_exn ~f:(fun c m -> Affine3.(c %> m)) counter
+      |> List.map2 (fun c m -> Affine3.(c %> m)) counter
   in
   let scad =
     let rows =
       List.mapi
-        ~f:(fun i m -> List.map ~f:(fun p -> V3.affine m (scaler i p)) centred)
+        (fun i m -> List.map (fun p -> V3.affine m (scaler i p)) centred)
         transforms
     and clearing =
       Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; cleared_face.path ]
     in
     let final =
-      let s = List.last_exn rows in
-      let flat = List.map ~f:(fun { x; y; z = _ } -> v3 x y 0.) s in
+      let s = Util.last rows in
+      let flat = List.map (fun { x; y; z = _ } -> v3 x y 0.) s in
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in
-    Mesh.of_rows (List.concat [ clearing; List.tl_exn rows; List.tl_exn final ])
-    |> Mesh.to_scad
+    Mesh.of_rows (List.concat [ clearing; List.tl rows; List.tl final ]) |> Mesh.to_scad
   and foot =
-    let m = List.last_exn transforms in
+    let m = Util.last transforms in
     let f p =
       let { x; y; z = _ } = V3.(affine m (scaler fn (p -@ cleared_face.points.centre))) in
       v3 x y 0.
     in
-    Points.map ~f cleared_face.points
+    Points.map f cleared_face.points
   and drawer pt =
     let p0, p1 =
       let f x y =
@@ -237,10 +235,10 @@ let poly_siding
     let c1 = V3.sub p1 cleared_face.points.centre in
     let trans = List.rev transforms
     and f i m = V3.affine m (scaler i c1) in
-    let path =
-      List.foldi
-        ~f:(fun i acc m -> f (fn - i) m :: acc)
-        ~init:[ V3.(f fn (List.hd_exn trans) *@ v3 1. 1. 0.) ]
+    let _, path =
+      List.fold_left
+        (fun (i, acc) m -> i + 1, f (fn - i) m :: acc)
+        (0, [ V3.(f fn (List.hd trans) *@ v3 1. 1. 0.) ])
         trans
     in
     p0 :: path
@@ -260,7 +258,7 @@ let poly_siding
       Some (make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right))
     | None -> None
   in
-  { scad = Option.value_map ~default:scad ~f:(fun s -> Eyelet.apply s scad) screw
+  { scad = Util.value_map_opt ~default:scad (fun s -> Eyelet.apply s scad) screw
   ; start = start_face.points
   ; cleared = cleared_face.points
   ; foot
@@ -289,28 +287,28 @@ let column_drop
     idx
   =
   let key, face, hanging =
-    let c : Column.t = Map.find_exn columns idx in
+    let c : Column.t = IMap.find idx columns in
     match side with
     | `North ->
-      let key = snd @@ Map.max_elt_exn c.keys in
+      let key = snd @@ IMap.max_binding c.keys in
       let edge_y = V3.get_y key.faces.north.points.centre in
-      key, key.faces.north, Float.(( <= ) edge_y)
+      key, key.faces.north, ( <= ) edge_y
     | `South ->
-      let key = Map.find_exn c.keys 0 in
+      let key = IMap.find 0 c.keys in
       let edge_y = V3.get_y key.faces.south.points.centre in
-      key, key.faces.south, Float.(( >= ) edge_y)
+      key, key.faces.south, ( >= ) edge_y
   in
   let x_dodge =
-    match Map.find columns (idx + 1) with
+    match IMap.find_opt (idx + 1) columns with
     | Some next_c ->
       let right_x = V3.get_x face.points.top_right
-      and next_face = Key.Faces.face (snd @@ Map.max_elt_exn next_c.keys).faces side in
+      and next_face = Key.Faces.face (snd @@ IMap.max_binding next_c.keys).faces side in
       let diff =
         if hanging (V3.get_y next_face.points.centre)
         then right_x -. V3.get_x next_face.points.bot_left
         else -.spacing
       in
-      if Float.(diff > 0.) then diff +. spacing else Float.max 0. (spacing +. diff)
+      if diff > 0. then diff +. spacing else Float.max 0. (spacing +. diff)
     | _ -> 0.
   in
   poly_siding

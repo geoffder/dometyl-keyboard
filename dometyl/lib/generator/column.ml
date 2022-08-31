@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 
 module Join = struct
@@ -32,10 +31,10 @@ type config =
 type t =
   { config : config [@scad.ignore]
   ; scad : Scad.d3
-  ; keys : Key.t Map.M(Int).t
-  ; joins : Join.t Map.M(Int).t
+  ; keys : Key.t IMap.t
+  ; joins : Join.t IMap.t
   }
-[@@deriving scad_jane]
+[@@deriving scad]
 
 let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
@@ -47,7 +46,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       in
       Option.some @@ Scad.translate p (caps i)
     in
-    Map.add_exn ~key:i ~data:(curve i { key with cap }) keys
+    IMap.add i (curve i { key with cap }) keys
   in
   let get_start, get_dest =
     let get s key = Key.Faces.face key.Key.faces s in
@@ -63,13 +62,11 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       (List.rev (get_dest b).path)
     |> Mesh.to_scad
   in
-  let keys =
-    List.fold (List.range 0 n_keys) ~init:(Map.empty (module Int)) ~f:place_key
-  in
+  let keys = List.fold_left place_key IMap.empty (List.init n_keys Fun.id) in
   let joins =
-    let f ~key ~data:k1 m =
-      match Map.find keys (key + 1) with
-      | None    -> m
+    let f key k1 m =
+      match IMap.find_opt (key + 1) keys with
+      | None -> m
       | Some k2 ->
         let open V3 in
         let face1 = get_start k1
@@ -78,40 +75,44 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
         and dir1 = Key.Face.direction face1
         and dir2 = Key.Face.direction face2 in
         let west =
-          Util.prism_exn
-            [ face1.points.top_left
-            ; face1.points.bot_left
-            ; face2.points.bot_right
-            ; face2.points.top_right
+          Mesh.of_rows
+            [ [ face1.points.top_left
+              ; face1.points.bot_left
+              ; face2.points.bot_right
+              ; face2.points.top_right
+              ]
+            ; [ face1.points.top_left +@ (dir1 *$ -0.01)
+              ; face1.points.bot_left +@ (dir1 *$ -0.01)
+              ; face2.points.bot_right +@ (dir2 *$ 0.01)
+              ; face2.points.top_right +@ (dir2 *$ 0.01)
+              ]
             ]
-            [ face1.points.top_left +@ (dir1 *$ -0.01)
-            ; face1.points.bot_left +@ (dir1 *$ -0.01)
-            ; face2.points.bot_right +@ (dir2 *$ 0.01)
-            ; face2.points.top_right +@ (dir2 *$ 0.01)
-            ]
+          |> Mesh.to_scad
         and east =
-          Util.prism_exn
-            [ face1.points.top_right
-            ; face1.points.bot_right
-            ; face2.points.bot_left
-            ; face2.points.top_left
+          Mesh.of_rows
+            [ [ face1.points.top_right
+              ; face1.points.bot_right
+              ; face2.points.bot_left
+              ; face2.points.top_left
+              ]
+            ; [ face1.points.top_right +@ (dir1 *$ 0.01)
+              ; face1.points.bot_right +@ (dir1 *$ 0.01)
+              ; face2.points.bot_left +@ (dir2 *$ -0.01)
+              ; face2.points.top_left +@ (dir2 *$ -0.01)
+              ]
             ]
-            [ face1.points.top_right +@ (dir1 *$ 0.01)
-            ; face1.points.bot_right +@ (dir1 *$ 0.01)
-            ; face2.points.bot_left +@ (dir2 *$ -0.01)
-            ; face2.points.top_left +@ (dir2 *$ -0.01)
-            ]
+          |> Mesh.to_scad
         in
-        Map.add_exn m ~key ~data:Join.{ scad; faces = { west; east } }
+        IMap.add key Join.{ scad; faces = { west; east } } m
     in
-    Map.fold ~f ~init:(Map.empty (module Int)) keys
+    IMap.fold f keys IMap.empty
   in
   let scad =
     Scad.union
-      (Map.fold
-         ~f:(fun ~key:_ ~data l -> data.scad :: l)
-         ~init:(Map.fold ~f:(fun ~key:_ ~data acc -> data.scad :: acc) ~init:[] joins)
-         keys )
+      (IMap.fold
+         (fun _key data l -> data.Key.scad :: l)
+         keys
+         (IMap.fold (fun _key data acc -> data.Join.scad :: acc) joins []) )
   in
   { config = { key; n_keys; curve }; scad; keys; joins }
 

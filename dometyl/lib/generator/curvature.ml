@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 open! Infix
 
@@ -45,7 +44,7 @@ let place ?well ?fan ~centre_idx i key =
     |> Key.rotate ~about:(well_point spec) r
   | None, Some spec ->
     Key.yrot spec.tilt key |> Key.rotate ~about:(fan_point spec) (fan_theta' spec i)
-  | Some w, Some f  ->
+  | Some w, Some f ->
     let welled =
       let r = well_theta' w i in
       Key.rotate (v3 0. w.tilt (V3.get_x r *. w.tilt /. -2.)) key
@@ -54,7 +53,7 @@ let place ?well ?fan ~centre_idx i key =
     Key.ytrans (welled.origin.y *. -1.) welled
     |> Key.yrot f.tilt
     |> Key.rotate ~about:(fan_point f) (fan_theta' f i)
-  | None, None      -> key
+  | None, None -> key
 
 let apply ~centre_idx t =
   match t with

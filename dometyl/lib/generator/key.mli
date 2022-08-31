@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 module Face : sig
@@ -25,8 +24,8 @@ module Faces : sig
     }
   [@@deriving scad]
 
-  val map : f:(Face.t -> Face.t) -> t -> t
-  val fold : f:('k -> Face.t -> 'k) -> init:'k -> t -> 'k
+  val map : (Face.t -> Face.t) -> t -> t
+  val fold : ('k -> Face.t -> 'k) -> 'k -> t -> 'k
   val face : t -> [< `East | `North | `South | `West ] -> Face.t
 end
 

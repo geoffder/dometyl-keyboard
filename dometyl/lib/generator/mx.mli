@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 val kailh_socket : Scad.d3

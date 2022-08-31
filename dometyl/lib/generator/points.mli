@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 type t =
@@ -18,8 +17,8 @@ type pos =
   | `TR
   ]
 
-val map : f:(V3.t -> V3.t) -> t -> t
-val fold : f:('a -> V3.t -> 'a) -> init:'a -> t -> 'a
+val map : (V3.t -> V3.t) -> t -> t
+val fold : ('a -> V3.t -> 'a) -> 'a -> t -> 'a
 val to_cw_path : t -> Path3.t
 val to_ccw_path : t -> Path3.t
 val of_cw_path_exn : Path3.t -> t

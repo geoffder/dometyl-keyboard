@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 type cutter = ?z:float -> float -> Scad.d3
@@ -15,7 +14,8 @@ module ThroughHole = struct
       ?(body_w = 4.)
       ?(body_l = 3.)
       ?(body_thickness = 1.5)
-      () =
+      ()
+    =
     let bent_leg =
       let start =
         Scad.cube ~center:true (v3 leg_w leg_bend leg_thickness)
@@ -32,7 +32,8 @@ module ThroughHole = struct
     in
     let legs =
       let side_offset = leg_spacing +. (leg_w /. 2.) in
-      if not merge_legs then
+      if not merge_legs
+      then
         Scad.union
           [ bent_leg
           ; Scad.translate (v3 (-.side_offset) 0. 0.) bent_leg
@@ -51,7 +52,8 @@ module ThroughHole = struct
       ?(slot_l = 0.85)
       ()
       ?(z = 0.)
-      depth =
+      depth
+    =
     let body = Scad.cube ~center:true (v3 body_w (body_l +. 0.001) depth)
     and legs =
       Scad.cube ~center:true (v3 legs_w legs_l (depth -. legs_z_offset))
@@ -73,7 +75,8 @@ module ThroughHole = struct
       ?(slot_l = 0.85)
       ()
       ?(z = 0.)
-      depth =
+      depth
+    =
     let body = Scad.cube ~center:true (v3 body_w (body_l +. 0.001) depth)
     and legs =
       let thickness = depth -. legs_z_offset in

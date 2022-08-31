@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 module Join : sig
@@ -32,8 +31,8 @@ type config =
 type t =
   { config : config
   ; scad : Scad.d3
-  ; keys : Key.t Map.M(Int).t
-  ; joins : Join.t Map.M(Int).t
+  ; keys : Key.t IMap.t
+  ; joins : Join.t IMap.t
   }
 [@@deriving scad]
 

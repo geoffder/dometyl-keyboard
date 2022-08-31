@@ -1,7 +1,7 @@
 (executable
  (public_name dometyl)
  (name main)
- (libraries generator boards stdio))
+ (libraries generator boards))
 
 ; intended for use with `dune build -w @run`
 ; to automate generation on file save

@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 open Infix
 
@@ -114,15 +113,15 @@ let make
     let space = keyhole.config.outer_w +. spacing in
     let f (lookups : Lookups.t) m i =
       let data = V3.xtrans (space *. Float.of_int i) (lookups.offset i) in
-      Map.add_exn ~key:i ~data m
-    and init = Map.empty (module Int) in
-    ( List.fold ~f:(f body_lookups) ~init (List.range 0 n_body_cols)
-    , List.fold ~f:(f thumb_lookups) ~init (List.range 0 n_thumb_cols) )
+      IMap.add i data m
+    and init = IMap.empty in
+    ( Seq.fold_left (f body_lookups) init (Seq.init n_body_cols Fun.id)
+    , Seq.fold_left (f thumb_lookups) init (Seq.init n_thumb_cols Fun.id) )
   in
-  let centre_offset = Map.find_exn body_offsets centre_col in
+  let centre_offset = IMap.find centre_col body_offsets in
   let body, thumb =
     let body_cols =
-      let f ~key:i ~data:off =
+      let f i off =
         let tented =
           Column.(
             yrot
@@ -131,14 +130,14 @@ let make
               (curve_column ~join_ax:`NS ~caps body_lookups i keyhole))
         in
         Column.rotate
-          ~about:(Map.find_exn tented.keys (Int.of_float @@ body_lookups.centre i)).origin
+          ~about:(IMap.find (Int.of_float @@ body_lookups.centre i) tented.keys).origin
           (v3 0. (body_lookups.swing i) (body_lookups.splay i))
           tented
         |> Column.translate off
       in
-      Map.mapi ~f body_offsets
+      IMap.mapi f body_offsets
     and thumb =
-      let place ~key:i ~data:off =
+      let place i off =
         let caps, keyhole =
           if rotate_thumb_clips
           then caps >> Scad.zrot (Float.pi /. 2.), Key.zrot (Float.pi /. 2.) keyhole
@@ -155,41 +154,32 @@ let make
         |> Column.translate off
       in
       let placed =
-        Map.mapi ~f:place thumb_offsets
+        IMap.mapi place thumb_offsets
         (* orient along x-axis *)
         |> Columns.zrot (Float.pi /. -2.)
         |> Columns.rotate thumb_angle
         |> Columns.translate thumb_offset
       in
       let origin =
-        let col = Map.find_exn placed 0 in
-        (Map.find_exn col.keys (Int.of_float @@ thumb_lookups.centre 0)).origin
+        let col = IMap.find 0 placed in
+        (IMap.find (Int.of_float @@ thumb_lookups.centre 0) col.keys).origin
       in
       Columns.(yrot ~about:V3.(centre_offset -@ origin) tent placed)
     in
     let lift =
       let lowest_z =
         let face_low ({ points = ps; _ } : Key.Face.t) =
-          Points.fold ~f:(fun m p -> Float.min m (V3.get_z p)) ~init:Float.max_value ps
+          Points.fold (fun m p -> Float.min m (V3.get_z p)) Float.max_float ps
         in
         let key_low ({ faces = fs; _ } : Key.t) =
-          Key.Faces.fold
-            ~f:(fun m face -> Float.min m (face_low face))
-            ~init:Float.max_value
-            fs
+          Key.Faces.fold (fun m face -> Float.min m (face_low face)) Float.max_float fs
         in
         let col_low ({ keys = ks; _ } : Column.t) =
-          Map.fold
-            ~f:(fun ~key:_ ~data m -> Float.min m (key_low data))
-            ~init:Float.max_value
-            ks
+          IMap.fold (fun _key data m -> Float.min m (key_low data)) ks Float.max_float
         in
-        Map.fold
-          ~f:(fun ~key:_ ~data m -> Float.min m (col_low data))
-          ~init:Float.max_value
-          body_cols
+        IMap.fold (fun _ data m -> Float.min m (col_low data)) body_cols Float.max_float
       in
-      Map.map ~f:(Column.translate (v3 0. 0. (keyhole.config.clearance -. lowest_z)))
+      IMap.map (Column.translate (v3 0. 0. (keyhole.config.clearance -. lowest_z)))
     in
     lift body_cols, lift thumb
   in
@@ -213,12 +203,12 @@ let make
 
 let join_thumb ?in_d ?out_d1 ?out_d2 thumb =
   let join = Bridge.cols ~ax:`NS ?in_d ?out_d1 ?out_d2 ~columns:thumb in
-  Scad.union3 (List.init ~f:(fun i -> join i (i + 1)) (Map.length thumb - 1))
+  Scad.union3 (List.init (IMap.cardinal thumb - 1) (fun i -> join i (i + 1)))
 
 let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_body_cols; _ }; body; thumb; _ } =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns:body in
   Scad.union
-    [ Scad.union (List.init ~f:(fun i -> join i (i + 1)) (n_body_cols - 1))
+    [ Scad.union (List.init (n_body_cols - 1) (fun i -> join i (i + 1)))
     ; join_thumb ?in_d ?out_d1 ?out_d2 thumb
     ]
 
@@ -232,39 +222,33 @@ let skeleton_bridges
     let r = if first then fun _ -> 0 else fun i -> n_body_rows i - 1 in
     match Columns.key body c (r c) with
     | Some ({ origin = o1; _ } as k1) ->
-      let%bind.Option next_col = Map.find body (c + 1) in
-      let f ~key:_ ~data:(Key.{ origin = o2; _ } as k2) (m, closest) =
+      let* next_col = IMap.find_opt (c + 1) body in
+      let f _ (Key.{ origin = o2; _ } as k2) (m, closest) =
         let dist = V3.distance o1 o2 in
-        if Float.(dist < m) then dist, Some k2 else m, closest
+        if dist < m then dist, Some k2 else m, closest
       in
-      let _, k2 = Map.fold ~init:(Float.max_value, None) ~f next_col.keys in
-      Option.map ~f:(Bridge.keys ?in_d ?out_d1 ?out_d2 k1) k2
+      let _, k2 = IMap.fold f next_col.keys (Float.max_float, None) in
+      Option.map (Bridge.keys ?in_d ?out_d1 ?out_d2 k1) k2
     | None -> None
   in
-  ignore thumb;
+  let f i acc = Util.prepend_opt (bridge i (i < 2)) acc in
   Scad.union
-    [ List.init ~f:(fun i -> bridge i (i < 2)) (n_body_cols - 1)
-      |> List.filter_opt
-      |> Scad.union
+    [ Scad.union (Util.fold_init (n_body_cols - 1) f [])
     ; join_thumb ?in_d ?out_d1 ?out_d2 thumb
     ]
 
 let to_scad t = t.scad
 
-let collect ~f t =
-  let col_fold =
-    Map.fold ~f:(fun ~key:_ ~data acc -> Map.fold ~init:acc ~f data.Column.keys)
-  in
-  Scad.union3 @@ col_fold ~init:(col_fold ~init:[] t.body) t.thumb
+let collect f t =
+  let col_fold = IMap.fold (fun _ data acc -> IMap.fold f data.Column.keys acc) in
+  Scad.union3 @@ col_fold t.thumb (col_fold t.body [])
 
 let collect_caps t =
   collect
-    ~f:(fun ~key:_ ~data acc ->
-      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.Key.cap )
+    (fun _ data acc -> Util.value_map_opt ~default:acc (fun c -> c :: acc) data.Key.cap)
     t
 
 let collect_cutouts t =
   collect
-    ~f:(fun ~key:_ ~data acc ->
-      Option.value_map ~default:acc ~f:(fun c -> c :: acc) data.Key.cutout )
+    (fun _ data acc -> Util.value_map_opt ~default:acc (fun c -> c :: acc) data.Key.cutout)
     t

@@ -4,7 +4,6 @@
 - The {!Walls.t} from columns/thumb cluster to the ground
 - The connections between the separate walls provided by {!module:Connect} *)
 
-open! Base
 open! Scad_ml
 
 (** The top-level type of this library. The {!Scad.d3} scad held within this type

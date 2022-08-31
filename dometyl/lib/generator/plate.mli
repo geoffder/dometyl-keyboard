@@ -1,6 +1,5 @@
 (** Switch plate generation. *)
 
-open! Base
 open! Scad_ml
 
 (** Provides per-column lookup functions to be used by {!val:make} for placement of
@@ -162,11 +161,11 @@ val skeleton_bridges : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> t -> Sca
     Extracts the {!Scad.d3} from [t]. *)
 val to_scad : t -> Scad.d3
 
-(** [collect ~f t]
+(** [collect f t]
 
     Fold over all {!Key.t}s contained within [t], extracting {!Scad.d3}s with [f], and
     unioning them. Used for {!val:collect_caps} and {!val:collect_cutouts}. *)
-val collect : f:(key:int -> data:Key.t -> Scad.d3 list -> Scad.d3 list) -> t -> Scad.d3
+val collect : (int -> Key.t -> Scad.d3 list -> Scad.d3 list) -> t -> Scad.d3
 
 (** [collect_caps t]
 

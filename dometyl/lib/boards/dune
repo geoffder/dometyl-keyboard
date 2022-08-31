@@ -1,5 +1,4 @@
 (library
  (name boards)
  (public_name dometyl.boards)
- (libraries generator scad_ml base stdio)
- (preprocess (pps ppx_jane)))
+ (libraries generator scad_ml))

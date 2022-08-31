@@ -1,5 +1,5 @@
-open! Base
 open! Scad_ml
+open! Infix
 
 type presence =
   | No
@@ -7,7 +7,7 @@ type presence =
   | Eye
 
 module Side = struct
-  type t = (Wall.t Map.M(Int).t[@scad.d3]) [@@deriving scad_jane]
+  type t = (Wall.t IMap.t[@scad.d3]) [@@deriving scad]
   type config = int -> Wall.config option
 end
 
@@ -22,54 +22,54 @@ module Sides = struct
 
   let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : Columns.t) =
     { west =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            Option.map ~f:(fun c -> Wall.poly_of_config c `West data) (west key) )
-          (Map.find_exn columns 0).keys
+        IMap.filter_mapi
+          (fun key data ->
+            Option.map (fun c -> Wall.poly_of_config c `West data) (west key) )
+          (IMap.find 0 columns).keys
     ; north =
-        Map.filter_mapi
-          ~f:(fun ~key ~data:_ ->
+        IMap.filter_mapi
+          (fun key _ ->
             Option.map
-              ~f:(fun c -> Wall.drop_of_config ~spacing ~columns c `North key)
+              (fun c -> Wall.drop_of_config ~spacing ~columns c `North key)
               (north key) )
           columns
     ; east =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            Option.map ~f:(fun c -> Wall.poly_of_config c `East data) (east key) )
-          (snd @@ Map.max_elt_exn columns).keys
+        IMap.filter_mapi
+          (fun key data ->
+            Option.map (fun c -> Wall.poly_of_config c `East data) (east key) )
+          (snd @@ IMap.max_binding columns).keys
     ; south =
-        Map.filter_mapi
-          ~f:(fun ~key ~data:_ ->
+        IMap.filter_mapi
+          (fun key _data ->
             Option.map
-              ~f:(fun c -> Wall.drop_of_config ~spacing ~columns c `South key)
+              (fun c -> Wall.drop_of_config ~spacing ~columns c `South key)
               (south key) )
           columns
     }
 
   let manual_thumb ~west ~north ~east ~south (columns : Columns.t) =
     { west =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            let%bind.Option _, k = Map.min_elt data.keys in
-            Option.map ~f:(fun c -> Wall.poly_of_config c `West k) (west key) )
+        IMap.filter_mapi
+          (fun key data ->
+            let* _, k = IMap.min_binding_opt data.Column.keys in
+            Option.map (fun c -> Wall.poly_of_config c `West k) (west key) )
           columns
     ; north =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            Option.map ~f:(fun c -> Wall.poly_of_config c `North data) (north key) )
-          (snd @@ Map.min_elt_exn columns).keys
+        IMap.filter_mapi
+          (fun key data ->
+            Option.map (fun c -> Wall.poly_of_config c `North data) (north key) )
+          (snd @@ IMap.min_binding columns).keys
     ; east =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            let%bind.Option k = Map.find data.keys 0 in
-            Option.map ~f:(fun c -> Wall.poly_of_config c `East k) (east key) )
+        IMap.filter_mapi
+          (fun key data ->
+            let* k = IMap.find_opt 0 data.Column.keys in
+            Option.map (fun c -> Wall.poly_of_config c `East k) (east key) )
           columns
     ; south =
-        Map.filter_mapi
-          ~f:(fun ~key ~data ->
-            Option.map ~f:(fun c -> Wall.poly_of_config c `South data) (south key) )
-          (snd @@ Map.max_elt_exn columns).keys
+        IMap.filter_mapi
+          (fun key data ->
+            Option.map (fun c -> Wall.poly_of_config c `South data) (south key) )
+          (snd @@ IMap.max_binding columns).keys
     }
 
   let auto
@@ -96,9 +96,8 @@ module Sides = struct
       (columns : Columns.t)
     =
     let present m i conf = function
-      | Yes -> Map.add_exn m ~key:i ~data:conf
-      | Eye ->
-        Map.add_exn m ~key:i ~data:Wall.{ conf with eyelet_config = Some eyelet_config }
+      | Yes -> IMap.add i conf m
+      | Eye -> IMap.add i Wall.{ conf with eyelet_config = Some eyelet_config } m
       | No -> m
     and conf =
       Wall.
@@ -110,23 +109,23 @@ module Sides = struct
         ; scale_ez
         ; eyelet_config = None
         }
-    and init = Map.empty (module Int) in
+    and init = IMap.empty in
     let west =
-      Map.find
-      @@ List.fold
-           ~init
-           ~f:(fun m i -> present m i conf (west_lookup i))
-           (if thumb then Map.keys columns else Map.keys (Map.find_exn columns 0).keys)
+      Fun.flip IMap.find_opt
+      @@ Seq.fold_left
+           (fun m i -> present m i conf (west_lookup i))
+           init
+           (if thumb then IMap.keys columns else IMap.keys (IMap.find 0 columns).keys)
     and east =
-      Map.find
-      @@ List.fold
-           ~init
-           ~f:(fun m i -> present m i conf (east_lookup i))
+      Fun.flip IMap.find_opt
+      @@ Seq.fold_left
+           (fun m i -> present m i conf (east_lookup i))
+           init
            ( if thumb
-           then Map.keys columns
-           else Map.keys (snd @@ Map.min_elt_exn columns).keys )
+           then IMap.keys columns
+           else IMap.keys (snd @@ IMap.min_binding columns).keys )
     and north =
-      let index = Option.first_some index_scale s in
+      let index = Util.first_some index_scale s in
       let f m i =
         present
           m
@@ -134,32 +133,32 @@ module Sides = struct
           { conf with clearance = north_clearance; scale = (if i < 2 then index else s) }
           (north_lookup i)
       in
-      Map.find
-      @@ List.fold
-           ~init
-           ~f
+      Fun.flip IMap.find_opt
+      @@ Seq.fold_left
+           f
+           init
            ( if thumb
-           then Map.keys (snd @@ Map.min_elt_exn columns).keys
-           else Map.keys columns )
+           then IMap.keys (snd @@ IMap.min_binding columns).keys
+           else IMap.keys columns )
     and south =
-      Map.find
-      @@ List.fold
-           ~init
-           ~f:(fun m i ->
+      Fun.flip IMap.find_opt
+      @@ Seq.fold_left
+           (fun m i ->
              present m i { conf with clearance = south_clearance } (south_lookup i) )
+           init
            ( if thumb
-           then Map.keys (snd @@ Map.max_elt_exn columns).keys
-           else Map.keys columns )
+           then IMap.keys (snd @@ IMap.max_binding columns).keys
+           else IMap.keys columns )
     in
     if thumb
     then manual_thumb ~west ~north ~east ~south columns
     else manual_body ~west ~north ~east ~south ~spacing columns
 
-  let fold ~init ~f (t : t) =
-    let init = Map.fold ~init ~f t.west in
-    let init = Map.fold ~init ~f t.north in
-    let init = Map.fold ~init ~f t.east in
-    Map.fold ~init ~f t.south
+  let fold f init (t : t) =
+    let init = IMap.fold f t.west init in
+    let init = IMap.fold f t.north init in
+    let init = IMap.fold f t.east init in
+    IMap.fold f t.south init
 
   let get t = function
     | `N -> t.north
@@ -168,14 +167,12 @@ module Sides = struct
     | `W -> t.west
 
   let to_scad t =
-    let f ~key:_ ~data l = Wall.to_scad data :: l in
-    Scad.union3 (fold ~init:[] ~f t)
+    let f _key data l = Wall.to_scad data :: l in
+    Scad.union3 (fold f [] t)
 
   let collect_screws ?(init = []) (t : t) =
-    let f ~key:_ ~data l =
-      Option.value_map ~default:l ~f:(fun s -> s :: l) data.Wall.screw
-    in
-    fold ~init ~f t
+    let f _key data l = Util.value_map_opt ~default:l (fun s -> s :: l) data.Wall.screw in
+    fold f init t
 end
 
 let auto_body

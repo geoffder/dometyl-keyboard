@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 
 type t = Scad.d3
@@ -44,24 +43,24 @@ let keys
     Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
   and face1 = Key.Faces.face k1.faces start
   and face2 = Key.Faces.face k2.faces dest in
-  if Float.(V3.get_z face1.points.centre > V3.get_z face2.points.centre)
+  if V3.get_z face1.points.centre > V3.get_z face2.points.centre
   then aux (start, k1) (dest, k2)
   else aux (dest, k2) (start, k1)
 
 let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
-  let a : Column.t = Map.find_exn columns a_i
-  and b = Map.find_exn columns b_i
-  and bookends keys join_idx = Map.find_exn keys join_idx, Map.find_exn keys (join_idx + 1)
+  let a : Column.t = IMap.find a_i columns
+  and b : Column.t = IMap.find b_i columns
+  and bookends keys join_idx = IMap.find join_idx keys, IMap.find (join_idx + 1) keys
   and start, dest =
     match ax with
     | `EW -> `East, `West
     | `NS -> `South, `North
   in
-  let key_folder ~key:_ ~data hulls =
+  let key_folder _key data hulls =
     match data with
     | `Both (a', b') -> keys ~start ~dest ~in_d ?out_d1 ?out_d2 a' b' :: hulls
-    | _              -> hulls
-  and join_folder ~key ~data hulls =
+    | _ -> hulls
+  and join_folder key data hulls =
     let huller ~low_west (out_last, out_next, out_join) (in_last, in_next, in_join) =
       let mean_ortho side last next =
         V3.(normalize (Key.orthogonal last side +@ Key.orthogonal next side))
@@ -106,14 +105,10 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
                  ; (face e_next.faces dest).points.centre
                  ])
       in
-      if Float.(w_z > e_z)
+      if w_z > e_z
       then huller ~low_west:false e_set w_set :: hulls
       else huller ~low_west:true w_set e_set :: hulls
     | _ -> hulls
   in
   Scad.union
-    (Map.fold2
-       ~f:key_folder
-       ~init:(Map.fold2 ~f:join_folder ~init:[] a.joins b.joins)
-       a.keys
-       b.keys )
+    (IMap.fold2 key_folder (IMap.fold2 join_folder [] a.joins b.joins) a.keys b.keys)

@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 (** Used for lookups, indicating whether to place a wall at a particular position on the
@@ -11,7 +10,7 @@ type presence =
 module Side : sig
   (** Maps from index/position to {!Wall.t}, representing a side of the body or thumb of a
       plate. *)
-  type t = (Wall.t Map.M(Int).t[@scad.d3]) [@@deriving scad]
+  type t = (Wall.t IMap.t[@scad.d3]) [@@deriving scad]
 
   (** A function taking a index/position along a side of the body or thumb of a plate, and
       returning some {!Wall.config} if there should be a {!Wall.t} made at that location,

@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 type bump_loc =
@@ -6,7 +5,7 @@ type bump_loc =
   | Thumb of Util.idx * [ `N | `E | `S | `W ]
 
 let find_bump_wall (walls : Walls.t) = function
-  | Body (i, side)  -> Util.idx_to_find i @@ Walls.Sides.get walls.body side
+  | Body (i, side) -> Util.idx_to_find i @@ Walls.Sides.get walls.body side
   | Thumb (i, side) -> Util.idx_to_find i @@ Walls.Sides.get walls.thumb side
 
 let default_bumps =
@@ -21,7 +20,7 @@ let default_bumps =
 
 let bumpon ?(fn = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   let Points.{ top_left; top_right; bot_left; bot_right; centre } =
-    Points.map ~f:(V3.mul (v3 1. 1. 0.)) foot
+    Points.map (V3.mul (v3 1. 1. 0.)) foot
   in
   let normal = V2.(normalize @@ of_v3 V3.(centre -@ mid top_left top_right)) in
   let base_centre = V3.(to_v2 @@ mid top_left top_right)
@@ -68,9 +67,8 @@ let make
          (Int.of_float @@ case.plate.config.body_centres n) )
         .origin
     in
-    if Float.(
-         V3.(norm (pinky_home -@ v3 bb_right 0. 0.))
-         < V3.(norm (pinky_home -@ v3 bb_left 0. 0.)))
+    if V3.(norm (pinky_home -@ v3 bb_right 0. 0.))
+       < V3.(norm (pinky_home -@ v3 bb_left 0. 0.))
     then bb_left, bb_right, 1.
     else bb_right, bb_left, -1.
   and screws = Walls.collect_screws case.Case.walls
@@ -79,20 +77,20 @@ let make
       (Scad.polygon (Connect.outline_2d case.connections))
       [ Scad.polygon (Connect.inline_2d case.connections) ]
   in
-  let eyelet_config = (List.hd_exn screws).config in
+  let eyelet_config = (List.hd screws).config in
   let fastener =
     match fastener with
-    | None          ->
+    | None ->
       ( match eyelet_config with
       | { hole = Through; _ } -> Eyelet.screw_fastener ()
-      | _                     -> SameMagnet )
+      | _ -> SameMagnet )
     | Some fastener -> fastener
-  and rot = v3 0. (-1. *. Util.deg_to_rad degrees *. rot_sign) 0.
+  and rot = v3 0. (-1. *. Math.rad_of_deg degrees *. rot_sign) 0.
   and about = v3 (-.bb_pinky) 0. 0. in
   let filled_top =
     let eyelets =
       List.map
-        ~f:(fun Eyelet.{ centre; config = { inner_rad; hole; _ }; scad; _ } ->
+        (fun Eyelet.{ centre; config = { inner_rad; hole; _ }; scad; _ } ->
           let proj = Scad.projection scad in
           match hole with
           | Inset _ -> proj
@@ -120,7 +118,7 @@ let make
       let head_disc = Scad.circle head_rad in
       let hole =
         match sink with
-        | Counter   ->
+        | Counter ->
           let s = shaft_rad /. head_rad in
           Scad.linear_extrude ~height ~scale:(v2 s s) head_disc
         | Pan inset ->
@@ -133,9 +131,7 @@ let make
           Scad.linear_extrude ~height:clearance head_disc
           |> Scad.translate (v3 0. 0. (-.clearance))
         in
-        List.map
-          ~f:(fun Eyelet.{ centre; _ } -> trans @@ Scad.translate centre cyl)
-          screws
+        List.map (fun Eyelet.{ centre; _ } -> trans @@ Scad.translate centre cyl) screws
       in
       hole, height, clearances
     | SameMagnet ->
@@ -143,7 +139,7 @@ let make
       let h =
         match hole with
         | Eyelet.Inset inset -> inset
-        | _                  -> failwith "Case eyelet expected to be magnet inset."
+        | _ -> failwith "Case eyelet expected to be magnet inset."
       in
       magnetize inner_rad h thickness
     | Magnet { rad; thickness } -> magnetize rad thickness (thickness +. 1.4)
@@ -151,7 +147,7 @@ let make
   let top =
     Scad.difference
       (Scad.linear_extrude ~height:top_height filled_top)
-      (List.map ~f:(fun Eyelet.{ centre; _ } -> Scad.translate centre hole) screws)
+      (List.map (fun Eyelet.{ centre; _ } -> Scad.translate centre hole) screws)
     |> trans
   and shell =
     trans (Scad.linear_extrude ~height:0.001 perimeter)
@@ -178,9 +174,9 @@ let make
             foot
         in
         bump :: bumps, inset :: insets
-      | None                  -> bumps, insets
+      | None -> bumps, insets
     in
-    List.fold ~init:([], clearances) ~f bump_locs
+    List.fold_left f ([], clearances) bump_locs
   in
   Scad.difference
     (Scad.union

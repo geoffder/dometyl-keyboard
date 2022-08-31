@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 type bump_loc =

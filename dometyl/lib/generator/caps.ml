@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 let path n = Printf.sprintf "../things/caps/%s" n

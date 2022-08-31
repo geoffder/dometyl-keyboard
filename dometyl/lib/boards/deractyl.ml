@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 open! Generator
 open! Infix
@@ -17,7 +16,7 @@ let body_lookups =
         | 3 ->
           Key.quaternion_about_origin (Float.pi /. -128.)
           >> Key.translate (v3 (-0.5) (-1.5) 1.6)
-        | _ -> Fn.id
+        | _ -> Fun.id
       in
       Curvature.(
         post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
@@ -27,7 +26,7 @@ let body_lookups =
         | 3 ->
           Key.quaternion_about_origin (Float.pi /. 55.)
           >> Key.translate (v3 (-0.75) (-4.) 4.)
-        | _ -> Fn.id
+        | _ -> Fun.id
       in
       Curvature.(
         post_tweak ~well:(spec ~tilt:(Float.pi /. -4.7) ~radius:44. (Float.pi /. 5.4)) f)

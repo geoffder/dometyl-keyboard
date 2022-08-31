@@ -1,18 +1,17 @@
-open! Base
 open! Scad_ml
 
 (* https://grabcad.com/library/kailh-1350-socket-2 *)
 let kailh_socket =
   Scad.import3 "../things/switches/choc_hotswap_socket.stl"
   |> Scad.translate (v3 7. 0. 0.)
-  |> Scad.rotate (v3 (Float.pi /. 2.) 0. Float.pi)
+  |> Scad.rotate Float.(v3 (pi /. 2.) 0. pi)
   |> Scad.translate (v3 2.0 3.7 (-3.5))
   |> Scad.color ~alpha:0.4 Color.Silver
 
 (* https://grabcad.com/library/kailh-low-profile-mechanical-keyboard-switch-1 *)
 let switch =
   Scad.import3 "../things/switches/kailh_choc.stl"
-  |> Scad.rotate Float.(v3 (pi / 2.) 0. (pi / 2.))
+  |> Scad.rotate Float.(v3 (pi /. 2.) 0. (pi /. 2.))
   |> Scad.translate (v3 0. 0. 0.4)
   |> Scad.color ~alpha:0.5 Color.SkyBlue
 
@@ -40,7 +39,7 @@ module Hotswap = struct
       let poly =
         Scad.polygon
         @@ List.map
-             ~f:(fun (x, y) -> v2 (x *. sign) (y *. sign))
+             (fun (x, y) -> v2 (x *. sign) (y *. sign))
              [ -.edge_x, edge_y
              ; -5., 3.4
              ; 0.64, 3.4
@@ -90,9 +89,9 @@ module Hotswap = struct
       Scad.difference (Scad.square ~center:true (v2 w h)) [ led_cut; holes ]
       |> Scad.linear_extrude ~center:true ~height:holder_thickness
       |> Scad.translate (v3 0. 0. z)
-      |> Fn.flip Scad.difference [ cutout ]
+      |> Fun.flip Scad.difference [ cutout ]
     in
-    ( ( if Float.(shallowness > 0.)
+    ( ( if shallowness > 0.
       then (
         let spacer =
           Scad.difference
@@ -144,7 +143,7 @@ let make_hole
     | None -> clearance, teeth ~inner_w ~thickness, None
   and cap_cutout =
     Option.map
-      ~f:(fun h ->
+      (fun h ->
         Scad.translate
           (v3 0. 0. (2. +. h +. (thickness /. 2.)))
           (Scad.cube ~center:true (v3 18.5 17.5 4.)) )
@@ -154,7 +153,7 @@ let make_hole
     make
       ?render
       ?cap
-      ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
+      ?cutout:(Util.merge_opt (fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
       { outer_w
       ; outer_h
       ; inner_w
@@ -175,7 +174,7 @@ let example_assembly
     ()
   =
   let hole = make_hole ~hotswap:`South ~cap:Caps.MBK.mbk () in
-  let cutout = Option.value_exn hole.cutout in
+  let cutout = Option.get hole.cutout in
   let hole =
     Key.cutout_scad hole
     |> Scad.translate (v3 0. 0. (-2.))
@@ -184,11 +183,9 @@ let example_assembly
     if show_cutout
     then Some (Scad.ztrans (-20.) cutout |> Scad.color Color.DarkGray ~alpha:0.5)
     else None
-  and choc = Option.some_if show_switch switch
-  and socket = Option.some_if show_socket kailh_socket
-  and cap =
-    Option.bind ~f:(fun c -> Option.some_if show_cap (Scad.ztrans (-2.) c)) hole.cap
-  in
+  and choc = Util.some_if show_switch switch
+  and socket = Util.some_if show_socket kailh_socket
+  and cap = Option.bind hole.cap (fun c -> Util.some_if show_cap (Scad.ztrans (-2.) c)) in
   Util.prepend_opt cutout [ hole ]
   |> Util.prepend_opt choc
   |> Util.prepend_opt socket

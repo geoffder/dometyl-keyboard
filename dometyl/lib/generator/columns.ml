@@ -1,10 +1,9 @@
-open! Base
-open! Scad_ml
+open Scad_ml
 
-type t = (Column.t Map.M(Int).t[@scad.mapf] [@scad.d3]) [@@deriving scad]
+type t = (Column.t IMap.t[@scad.d3]) [@@deriving scad]
 
-let key t col key = Option.(Map.find t col >>= fun c -> Map.find c.Column.keys key)
-let key_exn t col key = Map.find_exn (Map.find_exn t col).Column.keys key
+let key t col key =
+  Option.bind (IMap.find_opt col t) (fun c -> IMap.find_opt key c.Column.keys)
 
-let to_scad t =
-  Scad.union3 (Map.fold ~init:[] ~f:(fun ~key:_ ~data l -> Column.to_scad data :: l) t)
+let key_exn t col key = IMap.find key (IMap.find col t).Column.keys
+let to_scad t = Scad.union3 (IMap.fold (fun _key data l -> Column.to_scad data :: l) t [])

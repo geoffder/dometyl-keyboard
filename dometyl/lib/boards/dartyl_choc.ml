@@ -1,6 +1,5 @@
 (* A choc flavored dactyl with 34 keys *)
 
-open! Base
 open! Scad_ml
 open Generator
 

@@ -53,10 +53,7 @@ dependencies](#opam-dependencies) sub-section, followed by copying
 
 ### opam dependencies
 All dependencies are available from the opam package manager including the build
-system [dune](https://github.com/ocaml/dune),
-[base](https://github.com/janestreet/base) and
-[stdio](https://github.com/janestreet/stdio) (standard library replacements)
-from janestreet, and of course
+system [dune](https://github.com/ocaml/dune), and of course
 [Scad_ml](https://github.com/namachan10777/scad-ml) and
 [ppx_deriving_scad](https://github.com/geoffder/ppx_deriving_scad) for the
 modelling. I'd also recommend that you pick up the listed dev tools (which

@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 (** Configuration type for number of steps used to draw the bezier curves that form the
@@ -37,7 +36,7 @@ module Drawer : sig
 
   type t = loc -> Path3.t [@@deriving scad]
 
-  val map : f:(Path3.t -> Path3.t) -> t -> t
+  val map : (Path3.t -> Path3.t) -> t -> t
 end
 
 type config =

@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 module Case = Case
 module Bottom = Bottom
@@ -20,7 +19,6 @@ module Choc = Choc
 module Niz = Niz
 module Caps = Caps
 module Sensor = Sensor
-module Util = Util
 module Infix = Infix
 module Sigs = Sigs
 module Hand = Hand

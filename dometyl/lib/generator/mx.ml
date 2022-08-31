@@ -1,4 +1,3 @@
-open! Base
 open! Scad_ml
 
 (* Taken from here: https://grabcad.com/library/kailh-hotswap-mx-1
@@ -71,9 +70,9 @@ module Hotswap = struct
       Scad.difference holder [ led_cut; holes ]
       |> Scad.linear_extrude ~center:true ~height:holder_thickness
       |> Scad.translate (v3 0. 0. z)
-      |> Fn.flip Scad.difference [ access_cuts; cutout ]
+      |> Fun.flip Scad.difference [ access_cuts; cutout ]
     in
-    ( ( if Float.(shallowness > 0.)
+    ( ( if shallowness > 0.
       then (
         let spacer =
           Scad.difference
@@ -128,7 +127,7 @@ let make_hole
     | None -> clearance, teeth ~inner_h ~thickness, None
   and cap_cutout =
     Option.map
-      ~f:(fun h ->
+      (fun h ->
         Scad.translate
           (v3 0. 0. (2.5 +. h +. (thickness /. 2.)))
           (Scad.cube ~center:true (v3 20. 20. 5.)) )
@@ -138,7 +137,7 @@ let make_hole
     make
       ?render
       ?cap
-      ?cutout:(Option.merge ~f:(fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
+      ?cutout:(Util.merge_opt (fun a b -> Scad.union [ a; b ]) cutout cap_cutout)
       { outer_w
       ; outer_h
       ; inner_w

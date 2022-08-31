@@ -1,4 +1,3 @@
-open Base
 open Scad_ml
 
 type t =
@@ -18,7 +17,7 @@ type pos =
   | `CN
   ]
 
-let map ~f t =
+let map f t =
   { top_left = f t.top_left
   ; top_right = f t.top_right
   ; bot_left = f t.bot_left
@@ -26,8 +25,8 @@ let map ~f t =
   ; centre = f t.centre
   }
 
-let fold ~f ~init t =
-  let flipped = Fn.flip f in
+let fold f init t =
+  let flipped = Fun.flip f in
   f init t.top_left |> flipped t.top_right |> flipped t.bot_left |> flipped t.bot_right
 
 let to_cw_path t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
