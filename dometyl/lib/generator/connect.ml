@@ -89,20 +89,42 @@ let rounder ~corner bot_edge top_edge =
   |> Path3.Round.mix
   |> Path3.roundover
 
+(* TODO: provide both scaling and subtraction modes? (and expose as param at top
+  level) *)
 let fillet ~d ~h rows =
-  let rel_dists =
+  let rel_dists, total_dist =
     let f (dists, sum, last) row =
       let p = V3.(mean row *@ v 1. 1. 0.) in
       let sum = sum +. V3.distance p last in
       sum :: dists, sum, p
     and start = V3.(mean (List.hd rows) *@ v 1. 1. 0.) in
     let dists, sum, _ = List.fold_left f ([ 0. ], 0., start) (List.tl rows) in
-    List.rev_map (fun d -> d /. sum) dists
+    List.rev_map (fun d -> d /. sum) dists, sum
   in
-  let ez = Easing.make (v2 d 1.) (v2 d 1.) in
+  let ez =
+    let d =
+      match d with
+      | `Rel d -> d
+      | `Abs d -> d /. total_dist
+    in
+    Easing.make (v2 d 1.) (v2 d 1.)
+  in
+  (* ignore h; *)
+  (* let h = 0.3 in *)
+  (* let f u row = *)
+  (*   let u = if u > 0.5 then 1. -. u else u in *)
+  (*   Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row *)
+  (* in *)
+  let range =
+    match h with
+    | `Rel h -> (Path3.bbox (List.hd rows)).max.z *. h
+    | `Abs h -> h
+  in
   let f u row =
     let u = if u > 0.5 then 1. -. u else u in
-    Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
+    let diff = ez u *. range in
+    let shift p = if p.z > diff +. 0.1 then V3.ztrans (-.diff) p else p in
+    List.map shift row
   in
   List.map2 f rel_dists rows
 
@@ -149,7 +171,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     and r = Int.max (List.length bot_r) (List.length top_r) in
     Int.max l r
   in
-  let subdiv = Path3.subdivide ~freq:(`N (edge_len, `BySeg)) in
+  (* let subdiv = Path3.subdivide ~freq:(`N (edge_len, `BySeg)) in *)
+  let subdiv = Path3.subdivide ~freq:(`N (edge_len, `ByLen)) in
   let bot_l, top_l, bot_r, top_r =
     subdiv bot_l, subdiv top_l, subdiv bot_r, subdiv top_r
   in
@@ -199,20 +222,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let ang_ratio = d /. Float.abs ang /. Float.pi in
   Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
   let step = 1. /. Float.of_int n_steps in
-  let fillet_d = 0.2 in
-  (* TODO: it seems like fillet can indeed make things more fickle (decreasing
-    allowed rendering with more wall steps than before, though the linear walls
-    in front failed/disappeared). Would subtracting from z (with checks/limits)
-   be better (preventing roundover points from getting too close together
-   mainly). e.g. calculate a z step based on the given fraction, and subtract
-   down with a limit to prevent the lowest point from getting too close to the
-     bottom (other points maintain their distances).
-
-     - try the subtraction method noted here
-     - work more on linear connection reliability, is a third case making use
-        of bezier elbow connections a necessity if I can't get it to be more
-        reliable? *)
-  let fillet_h = 0.2 in
+  let fillet_d = `Rel 0.2 in
+  let fillet_h = `Rel 0.3 in
+  (* let fillet_h = 0. in *)
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
   let transforms =
     let path =
@@ -267,7 +279,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       in
       let () =
         let show =
-          Path3.show_points (Fun.const (Scad.sphere 0.2)) >> Scad.color Color.Red
+          Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red
         in
         Scad.union [ Mesh.to_scad mesh; show a; show b ]
         |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
@@ -283,7 +295,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     continue to be the straw that breaks the back. Must make more resilient. *)
       let ang_step = `Abs (Float.pi /. 24.) in
       (* let ang_step = `Rel 0.1 in *)
-      let d_shift = 0.2 in
+      let d_shift = 0.3 in
       let max_angle = 0.6 in
       (* let d_shift = 0.5 in *)
       let step =
@@ -301,9 +313,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
             let rot = Path3.zrot ~about:pos r last in
             let plane = Path3.to_plane last in
             let d = (shift plane rot -. d_shift) *. if left then -1. else 1. in
-            let pos = V3.(Plane.normal plane *$ d) in
-            let prof = Path3.translate pos rot in
-            loop (prof :: acc) pos (r +. step) prof )
+            let move = V3.(Plane.normal plane *$ d) in
+            let prof = Path3.translate move rot in
+            loop (prof :: acc) V3.(pos +@ move) (r +. step) prof )
           else acc
         in
         let start = if left then a' else b' in
@@ -315,7 +327,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       let ab = rot_profs true
       and ba = rot_profs false in
       let mesh =
-        Mesh.slice_profiles ~slices:(`Flat 2) (a :: List.concat [ ab; ba; [ b ] ])
+        Mesh.slice_profiles ~slices:(`Flat 5) (a :: List.concat [ ab; ba; [ b ] ])
         |> fillet ~d:fillet_d ~h:fillet_h
         |> Mesh.of_rows
       in
@@ -327,7 +339,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
       in
       (* ignore mesh; *)
-      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.)  *)
+      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) *)
       mesh
       (*  *) )
   in
