@@ -1,4 +1,5 @@
 open Scad_ml
+open Syntax
 
 module Join = struct
   module Faces = struct
@@ -51,8 +52,13 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let get_start, get_dest =
     let get s key = Key.Faces.face key.Key.faces s in
     match join_ax with
-    | `NS -> get `North, get `South
-    | `EW -> get `East, get `West
+    | `NS ->
+      (* fudge faces in for union *)
+      let d = V3.(normalize (key.faces.north.points.centre -@ key.origin) *$ 0.01) in
+      get `North >> Key.Face.translate (V3.neg d), get `South >> Key.Face.translate d
+    | `EW ->
+      let d = V3.(normalize (key.faces.east.points.centre -@ key.origin) *$ 0.01) in
+      get `East >> Key.Face.translate (V3.neg d), get `West >> Key.Face.translate d
   in
   let join_keys (a : Key.t) (b : Key.t) =
     Mesh.skin_between
