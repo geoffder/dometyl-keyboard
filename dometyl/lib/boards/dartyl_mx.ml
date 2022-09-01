@@ -25,8 +25,7 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> Yes)
           ~north_clearance:0.5
           ~south_clearance:0.5
-          ~side_clearance:0.5
-          ~d1:3.
+          ~side_clearance:0.5 (* ~d1:3. *)
           ~d2:4.75
           ~eyelet_config:bumpon
           ~n_steps:(`Flat 15)

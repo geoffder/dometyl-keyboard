@@ -1,6 +1,6 @@
 open! Scad_ml
 open! Generator
-open! Infix
+open! Syntax
 
 let body_lookups =
   let offset = function
@@ -61,9 +61,9 @@ let wall_builder plate =
     { body =
         auto_body
           ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
-          ~east_lookup:(fun _ -> Yes)
-          ~d1:2.
-          ~d2:5.
+          ~east_lookup:(fun _ -> Yes )
+            (* ~d1:2. *)
+            (* ~d2:5. *)
           ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5

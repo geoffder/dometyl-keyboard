@@ -1,5 +1,5 @@
 open Scad_ml
-open Infix
+open Syntax
 
 module Lookups = struct
   type t =

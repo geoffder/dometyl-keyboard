@@ -1,4 +1,4 @@
-open! Scad_ml
+open Scad_ml
 
 (* The relative path to the project root is given as an argument to the dometyl
    executable when it is run by the `run` rule (used with `dune build -w @run`
@@ -14,19 +14,7 @@ let thing ?(export = false) name scad =
   Scad.to_file (filename "scad") scad;
   if export
   then (
-    Printf.printf " => stl\n";
-    Out_channel.flush stdout;
-    try
-      Printf.sprintf
-        ( if Sys.unix
-        then "openscad -q -o %s --export-format binstl %s"
-        else "openscad.com -q -o %s --export-format binstl %s" )
-        (filename "stl")
-        (filename "scad")
-      |> Sys.command
-      |> function
-      | 0 -> ()
-      | _ -> failwith ""
-    with
-    | _ -> print_endline "Openscad export shell command failed." )
+    match Export.script (filename "scad") (filename "stl") with
+    | Ok () -> Printf.printf " => stl\n"
+    | Error e -> failwith (Printf.sprintf " => export failed...\n%s\n" e) )
   else print_endline ""

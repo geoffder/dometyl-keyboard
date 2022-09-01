@@ -1,5 +1,5 @@
 open! Scad_ml
-open Infix
+open Syntax
 
 type bump_loc =
   | Thumb of Util.idx * Util.idx

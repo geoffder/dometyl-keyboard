@@ -53,13 +53,12 @@ let wall_builder plate =
   let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
-        auto_body
-          ~d1:13.
-          ~d2:8. (* ~n_steps:(`Flat 10) *)
-          ~n_steps:(`PerZ 3.5)
-            (* ~north_clearance:2.5 *)
-            (* ~south_clearance:2.5 *)
-            (* ~side_clearance:1.5 *)
+        auto_body (* ~d1:(`Rel 0.4) *)
+          ~d1:(`Abs 14.)
+          ~d2:10.
+            (* ~n_steps:(`Flat 10) *)
+            (* ~n_steps:(`PerZ 3.5) *)
+          ~n_steps:(`PerZ 3.)
           ~scale:(v2 0.8 1.)
           ~scale_ez:(v2 0.42 0., v2 1. 1.)
           ~north_clearance:0.
@@ -68,21 +67,19 @@ let wall_builder plate =
           ~eyelet_config
           plate
     ; thumb =
-        auto_thumb (* ~south_lookup:(fun _ -> Yes) *)
-          ~d1:12.
+        auto_thumb
+        (* ~south_lookup:(fun _ -> Yes) *)
+        (* ~d1:12. *)
           ~d2:8.
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye )
-            (* ~north_clearance:3. *)
-            (* ~south_clearance:3. *)
-            (* ~side_clearance:3. *)
+          ~west_lookup:(fun _ -> Eye)
           ~scale:(v2 0.8 1.)
           ~scale_ez:(v2 0.42 0., v2 1. 1.)
-          ~north_clearance:1.
-          ~south_clearance:1.
-          ~side_clearance:1.
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           ~n_steps:(`Flat 10)
           ~eyelet_config
           plate

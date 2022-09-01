@@ -1,6 +1,6 @@
 open! Scad_ml
 open! Generator
-open! Infix
+open! Syntax
 
 let body_lookups =
   let offset = function

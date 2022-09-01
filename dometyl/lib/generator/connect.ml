@@ -1,5 +1,5 @@
 open! Scad_ml
-open! Infix
+open! Syntax
 
 type t =
   { scad : Scad.d3
@@ -126,15 +126,20 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     in
     let b_loc, t_loc =
       match left, frac with
-      | true, None -> `BR, `TR
-      | false, None -> `BL, `TL
+      | true, None -> `B 0.99, `T 0.99 (* fudging for union *)
+      | false, None -> `B 0.01, `T 0.01
       | true, Some frac -> `B (1. -. frac), `T (1. -. frac)
       | false, Some frac -> `B frac, `T frac
     in
     let bot = edger w b_loc
     and top = edger w t_loc in
-    let plane = Plane.of_normal ~point:(Util.last bot) dir
-    and dedup = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eps:1. in
+    let plane = Plane.of_normal ~point:(Util.last bot) dir in
+    let dedup =
+      let proj = V3.project plane in
+      (* TODO: expose as max connection resolution? *)
+      let eq a b = V2.approx ~eps:2. (proj a) (proj b) in
+      Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq
+    in
     plane, dedup bot, dedup top
   in
   let plane_l, bot_l, top_l = end_edges true
@@ -195,7 +200,19 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
   let step = 1. /. Float.of_int n_steps in
   let fillet_d = 0.2 in
-  let fillet_h = 0.4 in
+  (* TODO: it seems like fillet can indeed make things more fickle (decreasing
+    allowed rendering with more wall steps than before, though the linear walls
+    in front failed/disappeared). Would subtracting from z (with checks/limits)
+   be better (preventing roundover points from getting too close together
+   mainly). e.g. calculate a z step based on the given fraction, and subtract
+   down with a limit to prevent the lowest point from getting too close to the
+     bottom (other points maintain their distances).
+
+     - try the subtraction method noted here
+     - work more on linear connection reliability, is a third case making use
+        of bezier elbow connections a necessity if I can't get it to be more
+        reliable? *)
+  let fillet_h = 0.2 in
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
   let transforms =
     let path =
@@ -257,27 +274,40 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       in
       mesh )
     else (
-      (* TODO: should the steps be a fraction, or rather a particular angle? And no
-            steps are done if the angle is less than the step to start with.
-            Should become something configurable. *)
-      let frac = 0.3 in
+      (* TODO: figure out how things can be broken out cleanly, so this and the
+            spline version can live in separate functions. Should return a complete
+            Connect.t I think, so input needs to have a, b, a', b', and inline
+            and outline start points. (spline input needs the ability to make a
+            new end profile though... makes the break not so clean) *)
+      (* FIXME: from some parameter tweaking, I think that these linear pieces
+    continue to be the straw that breaks the back. Must make more resilient. *)
+      let ang_step = `Abs (Float.pi /. 24.) in
+      (* let ang_step = `Rel 0.1 in *)
+      let d_shift = 0.2 in
+      let max_angle = 0.6 in
+      (* let d_shift = 0.5 in *)
+      let step =
+        match ang_step with
+        | `Abs a -> a *. Math.sign ang
+        | `Rel frac -> frac *. ang
+      in
       let shift plane =
         List.fold_left (fun d p -> Float.min d @@ Plane.distance_to_point plane p) 0.
       in
       let rot_profs left =
         let rec loop acc pos r last =
-          let rot = Path3.zrot ~about:pos r last in
-          let plane = Path3.to_plane last in
-          let d = (shift plane rot -. 0.15) *. if left then -1. else 1. in
-          let pos = V3.(Plane.normal plane *$ d) in
-          let r' = r +. (ang *. frac) in
-          let prof = Path3.translate pos rot in
-          if Float.(abs ang -. abs r') > 0.5
-          then loop (prof :: acc) pos r' prof
-          else prof :: acc
+          if Float.(abs ang -. abs r) > max_angle
+          then (
+            let rot = Path3.zrot ~about:pos r last in
+            let plane = Path3.to_plane last in
+            let d = (shift plane rot -. d_shift) *. if left then -1. else 1. in
+            let pos = V3.(Plane.normal plane *$ d) in
+            let prof = Path3.translate pos rot in
+            loop (prof :: acc) pos (r +. step) prof )
+          else acc
         in
         let start = if left then a' else b' in
-        let profs = loop [] V3.zero (ang *. frac) start in
+        let profs = loop [] V3.zero step start in
         if left
         then List.rev_map (Path3.translate p0) profs
         else List.map (Path3.translate p3) profs
@@ -285,7 +315,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       let ab = rot_profs true
       and ba = rot_profs false in
       let mesh =
-        Mesh.slice_profiles ~slices:(`Flat 5) (a :: List.concat [ ab; ba; [ b ] ])
+        Mesh.slice_profiles ~slices:(`Flat 2) (a :: List.concat [ ab; ba; [ b ] ])
         |> fillet ~d:fillet_d ~h:fillet_h
         |> Mesh.of_rows
       in
@@ -296,7 +326,10 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         Scad.union [ Mesh.to_scad mesh; show a; show b ]
         |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
       in
-      mesh )
+      (* ignore mesh; *)
+      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.)  *)
+      mesh
+      (*  *) )
   in
   id := !id + 1;
   (* FIXME: transforms are not relevant to linear skins, should move inline and
@@ -309,6 +342,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (* if !id <> 7 && !id <> 9 then Mesh.to_scad mesh else Scad.empty3 *)
     (* if !id <> 7 then Mesh.to_scad mesh else Scad.empty3 *)
     Mesh.to_scad mesh
+    (* ignore mesh; *)
+    (* Scad.sphere 1. *)
   in
   (* { scad = Scad.ztrans (-10.) scad; inline; outline } *)
   { scad; inline; outline }

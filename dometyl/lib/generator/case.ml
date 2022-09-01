@@ -1,5 +1,5 @@
 open! Scad_ml
-open! Infix
+open! Syntax
 
 type t =
   { scad : Scad.d3

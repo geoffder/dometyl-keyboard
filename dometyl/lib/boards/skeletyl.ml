@@ -62,8 +62,7 @@ let wall_builder plate =
           ~west_lookup:(fun _ -> Eye)
           ~north_clearance:0.5
           ~south_clearance:0.5
-          ~side_clearance:0.5
-          ~d1:4.
+          ~side_clearance:0.5 (* ~d1:4. *)
           ~d2:4.75
           ~n_steps:(`PerZ 5.)
           plate

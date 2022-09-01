@@ -75,7 +75,7 @@ module Sides : sig
         {!presence}, indicating whether there is a wall present at a position or not (and
         if there should be an eyelet attached to its base) *)
   val auto
-    :  ?d1:float
+    :  ?d1:[ `Abs of float | `Rel of float ]
     -> ?d2:float
     -> ?north_clearance:float
     -> ?south_clearance:float
@@ -101,7 +101,7 @@ end
 
 (** Use {!Sides.auto} to generate a {!Sides.t} from the body of the provided {!Plate.t}. *)
 val auto_body
-  :  ?d1:float
+  :  ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?north_clearance:float
   -> ?south_clearance:float
@@ -120,7 +120,7 @@ val auto_body
 
 (** Use {!Sides.auto} to generate a {!Sides.t} from the thumb of the provided {!Plate.t}. *)
 val auto_thumb
-  :  ?d1:float
+  :  ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?north_clearance:float
   -> ?south_clearance:float

@@ -1,5 +1,5 @@
 open! Scad_ml
-open! Infix
+open! Syntax
 
 type presence =
   | No
@@ -73,8 +73,8 @@ module Sides = struct
     }
 
   let auto
-      ?(d1 = 2.)
-      ?(d2 = 5.)
+      ?(d1 = `Abs 14.)
+      ?(d2 = 8.)
       ?(north_clearance = 2.5)
       ?(south_clearance = 2.5)
       ?(side_clearance = 3.0)
@@ -211,8 +211,8 @@ let auto_body
     body
 
 let auto_thumb
-    ?(d1 = 1.)
-    ?(d2 = 3.)
+    ?(d1 = `Abs 14.)
+    ?(d2 = 8.)
     ?(north_clearance = 2.5)
     ?(south_clearance = 2.5)
     ?(side_clearance = 3.0)

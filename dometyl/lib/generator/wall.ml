@@ -1,21 +1,6 @@
 open Scad_ml
-open Infix
+open Syntax
 
-(* TODO:
-
-   What is needed?
-   - Key must carry the full path of its front and back ends, along with a
-    Points holding coordinates of not the corners as they are originally, but
-    instead, the points of the long edges (first point of the corner, e.g.
-    beginning of the arc or start of the chamfer), such that connections can be drawn
-    disregarding the roundovers
-   - These points can then be used with the same transforms that draw the wall
-    to create edge paths that can be skinned together to join walls, or be the
-    target endpoints for (bespoke of_rows usage likely) sweeps between the
-    bases of column walls.
-   - Of course, these edge paths will need to take into account the skinning
-    that happens at the base of the walls (unimplemented fix that ensures that
-    the wall foot is flat on the xy plane). *)
 module Steps = struct
   type t =
     [ `PerZ of float
@@ -61,7 +46,7 @@ module Drawer = struct
 end
 
 type config =
-  { d1 : float
+  { d1 : [ `Abs of float | `Rel of float ]
   ; d2 : float
   ; clearance : float
   ; n_steps : Steps.t
@@ -71,8 +56,8 @@ type config =
   }
 
 let default =
-  { d1 = 2.
-  ; d2 = 5.
+  { d1 = `Abs 14.
+  ; d2 = 8.
   ; clearance = 1.5
   ; n_steps = `Flat 4
   ; scale = None
@@ -122,7 +107,7 @@ let poly_siding
     ?(y_off = 0.)
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
-    ?(d1 = 14.)
+    ?(d1 = `Abs 14.)
     ?(d2 = 10.)
     ?scale
     ?scale_ez
@@ -136,6 +121,11 @@ let poly_siding
   let xy = V3.(normalize (mul ortho (v3 1. 1. 0.)))
   and dir = Points.direction cleared_face.points
   and fn = Steps.to_int n_steps cleared_face.points.centre.z in
+  let d1 =
+    match d1 with
+    | `Abs d -> d
+    | `Rel frac -> cleared_face.points.centre.z *. frac
+  in
   let bz end_z =
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
@@ -190,13 +180,19 @@ let poly_siding
       |> List.map2 (fun c m -> Affine3.(c %> m)) counter
   in
   let scad =
+    (* TODO: if I keep the pruning, I need to update the drawer to use the
+               pruned transforms instead. *)
+    print_endline "begin pruning wall...";
     let rows =
-      List.mapi
-        (fun i m -> List.map (fun p -> V3.affine m (scaler i p)) centred)
-        transforms
+      Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred) transforms
+      |> List.map (fun (i, m) -> List.map (fun p -> V3.affine m (scaler i p)) centred)
+    (* List.mapi *)
+    (*   (fun i m -> List.map (fun p -> V3.affine m (scaler i p)) centred) *)
+    (*   transforms *)
     and clearing =
       Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; cleared_face.path ]
     in
+    print_endline "...end pruning wall";
     let final =
       let s = Util.last rows in
       let flat = List.map (fun { x; y; z = _ } -> v3 x y 0.) s in

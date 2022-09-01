@@ -40,7 +40,7 @@ module Drawer : sig
 end
 
 type config =
-  { d1 : float
+  { d1 : [ `Abs of float | `Rel of float ]
   ; d2 : float
   ; clearance : float
   ; n_steps : Steps.t
@@ -105,7 +105,7 @@ val poly_siding
   -> ?y_off:float
   -> ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?d1:float
+  -> ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
@@ -133,7 +133,7 @@ val poly_of_config
 val column_drop
   :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?d1:float
+  -> ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
