@@ -53,14 +53,12 @@ let wall_builder plate =
   let eyelet_config = Eyelet.magnet_6x3_config in
   Walls.
     { body =
-        auto_body (* ~d1:(`Rel 0.4) *)
-          ~d1:(`Abs 14.)
-          ~d2:10.
-            (* ~n_steps:(`Flat 10) *)
-            (* ~n_steps:(`PerZ 3.5) *)
-          ~n_steps:(`PerZ 3.)
-          ~scale:(v2 0.8 1.)
-          ~scale_ez:(v2 0.42 0., v2 1. 1.)
+        auto_body
+          ~d1:(`Abs 14.) (* ~d1:(`Rel 0.4) *)
+          ~d2:10. (* ~n_steps:(`Flat 10) *)
+          ~n_steps:(`PerZ 3.5)
+          ~scale:(v2 0.8 0.9) (* ~scale_ez:(v2 0.42 0., v2 1. 1.) *)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
@@ -70,13 +68,14 @@ let wall_builder plate =
         auto_thumb
         (* ~south_lookup:(fun _ -> Yes) *)
         (* ~d1:12. *)
+          ~d1:(`Abs 14.)
           ~d2:8.
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
           ~west_lookup:(fun _ -> Eye)
-          ~scale:(v2 0.8 1.)
-          ~scale_ez:(v2 0.42 0., v2 1. 1.)
+          ~scale:(v2 0.8 0.9) (* ~scale_ez:(v2 0.42 0., v2 1. 1.) *)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
@@ -104,7 +103,7 @@ let base_connector =
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
-let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:(-1.) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:0. (make ()))
 
 let build ?right_hand ?hotswap () =
   Case.make
