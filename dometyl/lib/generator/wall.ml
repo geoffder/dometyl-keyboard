@@ -164,21 +164,17 @@ let poly_siding
         |> V2.lift p
     | None -> fun _ pt -> pt
   in
-  let end_z = None in
-  (* let end_z = Some 5. in *)
   let transforms =
-    match end_z with
-    | Some z -> Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz z))
-    | None ->
-      let trans =
-        Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz 0.))
-        |> Util.last
-        |> Affine3.compose (Util.last counter)
-      in
-      let last_shape = Path3.affine trans (List.map (scaler fn) centred) in
-      let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.001 in
-      Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
-      |> List.map2 (fun c m -> Affine3.(c %> m)) counter
+    (* TODO: decide whether the end_z fudge should be parameterized *)
+    let trans =
+      Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz 0.))
+      |> Util.last
+      |> Affine3.compose (Util.last counter)
+    in
+    let last_shape = Path3.affine trans (List.map (scaler fn) centred) in
+    let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.1 in
+    Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
+    |> List.map2 (fun c m -> Affine3.(c %> m)) counter
   in
   let scad =
     (* TODO: if I keep the pruning, I need to update the drawer to use the
@@ -199,7 +195,8 @@ let poly_siding
       let flat = List.map (fun { x; y; z = _ } -> v3 x y 0.) s in
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in
-    Mesh.of_rows (List.concat [ clearing; List.tl rows; List.tl final ]) |> Mesh.to_scad
+    Mesh.of_rows ~style:`MinEdge (List.concat [ clearing; List.tl rows; List.tl final ])
+    |> Mesh.to_scad
   and foot =
     let m = Util.last transforms in
     let f p =
