@@ -91,7 +91,7 @@ let outward_sign (w1 : Wall.t) (w2 : Wall.t) =
 
 (* Apply the roundover corner to the two topmost points of the connector drawn
    by bot_edge and top_edge. Edges must have the same length. *)
-let rounder ~corner bot_edge top_edge =
+let rounder ?fn ~corner bot_edge top_edge =
   (* TODO: ability to autocalculate cut/joint based on
       the distance between the upper (first) points of bot' and top'?
     (corner as a poly variant e.g. [`AutoBez | `AutoChamf | `Corner of corner]) *)
@@ -99,11 +99,9 @@ let rounder ~corner bot_edge top_edge =
   let zip a b = List.map2 (fun a b -> a, b) a b in
   List.rev_append (zip bot_edge corners) (zip top_edge corners)
   |> Path3.Round.mix
-  |> Path3.roundover
+  |> Path3.roundover ?fn
 
-(* TODO: provide both scaling and subtraction modes? (and expose as param at top
-  level) *)
-let fillet ~d ~h rows =
+let fillet ?(style = `Scale) ~d ~h rows =
   let rel_dists, total_dist =
     let f (dists, sum, last) row =
       let p = V3.(mean row *@ v 1. 1. 0.) in
@@ -121,22 +119,28 @@ let fillet ~d ~h rows =
     in
     Easing.make (v2 d 1.) (v2 d 1.)
   in
-  (* ignore h; *)
-  (* let h = 0.3 in *)
-  (* let f u row = *)
-  (*   let u = if u > 0.5 then 1. -. u else u in *)
-  (*   Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row *)
-  (* in *)
-  let range =
-    match h with
-    | `Rel h -> (Path3.bbox (List.hd rows)).max.z *. h
-    | `Abs h -> h
-  in
-  let f u row =
-    let u = if u > 0.5 then 1. -. u else u in
-    let diff = ez u *. range in
-    let shift p = if p.z > diff +. 0.1 then V3.ztrans (-.diff) p else p in
-    List.map shift row
+  let f =
+    match style with
+    | `Scale ->
+      let h =
+        match h with
+        | `Rel h -> h
+        | `Abs h -> h /. (Path3.bbox (List.hd rows)).max.z
+      in
+      fun u row ->
+        let u = if u > 0.5 then 1. -. u else u in
+        Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
+    | `Shift ->
+      let range =
+        match h with
+        | `Rel h -> (Path3.bbox (List.hd rows)).max.z *. h
+        | `Abs h -> h
+      in
+      fun u row ->
+        let u = if u > 0.5 then 1. -. u else u in
+        let diff = ez u *. range in
+        let shift p = if p.z > diff +. 0.1 then V3.ztrans (-.diff) p else p in
+        List.map shift row
   in
   List.map2 f rel_dists rows
 
@@ -205,10 +209,10 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and out_start = Util.last top_l' in
   let corner = Path3.Round.(chamf (`Joint 0.7)) in
   (* let corner = Path3.Round.(bez (`Joint 1.)) in *)
-  let a = rounder ~corner bot_l top_l
-  and a' = rounder ~corner bot_l' top_l'
-  and b = rounder ~corner bot_r top_r
-  and b' = rounder ~corner bot_r' top_r' in
+  let a = rounder ~fn:16 ~corner bot_l top_l
+  and a' = rounder ~fn:16 ~corner bot_l' top_l'
+  and b = rounder ~fn:16 ~corner bot_r top_r
+  and b' = rounder ~fn:16 ~corner bot_r' top_r' in
   let shrink_edges prof =
     let m = V3.(mean prof *@ v3 1. 1. 0.)
     and s = v3 0.8 0.8 1. in
@@ -241,7 +245,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   in
   let n_steps =
     ignore n_steps;
-    20
+    32
   in
   let out = 3. in
   (* let min_spline_dist = 15. in *)
@@ -290,7 +294,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           (* List.mapi (fun i m -> i, m) transforms  *)
           Util.prune_transforms ~shape:transition transforms
           |> List.map (fun (i, m) -> Path3.affine m (transition i))
-          |> fillet ~d:fillet_d ~h:fillet_h
+          |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
         in
         let b =
           let plane =
@@ -303,24 +307,17 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
               0.
               (Util.last rows)
           in
-          (* let rel = w
-             d *. 2. /. V3.distance w2.foot.top_left w2.foot.top_right in *)
-          let rel = (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right in
-          (* let d = *)
-          (*   List.fold_left *)
-          (*     (fun d p -> Float.min d @@ Plane.distance_to_point plane p) *)
-          (*     0. *)
-          (*     (Util.last rows) *)
-          (* in *)
-          (* let rel = -.d /. V3.distance w2.foot.top_left w2.foot.top_right in *)
+          let rel =
+            Float.min 0.99 (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right
+          in
           let _, bot, top = end_edges ~frac:rel false in
-          let pth = rounder ~corner (subdiv bot) (subdiv top) in
+          let pth = rounder ~fn:16 ~corner (subdiv bot) (subdiv top) in
           let p = V3.(mean pth *@ v3 1. 1. 0.) in
           Path3.translate (V3.neg p) pth
           |> Path3.scale (v3 0.9 0.9 1.) (* shrink to hide edge *)
           |> Path3.translate p
         in
-        Mesh.of_rows
+        Mesh.of_rows ~style:`MinEdge
         @@ List.concat
              [ Mesh.slice_profiles ~slices:(`Flat 5) [ a; List.hd rows ]
              ; rows
@@ -343,7 +340,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
             new end profile though... makes the break not so clean) *)
       (* FIXME: from some parameter tweaking, I think that these linear pieces
     continue to be the straw that breaks the back. Must make more resilient. *)
-      let ang_step = `Abs (Float.pi /. 24.) in
+      let ang_step = `Abs (Float.pi /. 36.) in
       (* let ang_step = `Rel 0.1 in *)
       let d_shift = 0.3 in
       let max_angle = 0.6 in
@@ -380,9 +377,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       let ab = rot_profs true
       and ba = rot_profs false in
       let mesh =
-        Mesh.slice_profiles ~slices:(`Flat 5) (a :: List.concat [ ab; ba; [ b ] ])
+        Mesh.slice_profiles ~slices:(`Flat 10) (a :: List.concat [ ab; ba; [ b ] ])
         |> fillet ~d:fillet_d ~h:fillet_h
-        |> Mesh.of_rows
+        |> Mesh.of_rows ~style:`MinEdge
       in
       let () =
         let show =
