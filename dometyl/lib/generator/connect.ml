@@ -37,6 +37,18 @@ let is_outward (w1 : Wall.t) (w2 : Wall.t) =
   V3.distance w1.foot.top_right w2.foot.top_left
   > V3.distance w1.foot.top_right w2.foot.bot_left
 
+let outward_sign (w1 : Wall.t) (w2 : Wall.t) =
+  V2.(
+    clockwise_sign
+      (of_v3 w1.foot.top_left)
+      (of_v3 w1.foot.top_right)
+      (of_v3 w2.foot.top_left))
+
+(* let is_outward (w1 : Wall.t) (w2 : Wall.t) = *)
+(*   V2.ccw_theta V3.(to_v2 @@ (w1.foot.top_right -@ w2.foot.top_left)) *)
+(*   *. V3.angle (Wall.foot_direction w1) (Wall.foot_direction w2) *)
+(*   > 0. *)
+
 (* let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez = *)
 (*   let step = height /. Float.of_int n_facets *)
 (*   and start, continue, next = *)
@@ -204,10 +216,16 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and out_start = V3.add (V3.neg p0) out_start in
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
+  (* FIXME: is_outward scheme does not work for elbow corners like on west of
+    thumb, or on full bows like the pinky N-S connection. For the elbow and bow
+    conditions, the rotation angle must be opposite for the linear skin
+    profiles as well. *)
   let ang =
     (* account for whether this connection moves away from centre of mass
               (positive) or inward (negative) to set angle  polarity  *)
-    let sign = if is_outward w1 w2 then 1. else -1. in
+    (* let sign = if is_outward w1 w2 then 1. else -1. in *)
+    ignore is_outward;
+    let sign = outward_sign w1 w2 in
     V3.angle (V3.neg dir1) V3.(p3 -@ p0) *. sign
   in
   let n_steps =
@@ -221,6 +239,18 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let min_spline_ratio = 6. in
   let ang_ratio = d /. Float.abs ang /. Float.pi in
   Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
+  Printf.printf "dir angle = %f\n" (V3.angle dir1 dir2);
+  Printf.printf
+    "3pt angle = %f\n"
+    (V3.angle_points w1.foot.top_left w1.foot.top_right w2.foot.top_left);
+  Printf.printf
+    "3pt cw sign = %f\n"
+    V2.(
+      clockwise_sign
+        (of_v3 w1.foot.top_left)
+        (of_v3 w1.foot.top_right)
+        (of_v3 w2.foot.top_left));
+  Printf.printf "outward sign = %f\n" (if is_outward w1 w2 then 1. else -1.);
   let step = 1. /. Float.of_int n_steps in
   let fillet_d = `Rel 0.2 in
   let fillet_h = `Rel 0.3 in
@@ -254,7 +284,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         let b =
           let plane =
             Path3.to_plane
-              (Path3.translate p3 (Path3.quaternion (Quaternion.neg align_q) b'))
+              (Path3.translate p3 (Path3.quaternion (Quaternion.conj align_q) b'))
           in
           let d =
             List.fold_left
@@ -262,7 +292,16 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
               0.
               (Util.last rows)
           in
-          let rel = d *. 2. /. V3.distance w2.foot.top_left w2.foot.top_right in
+          (* let rel = w
+             d *. 2. /. V3.distance w2.foot.top_left w2.foot.top_right in *)
+          let rel = (d +. 0.2) /. V3.distance w2.foot.top_left w2.foot.top_right in
+          (* let d = *)
+          (*   List.fold_left *)
+          (*     (fun d p -> Float.min d @@ Plane.distance_to_point plane p) *)
+          (*     0. *)
+          (*     (Util.last rows) *)
+          (* in *)
+          (* let rel = -.d /. V3.distance w2.foot.top_left w2.foot.top_right in *)
           let _, bot, top = end_edges ~frac:rel false in
           let pth = rounder ~corner (subdiv bot) (subdiv top) in
           let p = V3.(mean pth *@ v3 1. 1. 0.) in
@@ -303,8 +342,11 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         | `Abs a -> a *. Math.sign ang
         | `Rel frac -> frac *. ang
       in
-      let shift plane =
-        List.fold_left (fun d p -> Float.min d @@ Plane.distance_to_point plane p) 0.
+      let shift left plane prof =
+        let extrema = if left then Float.min else Float.max in
+        let f d p = extrema d @@ Plane.distance_to_point plane p in
+        let d = List.fold_left f 0. prof in
+        if left then d_shift -. d else (d +. d_shift) *. -1.
       in
       let rot_profs left =
         let rec loop acc pos r last =
@@ -312,7 +354,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           then (
             let rot = Path3.zrot ~about:pos r last in
             let plane = Path3.to_plane last in
-            let d = (shift plane rot -. d_shift) *. if left then -1. else 1. in
+            let d = shift left plane rot in
             let move = V3.(Plane.normal plane *$ d) in
             let prof = Path3.translate move rot in
             loop (prof :: acc) V3.(pos +@ move) (r +. step) prof )
