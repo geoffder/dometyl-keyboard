@@ -165,6 +165,7 @@ let poly_siding
     | None -> fun _ pt -> pt
   in
   let end_z = None in
+  (* let end_z = Some 5. in *)
   let transforms =
     match end_z with
     | Some z -> Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz z))

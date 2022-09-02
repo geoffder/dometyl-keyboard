@@ -195,7 +195,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     in
     let d, top' = List.fold_left f (0., []) top in
     let d, bot' = List.fold_left f (d, []) bot in
-    let f = V3.(translate (Plane.normal plane *$ d)) in
+    (* NOTE: didn't have a shift here before, maybe it was causing problems? *)
+    let f = V3.(translate (Plane.normal plane *$ (d +. 0.1))) in
     List.rev_map f bot', List.rev_map f top'
   in
   let bot_l', top_l' = planer plane_l bot_l top_l
@@ -208,6 +209,13 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and a' = rounder ~corner bot_l' top_l'
   and b = rounder ~corner bot_r top_r
   and b' = rounder ~corner bot_r' top_r' in
+  let shrink_edges prof =
+    let m = V3.(mean prof *@ v3 1. 1. 0.)
+    and s = v3 0.8 0.8 1. in
+    List.map (fun p -> V3.(((p -@ m) *@ s) +@ m)) prof
+  in
+  let a = shrink_edges a
+  and b = shrink_edges b in
   let p0 = V3.(mean a' *@ v3 1. 1. 0.)
   and p3 = V3.(mean b' *@ v3 1. 1. 0.) in
   let a' = Path3.translate (V3.neg p0) a'
@@ -220,6 +228,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     thumb, or on full bows like the pinky N-S connection. For the elbow and bow
     conditions, the rotation angle must be opposite for the linear skin
     profiles as well. *)
+  (* TODO: try using the angle between the dir vectors to flag whether the wall
+   relationship calls for elbow/bow (issue mentioned above). I think that it's
+    greater than (pi / 2) reliably when these special cases arise.  *)
   let ang =
     (* account for whether this connection moves away from centre of mass
               (positive) or inward (negative) to set angle  polarity  *)
@@ -294,7 +305,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
           in
           (* let rel = w
              d *. 2. /. V3.distance w2.foot.top_left w2.foot.top_right in *)
-          let rel = (d +. 0.2) /. V3.distance w2.foot.top_left w2.foot.top_right in
+          let rel = (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right in
           (* let d = *)
           (*   List.fold_left *)
           (*     (fun d p -> Float.min d @@ Plane.distance_to_point plane p) *)
