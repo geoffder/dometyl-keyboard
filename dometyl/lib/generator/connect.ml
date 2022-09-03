@@ -8,18 +8,14 @@ type t =
   }
 [@@deriving scad]
 
-(* Assumes lists are lead with the outer (top) line along the xy plane. *)
-(* let prism_connection bezs steps = *)
-(*   let n_steps = *)
-(*     match steps with *)
-(*     | `Uniform n -> n *)
-(*     | `Ragged ns -> List.hd ns *)
-(*   in *)
-(*   (\* { scad = Bezier.prism bezs steps *\) *)
-(*   { scad = Scad.empty3 *)
-(*   ; outline = Bezier3.curve ~fn:n_steps (List.hd bezs) *)
-(*   ; inline = Bezier3.curve ~fn:n_steps (Util.last bezs) *)
-(*   } *)
+(* TODO:
+   - break bezier spline and linear connectors into separate functions, and the
+    work that they share into a higher level helper. Another router function
+    can handle deciding which one to use.
+   - better angle logic for the linear connector (better knobs for how to do
+    rotation stepping, and handling the >90degrees cases)z
+   - elbow bezier case (subcase of bezier spline?), largely as an option
+    solution for the southern pinky to ring connection *)
 
 let clockwise_union ts =
   let collect ~init line = List.fold_left (fun ps p -> p :: ps) init line in
@@ -187,7 +183,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     and r = Int.max (List.length bot_r) (List.length top_r) in
     Int.max l r
   in
-  (* let subdiv = Path3.subdivide ~freq:(`N (edge_len, `BySeg)) in *)
   let subdiv = Path3.subdivide ~freq:(`N (edge_len, `ByLen)) in
   let bot_l, top_l, bot_r, top_r =
     subdiv bot_l, subdiv top_l, subdiv bot_r, subdiv top_r
@@ -200,19 +195,21 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     let d, top' = List.fold_left f (0., []) top in
     let d, bot' = List.fold_left f (d, []) bot in
     (* NOTE: didn't have a shift here before, maybe it was causing problems? *)
-    let f = V3.(translate (Plane.normal plane *$ (d +. 0.1))) in
+    let f = V3.(translate (Plane.normal plane *$ (d +. 0.05))) in
     List.rev_map f bot', List.rev_map f top'
   in
   let bot_l', top_l' = planer plane_l bot_l top_l
   and bot_r', top_r' = planer plane_r bot_r top_r in
-  let in_start = Util.last bot_l'
-  and out_start = Util.last top_l' in
   let corner = Path3.Round.(chamf (`Joint 0.7)) in
   (* let corner = Path3.Round.(bez (`Joint 1.)) in *)
   let a = rounder ~fn:16 ~corner bot_l top_l
   and a' = rounder ~fn:16 ~corner bot_l' top_l'
   and b = rounder ~fn:16 ~corner bot_r top_r
   and b' = rounder ~fn:16 ~corner bot_r' top_r' in
+  let base_points = function
+    | inner :: pts -> inner, Util.last pts
+    | [] -> failwith "unreachable"
+  in
   let shrink_edges prof =
     let m = V3.(mean prof *@ v3 1. 1. 0.)
     and s = v3 0.8 0.8 1. in
@@ -224,8 +221,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   and p3 = V3.(mean b' *@ v3 1. 1. 0.) in
   let a' = Path3.translate (V3.neg p0) a'
   and b' = Path3.translate (V3.neg p3) b' in
-  let in_start = V3.add (V3.neg p0) in_start
-  and out_start = V3.add (V3.neg p0) out_start in
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
   (* FIXME: is_outward scheme does not work for elbow corners like on west of
@@ -285,130 +280,131 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     in
     Path3.to_transforms ~mode:`NoAlign path
   in
-  let mesh =
-    if d > min_spline_dist && ang_ratio > min_spline_ratio
-    then (
-      Printf.printf "pruning id#%i:\n" !id;
-      let mesh =
-        let rows =
-          (* List.mapi (fun i m -> i, m) transforms  *)
-          Util.prune_transforms ~shape:transition transforms
-          |> List.map (fun (i, m) -> Path3.affine m (transition i))
-          |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
-        in
-        let b =
-          let plane =
-            Path3.to_plane
-              (Path3.translate p3 (Path3.quaternion (Quaternion.conj align_q) b'))
-          in
-          let d =
-            List.fold_left
-              (fun d p -> Float.max d @@ Plane.distance_to_point plane p)
-              0.
-              (Util.last rows)
-          in
-          let rel =
-            Float.min 0.99 (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right
-          in
-          let _, bot, top = end_edges ~frac:rel false in
-          let pth = rounder ~fn:16 ~corner (subdiv bot) (subdiv top) in
-          let p = V3.(mean pth *@ v3 1. 1. 0.) in
-          Path3.translate (V3.neg p) pth
-          |> Path3.scale (v3 0.9 0.9 1.) (* shrink to hide edge *)
-          |> Path3.translate p
-        in
-        Mesh.of_rows ~style:`MinEdge
-        @@ List.concat
-             [ Mesh.slice_profiles ~slices:(`Flat 5) [ a; List.hd rows ]
-             ; rows
-             ; List.tl @@ Mesh.slice_profiles ~slices:(`Flat 5) [ Util.last rows; b ]
-             ]
+  if d > min_spline_dist && ang_ratio > min_spline_ratio
+  then (
+    let in_start', out_start' = base_points a' in
+    let mesh =
+      let rows =
+        Util.prune_transforms ~shape:transition transforms
+        |> List.map (fun (i, m) -> Path3.affine m (transition i))
+        |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
       in
-      let () =
-        let show =
-          Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red
+      let b =
+        let plane =
+          Path3.to_plane
+            (Path3.translate p3 (Path3.quaternion (Quaternion.conj align_q) b'))
         in
-        Scad.union [ Mesh.to_scad mesh; show a; show b ]
-        |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
+        let d =
+          List.fold_left
+            (fun d p -> Float.max d @@ Plane.distance_to_point plane p)
+            0.
+            (Util.last rows)
+        in
+        let rel =
+          Float.min 0.99 (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right
+        in
+        let _, bot, top = end_edges ~frac:rel false in
+        let pth = rounder ~fn:16 ~corner (subdiv bot) (subdiv top) in
+        let p = V3.(mean pth *@ v3 1. 1. 0.) in
+        Path3.translate (V3.neg p) pth
+        |> Path3.scale (v3 0.9 0.9 1.) (* shrink to hide edge *)
+        |> Path3.translate p
       in
-      mesh )
-    else (
-      (* TODO: figure out how things can be broken out cleanly, so this and the
+      Mesh.of_rows ~style:`MinEdge
+      @@ List.concat
+           [ Mesh.slice_profiles ~slices:(`Flat 5) [ a; List.hd rows ]
+           ; rows
+           ; List.tl @@ Mesh.slice_profiles ~slices:(`Flat 5) [ Util.last rows; b ]
+           ]
+    and inline = List.map (fun m -> V3.affine m in_start') transforms
+    and outline = List.map (fun m -> V3.affine m out_start') transforms in
+    let () =
+      let show =
+        Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red
+      in
+      Scad.union [ Mesh.to_scad mesh; show a; show b ]
+      |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
+    in
+    id := !id + 1;
+    { scad = Mesh.to_scad mesh; inline; outline } )
+  else (
+    (* TODO: figure out how things can be broken out cleanly, so this and the
             spline version can live in separate functions. Should return a complete
             Connect.t I think, so input needs to have a, b, a', b', and inline
             and outline start points. (spline input needs the ability to make a
             new end profile though... makes the break not so clean) *)
-      (* FIXME: from some parameter tweaking, I think that these linear pieces
+    (* FIXME: from some parameter tweaking, I think that these linear pieces
     continue to be the straw that breaks the back. Must make more resilient. *)
-      let ang_step = `Abs (Float.pi /. 36.) in
-      (* let ang_step = `Rel 0.1 in *)
-      let d_shift = 0.3 in
-      let max_angle = 0.6 in
-      (* let d_shift = 0.5 in *)
-      let step =
-        match ang_step with
-        | `Abs a -> a *. Math.sign ang
-        | `Rel frac -> frac *. ang
-      in
-      let shift left plane prof =
-        let extrema = if left then Float.min else Float.max in
-        let f d p = extrema d @@ Plane.distance_to_point plane p in
-        let d = List.fold_left f 0. prof in
-        if left then d_shift -. d else (d +. d_shift) *. -1.
-      in
-      let rot_profs left =
-        let rec loop acc pos r last =
-          if Float.(abs ang -. abs r) > max_angle
-          then (
-            let rot = Path3.zrot ~about:pos r last in
-            let plane = Path3.to_plane last in
-            let d = shift left plane rot in
-            let move = V3.(Plane.normal plane *$ d) in
-            let prof = Path3.translate move rot in
-            loop (prof :: acc) V3.(pos +@ move) (r +. step) prof )
-          else acc
+    let ang_step = `Abs (Float.pi /. 36.) in
+    (* let ang_step = `Rel 0.1 in *)
+    let d_shift = 0.3 in
+    let target_angle = 0.6 in
+    (* let d_shift = 0.5 in *)
+    let step =
+      Float.abs
+      @@
+      match ang_step with
+      | `Abs a -> a
+      | `Rel frac -> frac *. ang
+    in
+    let ang_sign = Math.sign ang in
+    let ang =
+      let diff = Float.abs ang -. target_angle in
+      if diff > 0. then Float.max diff step else Float.abs ang
+    in
+    let shift left plane prof =
+      let extrema = if left then Float.min else Float.max in
+      let f d p = extrema d @@ Plane.distance_to_point plane p in
+      let d = List.fold_left f 0. prof in
+      if left then d_shift -. d else (d +. d_shift) *. -1.
+    in
+    let rot_profs left =
+      let rec loop r profs inln outln pos last =
+        let r = Float.min (r +. step) ang in
+        let rot = Path3.zrot ~about:pos (r *. ang_sign) last in
+        let plane = Path3.to_plane last in
+        let d = shift left plane rot in
+        let move = V3.(Plane.normal plane *$ d) in
+        let prof = Path3.translate move rot in
+        let inln, outln =
+          let ip, op = base_points prof in
+          ip :: inln, op :: outln
         in
-        let start = if left then a' else b' in
-        let profs = loop [] V3.zero step start in
-        if left
-        then List.rev_map (Path3.translate p0) profs
-        else List.map (Path3.translate p3) profs
+        if r < ang
+        then loop r (prof :: profs) inln outln V3.(pos +@ move) prof
+        else prof :: profs, inln, outln
       in
-      let ab = rot_profs true
-      and ba = rot_profs false in
-      let mesh =
-        Mesh.slice_profiles ~slices:(`Flat 10) (a :: List.concat [ ab; ba; [ b ] ])
-        |> fillet ~d:fillet_d ~h:fillet_h
-        |> Mesh.of_rows ~style:`MinEdge
+      let start = if left then a' else b' in
+      let profs, inln, outln = loop 0. [] [] [] V3.zero start in
+      if left
+      then
+        ( List.rev_map (Path3.translate p0) profs
+        , List.rev_map (V3.add p0) inln
+        , List.rev_map (V3.add p0) outln )
+      else
+        ( List.map (Path3.translate p3) profs
+        , Path3.translate p3 inln
+        , Path3.translate p3 outln )
+    in
+    let ab, inline_a, outline_a = rot_profs true
+    and ba, inline_b, outline_b = rot_profs false in
+    let mesh =
+      Mesh.slice_profiles ~slices:(`Flat 10) (a :: List.concat [ ab; ba; [ b ] ])
+      |> fillet ~d:fillet_d ~h:fillet_h
+      |> Mesh.of_rows ~style:`MinEdge
+    in
+    let () =
+      let show =
+        Path3.show_points (Fun.const (Scad.sphere 0.5)) >> Scad.color Color.Red
       in
-      let () =
-        let show =
-          Path3.show_points (Fun.const (Scad.sphere 0.5)) >> Scad.color Color.Red
-        in
-        Scad.union [ Mesh.to_scad mesh; show a; show b ]
-        |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
-      in
-      (* ignore mesh; *)
-      (* Mesh.linear_extrude ~height:1. (Poly2.circle 1.) *)
-      mesh
-      (*  *) )
-  in
-  id := !id + 1;
-  (* FIXME: transforms are not relevant to linear skins, should move inline and
-    outline contsruction into where the meshes are made. Or, could make a list
-    of transforms that applies each of the steps done for the linear skins. *)
-  let inline = List.map (fun m -> V3.affine m in_start) transforms
-  and outline = List.map (fun m -> V3.affine m out_start) transforms
-  and scad =
-    (* if !id <> 7 && !id <> 9 && !id <> 8 then Mesh.to_scad mesh else Scad.empty3 *)
-    (* if !id <> 7 && !id <> 9 then Mesh.to_scad mesh else Scad.empty3 *)
-    (* if !id <> 7 then Mesh.to_scad mesh else Scad.empty3 *)
-    Mesh.to_scad mesh
-    (* ignore mesh; *)
-    (* Scad.sphere 1. *)
-  in
-  (* { scad = Scad.ztrans (-10.) scad; inline; outline } *)
-  { scad; inline; outline }
+      Scad.union [ Mesh.to_scad mesh; show a; show b ]
+      |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
+    in
+    id := !id + 1;
+    { scad = Mesh.to_scad mesh
+    ; inline = List.append inline_a inline_b
+    ; outline = List.append outline_a outline_b
+    } )
 
 (* let bez_base ?(n_facets = 1) ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)

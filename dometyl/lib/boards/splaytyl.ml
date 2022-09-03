@@ -56,7 +56,7 @@ let wall_builder plate =
         auto_body
           ~d1:(`Abs 14.) (* ~d1:(`Rel 0.4) *)
           ~d2:10. (* ~n_steps:(`Flat 10) *)
-          ~n_steps:(`PerZ 3.5)
+          ~n_steps:(`PerZ 2.)
           ~scale:(v2 0.8 0.9) (* ~scale_ez:(v2 0.42 0., v2 1. 1.) *)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
           ~north_clearance:0.
@@ -70,6 +70,7 @@ let wall_builder plate =
         (* ~d1:12. *)
           ~d1:(`Abs 14.)
           ~d2:8.
+          ~n_steps:(`PerZ 2.)
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
@@ -79,7 +80,6 @@ let wall_builder plate =
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
-          ~n_steps:(`Flat 10)
           ~eyelet_config
           plate
     }

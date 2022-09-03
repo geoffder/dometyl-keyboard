@@ -172,24 +172,18 @@ let poly_siding
       |> Affine3.compose (Util.last counter)
     in
     let last_shape = Path3.affine trans (List.map (scaler fn) centred) in
-    let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.1 in
+    let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.05 in
     Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
     |> List.map2 (fun c m -> Affine3.(c %> m)) counter
   in
   let scad =
-    (* TODO: if I keep the pruning, I need to update the drawer to use the
-               pruned transforms instead. *)
-    print_endline "begin pruning wall...";
+    (* TODO: I need to update the drawer to use the pruned transforms instead. *)
     let rows =
       Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred) transforms
       |> List.map (fun (i, m) -> List.map (fun p -> V3.affine m (scaler i p)) centred)
-    (* List.mapi *)
-    (*   (fun i m -> List.map (fun p -> V3.affine m (scaler i p)) centred) *)
-    (*   transforms *)
     and clearing =
       Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; cleared_face.path ]
     in
-    print_endline "...end pruning wall";
     let final =
       let s = Util.last rows in
       let flat = List.map (fun { x; y; z = _ } -> v3 x y 0.) s in
