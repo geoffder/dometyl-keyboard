@@ -194,8 +194,11 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     in
     let d, top' = List.fold_left f (0., []) top in
     let d, bot' = List.fold_left f (d, []) bot in
-    (* NOTE: didn't have a shift here before, maybe it was causing problems? *)
-    let f = V3.(translate (Plane.normal plane *$ (d +. 0.05))) in
+    (* NOTE: 0.3 feels like a pretty large fudge, but I have seen issues with
+        lower, how often do those cases actually come up, I have had it working
+        with 0.05 before running into a situation that seemed to call for 0.3.
+        Another param to expose? *)
+    let f = V3.(translate (Plane.normal plane *$ (d +. 0.3))) in
     List.rev_map f bot', List.rev_map f top'
   in
   let bot_l', top_l' = planer plane_l bot_l top_l
@@ -266,6 +269,8 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
   let fillet_h = `Rel 0.3 in
   (* let fillet_h = 0. in *)
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
+  (* TODO: what about trying a range of out/size values and keeping the one that
+    drops the least? *)
   let transforms =
     let path =
       let p1 = V3.(p0 +@ (dir1 *$ -.out))
@@ -278,15 +283,22 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
            ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ])
            [ p0; p1; p2; p3 ]
     in
-    Path3.to_transforms ~mode:`NoAlign path
+    Path3.to_transforms ~mode:`NoAlign path |> Util.prune_transforms ~shape:transition
   in
+  (* TODO: experiment with automatic "out" d adjustment as well as size as
+    mentioned above. I think I can remove the need for most uses of the
+    linear/rot connectors this way and make it more of an option rather than a
+     necessity. The auto function could optionally take bow params to only be
+    used when one is encountered for example (e.g.
+     - decrease out d when harsh angles or short distances are detected
+     - increasing d, when bowing is detected
+      *)
   if d > min_spline_dist && ang_ratio > min_spline_ratio
   then (
     let in_start', out_start' = base_points a' in
     let mesh =
       let rows =
-        Util.prune_transforms ~shape:transition transforms
-        |> List.map (fun (i, m) -> Path3.affine m (transition i))
+        List.map (fun (i, m) -> Path3.affine m (transition i)) transforms
         |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
       in
       let b =
@@ -295,15 +307,11 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
             (Path3.translate p3 (Path3.quaternion (Quaternion.conj align_q) b'))
         in
         let d =
-          List.fold_left
-            (fun d p -> Float.max d @@ Plane.distance_to_point plane p)
-            0.
-            (Util.last rows)
+          let f d p = Float.max d @@ Plane.distance_to_point plane p in
+          List.fold_left f 0. (Util.last rows)
         in
-        let rel =
-          Float.min 0.99 (d +. 0.3) /. V3.distance w2.foot.top_left w2.foot.top_right
-        in
-        let _, bot, top = end_edges ~frac:rel false in
+        let rel = (d +. 0.2) /. V3.distance w2.foot.top_left w2.foot.top_right in
+        let _, bot, top = end_edges ~frac:(Float.min 0.99 rel) false in
         let pth = rounder ~fn:16 ~corner (subdiv bot) (subdiv top) in
         let p = V3.(mean pth *@ v3 1. 1. 0.) in
         Path3.translate (V3.neg p) pth
@@ -316,14 +324,14 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
            ; rows
            ; List.tl @@ Mesh.slice_profiles ~slices:(`Flat 5) [ Util.last rows; b ]
            ]
-    and inline = List.map (fun m -> V3.affine m in_start') transforms
-    and outline = List.map (fun m -> V3.affine m out_start') transforms in
+    and inline = List.map (fun (_, m) -> V3.affine m in_start') transforms
+    and outline = List.map (fun (_, m) -> V3.affine m out_start') transforms in
     let () =
       let show =
         Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red
       in
       Scad.union [ Mesh.to_scad mesh; show a; show b ]
-      |> Scad.to_file (Printf.sprintf "sweep_test_%i.scad" !id)
+      |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
     in
     id := !id + 1;
     { scad = Mesh.to_scad mesh; inline; outline } )
@@ -339,7 +347,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (* let ang_step = `Rel 0.1 in *)
     let d_shift = 0.3 in
     let target_angle = 0.6 in
-    (* let d_shift = 0.5 in *)
     let step =
       Float.abs
       @@
@@ -398,7 +405,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
         Path3.show_points (Fun.const (Scad.sphere 0.5)) >> Scad.color Color.Red
       in
       Scad.union [ Mesh.to_scad mesh; show a; show b ]
-      |> Scad.to_file (Printf.sprintf "skin_test_%i.scad" !id)
+      |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
     in
     id := !id + 1;
     { scad = Mesh.to_scad mesh
