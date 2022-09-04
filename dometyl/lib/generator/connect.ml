@@ -34,11 +34,7 @@ let is_outward (w1 : Wall.t) (w2 : Wall.t) =
   > V3.distance w1.foot.top_right w2.foot.bot_left
 
 let outward_sign (w1 : Wall.t) (w2 : Wall.t) =
-  V2.(
-    clockwise_sign
-      (of_v3 w1.foot.top_left)
-      (of_v3 w1.foot.top_right)
-      (of_v3 w2.foot.top_left))
+  V3.clockwise_sign w1.foot.top_left w1.foot.top_right w2.foot.top_left
 
 (* let is_outward (w1 : Wall.t) (w2 : Wall.t) = *)
 (*   V2.ccw_theta V3.(to_v2 @@ (w1.foot.top_right -@ w2.foot.top_left)) *)
@@ -237,7 +233,6 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (* account for whether this connection moves away from centre of mass
               (positive) or inward (negative) to set angle  polarity  *)
     (* let sign = if is_outward w1 w2 then 1. else -1. in *)
-    ignore is_outward;
     let sign = outward_sign w1 w2 in
     V3.angle (V3.neg dir1) V3.(p3 -@ p0) *. sign
   in
@@ -245,7 +240,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     ignore n_steps;
     32
   in
-  let out = 3. in
+  let out = 1.5 in
   (* let min_spline_dist = 15. in *)
   let min_spline_dist = out *. 4. in
   let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
@@ -258,33 +253,13 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (V3.angle_points w1.foot.top_left w1.foot.top_right w2.foot.top_left);
   Printf.printf
     "3pt cw sign = %f\n"
-    V2.(
-      clockwise_sign
-        (of_v3 w1.foot.top_left)
-        (of_v3 w1.foot.top_right)
-        (of_v3 w2.foot.top_left));
+    (V3.clockwise_sign w1.foot.top_left w1.foot.top_right w2.foot.top_left);
   Printf.printf "outward sign = %f\n" (if is_outward w1 w2 then 1. else -1.);
   let step = 1. /. Float.of_int n_steps in
   let fillet_d = `Rel 0.2 in
   let fillet_h = `Rel 0.3 in
   (* let fillet_h = 0. in *)
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
-  (* TODO: what about trying a range of out/size values and keeping the one that
-    drops the least? *)
-  let transforms =
-    let path =
-      let p1 = V3.(p0 +@ (dir1 *$ -.out))
-      and p2 = V3.(p3 +@ (dir2 *$ out)) in
-      (* TODO: related to above, the size param of of_path may be useful for
-           automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
-      Bezier3.curve ~fn:n_steps
-      @@ Bezier3.of_path
-           ~tangents:`NonUniform
-           ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ])
-           [ p0; p1; p2; p3 ]
-    in
-    Path3.to_transforms ~mode:`NoAlign path |> Util.prune_transforms ~shape:transition
-  in
   (* TODO: experiment with automatic "out" d adjustment as well as size as
     mentioned above. I think I can remove the need for most uses of the
     linear/rot connectors this way and make it more of an option rather than a
@@ -295,6 +270,31 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
       *)
   if d > min_spline_dist && ang_ratio > min_spline_ratio
   then (
+    (* NOTE: try minimal out shift for tight connections, and a separate
+        parameter for more extreme foot direction angles (over 90 deg)? *)
+    let out =
+      if d < min_spline_dist || ang_ratio < min_spline_ratio
+      then 0.1
+      else if V3.(angle dir1 dir2) > Float.pi /. 2.
+      then 3.
+      else out
+    in
+    (* TODO: what about trying a range of out/size values and keeping the one that
+    drops the least? *)
+    let transforms =
+      let path =
+        let p1 = V3.(p0 +@ (dir1 *$ -.out))
+        and p2 = V3.(p3 +@ (dir2 *$ out)) in
+        (* TODO: related to above, the size param of of_path may be useful for
+           automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
+        Bezier3.curve ~fn:n_steps
+        @@ Bezier3.of_path
+             ~tangents:`NonUniform
+             ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ])
+             [ p0; p1; p2; p3 ]
+      in
+      Path3.to_transforms ~mode:`NoAlign path |> Util.prune_transforms ~shape:transition
+    in
     let in_start', out_start' = base_points a' in
     let mesh =
       let rows =
@@ -336,6 +336,9 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     id := !id + 1;
     { scad = Mesh.to_scad mesh; inline; outline } )
   else (
+    (* TODO: I'm going to break this out (and not use it). Will probably delete
+      eventually, but store it in an ignored module for the time being I think.
+    Some of the tricks might be useful for something else. *)
     (* TODO: figure out how things can be broken out cleanly, so this and the
             spline version can live in separate functions. Should return a complete
             Connect.t I think, so input needs to have a, b, a', b', and inline
@@ -347,6 +350,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     (* let ang_step = `Rel 0.1 in *)
     let d_shift = 0.3 in
     let target_angle = 0.6 in
+    let max_angle = 0.4 in
     let step =
       Float.abs
       @@
@@ -357,7 +361,7 @@ let spline_base ?(height = 11.) ?(n_steps = 6) (w1 : Wall.t) (w2 : Wall.t) =
     let ang_sign = Math.sign ang in
     let ang =
       let diff = Float.abs ang -. target_angle in
-      if diff > 0. then Float.max diff step else Float.abs ang
+      Float.min max_angle (if diff > 0. then Float.max diff step else Float.abs ang)
     in
     let shift left plane prof =
       let extrema = if left then Float.min else Float.max in
