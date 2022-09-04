@@ -175,12 +175,13 @@ let poly_siding
     let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.05 in
     Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
     |> List.map2 (fun c m -> Affine3.(c %> m)) counter
+    |> Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred)
   in
   let scad =
-    (* TODO: I need to update the drawer to use the pruned transforms instead. *)
     let rows =
-      Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred) transforms
-      |> List.map (fun (i, m) -> List.map (fun p -> V3.affine m (scaler i p)) centred)
+      List.map
+        (fun (i, m) -> List.map (fun p -> V3.affine m (scaler i p)) centred)
+        transforms
     and clearing =
       Mesh.slice_profiles ~slices:(`Flat 5) [ start_face.path; cleared_face.path ]
     in
@@ -192,9 +193,9 @@ let poly_siding
     Mesh.of_rows ~style:`MinEdge (List.concat [ clearing; List.tl rows; List.tl final ])
     |> Mesh.to_scad
   and foot =
-    let m = Util.last transforms in
+    let i, m = Util.last transforms in
     let f p =
-      let { x; y; z = _ } = V3.(affine m (scaler fn (p -@ cleared_face.points.centre))) in
+      let { x; y; z = _ } = V3.(affine m (scaler i (p -@ cleared_face.points.centre))) in
       v3 x y 0.
     in
     Points.map f cleared_face.points
@@ -222,14 +223,12 @@ let poly_siding
     in
     let c1 = V3.sub p1 cleared_face.points.centre in
     let trans = List.rev transforms
-    and f i m = V3.affine m (scaler i c1) in
-    let _, path =
-      List.fold_left
-        (fun (i, acc) m -> i + 1, f (fn - i) m :: acc)
-        (0, [ V3.(f fn (List.hd trans) *@ v3 1. 1. 0.) ])
-        trans
-    in
-    p0 :: path
+    and f (i, m) = V3.affine m (scaler i c1) in
+    p0
+    :: List.fold_left
+         (fun acc im -> f im :: acc)
+         [ V3.(f (List.hd trans) *@ v3 1. 1. 0.) ]
+         trans
   in
   let screw =
     match eyelet_config with
