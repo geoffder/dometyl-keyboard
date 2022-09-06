@@ -242,7 +242,9 @@ let poly_siding
           let offset = outer_rad +. V3.(norm (sub foot.top_left foot.bot_left) /. 4.) in
           Point V3.(to_v2 (mid foot.top_left foot.top_right +@ (n *$ offset)))
       in
-      Some (make ~placement config (V2.of_v3 foot.bot_left) (V2.of_v3 foot.bot_right))
+      let l = V2.(lerp (of_v3 foot.bot_left) (of_v3 foot.top_left) 0.25)
+      and r = V2.(lerp (of_v3 foot.bot_right) (of_v3 foot.top_right) 0.25) in
+      Some (make ~placement config [ l; r ])
     | None -> None
   in
   { scad = Util.value_map_opt ~default:scad (fun s -> Eyelet.apply s scad) screw
