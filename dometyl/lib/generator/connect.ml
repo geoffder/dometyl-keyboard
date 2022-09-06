@@ -135,9 +135,10 @@ let id = ref 0
 
 let spline_base
     ?(height = 11.)
+    ?(d = 1.)
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
-    ?(fn = 6)
+    ?(fn = 64)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
@@ -217,17 +218,10 @@ let spline_base
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
   let ang = V3.angle (V3.neg dir1) V3.(p3 -@ p0) *. outward_sign w1 w2 in
-  let fn =
-    ignore fn;
-    (* 32 *)
-    64
-    (* 80 *)
-  in
-  let out = 1. in
-  let min_spline_dist = out *. 4. in
-  let d = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
+  let min_spline_dist = d *. 4. in
+  let dist = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
   let min_spline_ratio = 6. in
-  let ang_ratio = d /. Float.abs ang /. Float.pi in
+  let ang_ratio = dist /. Float.abs ang /. Float.pi in
   Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
   let step = 1. /. Float.of_int fn in
   let fillet_d = `Rel 0.2 in
@@ -245,7 +239,9 @@ let spline_base
     (* TODO: possible to roughly calculate an out distance based on these
     factors rather than hardcoding to 0.1 or some other small number? Or is the
     iterative "least pruned" approach I was thinking of the best? *)
-    if d < min_spline_dist || ang_ratio < min_spline_ratio then 0.1 else out
+    if (dist < min_spline_dist || ang_ratio < min_spline_ratio) && V3.angle dir1 dir2 < 3.
+    then 0.1
+    else d
   in
   (* TODO: what about trying a range of out/size values and keeping the one that
     drops the least? *)
@@ -328,8 +324,12 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
   (* TODO: rather than use the ends, I should calculate a factor to slide the
     more outward end along the wall (given to drawer) that will improve the
     angle when it is too sharp (razor thin / intersecting mesh) *)
-  let a = dedup @@ List.rev_append (w1.drawer `BR) (w1.drawer `TR)
-  and b = dedup @@ List.rev_append (w2.drawer `BL) (w2.drawer `TL) in
+  let a_bot = dedup (w1.drawer (`B 0.99))
+  and a_top = dedup (w1.drawer (`T 0.99))
+  and b_bot = dedup (w2.drawer (`B 0.01))
+  and b_top = dedup (w2.drawer (`T 0.01)) in
+  let a = List.append a_top (List.rev a_bot)
+  and b = List.append b_top (List.rev b_bot) in
   let scad = Mesh.skin_between ~slices:32 a b |> Mesh.to_scad in
   let () =
     let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
@@ -337,7 +337,7 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
     |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
   in
   id := !id + 1;
-  { scad; outline = []; inline = [] }
+  Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
 (* let join_walls *)
 (*     ?(n_steps = `Flat 6) *)
 (*     ?(fudge_factor = 3.) *)
@@ -470,16 +470,20 @@ type config =
       }
   | Spline of
       { height : float option
+      ; d : float option
       ; fn : int option
       ; corner_fn : int option
       ; corner : Path3.Round.corner option
       }
 
 let full_join ?fudge_factor ?overlap_factor () = FullJoin { fudge_factor; overlap_factor }
-let spline ?height ?fn ?corner_fn ?corner () = Spline { height; fn; corner_fn; corner }
+
+let spline ?height ?d ?fn ?corner_fn ?corner () =
+  Spline { height; d; fn; corner_fn; corner }
 
 let connect = function
-  | Spline { height; fn; corner_fn; corner } -> spline_base ?height ?fn ?corner_fn ?corner
+  | Spline { height; d; fn; corner_fn; corner } ->
+    spline_base ?height ?d ?fn ?corner_fn ?corner
   | FullJoin _ -> join_walls
 
 let manual_joiner ~join key next (i, last, scads) =
@@ -556,14 +560,15 @@ let manual
       fold ~rev:true ~join:thumb_south ~init:(Util.prepend_opt se east) thumb.south
     in
     let last_thumb_west, swoop =
+      let northwest = Option.map snd (IMap.min_binding_opt thumb.north) in
       let sw =
-        let first_west = Option.map snd (IMap.max_binding_opt thumb.west) in
-        Util.map2_opt (connect (thumb_south last_idx)) last_thumb_south first_west
+        (* if there is nothing in the west, connect to the first northern wall *)
+        let next =
+          Util.first_some (Option.map snd (IMap.max_binding_opt thumb.west)) northwest
+        in
+        Util.map2_opt (connect (thumb_south last_idx)) last_thumb_south next
       in
-      let northwest =
-        let+ _, nw = IMap.min_binding_opt thumb.north in
-        nw
-      and last_idx, last, side =
+      let last_idx, last, side =
         fold ~rev:true ~join:thumb_west ~init:(Util.prepend_opt sw swoop) thumb.west
       in
       ( last
@@ -591,24 +596,33 @@ let manual
 let skeleton
     ?(index_height = 13.)
     ?height
+    ?spline_d
     ?fn
     ?corner_fn
     ?corner
     ?fudge_factor
     ?overlap_factor
     ?thumb_height
-    ?(east_link = spline ())
-    ?(west_link = spline ())
+    ?east_link
+    ?west_link
     ?(north_joins = fun i -> i < 2)
     ?(south_joins = fun _ -> false)
     ?(close_thumb = false)
     (Walls.{ body; thumb } as walls)
   =
-  let body_spline = spline ?height ?fn ?corner_fn ?corner ()
-  and index_spline = spline ~height:index_height ?fn ?corner_fn ?corner ()
+  let body_spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ()
+  and index_spline = spline ~height:index_height ?d:spline_d ?fn ?corner_fn ?corner ()
   and thumb_spline =
-    spline ?height:(Util.first_some thumb_height height) ?fn ?corner_fn ?corner ()
+    spline
+      ?height:(Util.first_some thumb_height height)
+      ?d:spline_d
+      ?fn
+      ?corner_fn
+      ?corner
+      ()
   in
+  let east_link = Option.value ~default:thumb_spline east_link
+  and west_link = Option.value ~default:thumb_spline west_link in
   let join = full_join ?fudge_factor ?overlap_factor ()
   and thumb_corner =
     if close_thumb then full_join ~fudge_factor:0. ?overlap_factor () else thumb_spline
@@ -654,6 +668,7 @@ let closed
     ?fudge_factor
     ?overlap_factor
     ?height
+    ?spline_d
     ?fn
     ?corner_fn
     ?corner
@@ -663,7 +678,7 @@ let closed
   =
   let join = full_join ?fudge_factor ?overlap_factor ()
   and corner_join = full_join ~fudge_factor:0. ?overlap_factor ()
-  and spline = spline ?height ?fn ?corner_fn ?corner () in
+  and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner () in
   let side last_idx i = if i = last_idx then corner_join else join
   and max_key m = fst (IMap.max_binding m) in
   let north =

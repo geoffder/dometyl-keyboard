@@ -30,6 +30,7 @@ val full_join : ?fudge_factor:float -> ?overlap_factor:float -> unit -> config
 
 val spline
   :  ?height:float
+  -> ?d:float
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
@@ -53,6 +54,7 @@ val manual
 val skeleton
   :  ?index_height:float
   -> ?height:float
+  -> ?spline_d:float
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
@@ -71,6 +73,7 @@ val closed
   :  ?fudge_factor:float
   -> ?overlap_factor:float
   -> ?height:float
+  -> ?spline_d:float
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
