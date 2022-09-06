@@ -26,45 +26,15 @@ val outline_2d : t -> Path2.t
     Retrieve the inline points of [t] and project them to 2d vectors. *)
 val inline_2d : t -> Path2.t
 
-val straight
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> ?min_width:float
+val full_join : ?fudge_factor:float -> ?overlap_factor:float -> unit -> config
+
+val spline
+  :  ?height:float
+  -> ?fn:int
+  -> ?corner_fn:int
+  -> ?corner:Path3.Round.corner
   -> unit
   -> config
-
-val bez : ?n_facets:int -> ?height:float -> ?n_steps:int -> unit -> config
-
-val cubic
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?scale:float
-  -> ?d:float
-  -> ?n_steps:int
-  -> ?bow_out:bool
-  -> unit
-  -> config
-
-val snake
-  :  ?n_facets:int
-  -> ?height:float
-  -> ?scale:float
-  -> ?d:float
-  -> ?n_steps:int
-  -> unit
-  -> config
-
-val full_join
-  :  ?n_steps:Wall.Steps.t
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> unit
-  -> config
-
-val elbow : ?n_facets:int -> ?height:float -> ?n_steps:int -> ?d:float -> unit -> config
-val spline : ?height:float -> ?n_steps:int -> unit -> config
 
 val manual
   :  ?west:(int -> config)
@@ -81,34 +51,29 @@ val manual
   -> t
 
 val skeleton
-  :  ?n_facets:int
-  -> ?index_height:float
+  :  ?index_height:float
   -> ?height:float
-  -> ?min_straight_width:float
-  -> ?n_steps:int
-  -> ?body_join_steps:Wall.Steps.t
-  -> ?thumb_join_steps:Wall.Steps.t
+  -> ?fn:int
+  -> ?corner_fn:int
+  -> ?corner:Path3.Round.corner
   -> ?fudge_factor:float
-  -> ?join_fudge_factor:float
   -> ?overlap_factor:float
-  -> ?cubic_d:float
-  -> ?cubic_scale:float
   -> ?thumb_height:float
   -> ?east_link:config
   -> ?west_link:config
   -> ?north_joins:(int -> bool)
   -> ?south_joins:(int -> bool)
-  -> ?pinky_idx:int
-  -> ?pinky_elbow:bool
   -> ?close_thumb:bool
   -> Walls.t
   -> t
 
 val closed
-  :  ?body_steps:Wall.Steps.t
-  -> ?thumb_steps:Wall.Steps.t
-  -> ?fudge_factor:float
+  :  ?fudge_factor:float
   -> ?overlap_factor:float
+  -> ?height:float
+  -> ?fn:int
+  -> ?corner_fn:int
+  -> ?corner:Path3.Round.corner
   -> ?west_link:config
   -> ?east_link:config
   -> Walls.t
