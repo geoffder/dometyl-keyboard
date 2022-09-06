@@ -24,6 +24,7 @@ val place
 
 val eyelets
   :  ?width:float
+  -> ?bury:float
   -> ?z_off:float
   -> ?eyelet_config:Eyelet.config
   -> Connect.t

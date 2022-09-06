@@ -129,74 +129,34 @@ let place
 
 let eyelets
     ?width
+    ?(bury = 0.1)
     ?(z_off = 1.)
     ?(eyelet_config = Eyelet.m4_config)
-    Connect.{ inline; _ }
+    Connect.{ inline; outline; _ }
     { screw_l; screw_r; thickness; _ }
   =
-  let perim = Array.of_list inline
-  and half_width =
+  let half_width =
     Util.value_map_opt ~default:(eyelet_config.outer_rad +. 3.) (( *. ) 0.5) width
   in
-  let n_pts = Array.length perim in
-  let dist a b = V3.(norm (a -@ b)) in
-  let find a =
-    let f (i, m, idx, closest) b =
-      let m' = dist a b in
-      if m' < m then i + 1, m', i, b else i + 1, m, idx, closest
-    in
-    let _, _, idx, closest = Array.fold_left f (0, Float.max_float, 0, V3.zero) perim in
-    idx, closest
-  in
-  let wrap i = if i < 0 then n_pts + i else if i >= n_pts then n_pts - i else i in
+  let len_inline = Path3.length ~closed:true inline
+  and cont_inline = Path3.to_continuous ~closed:true inline
+  and cont_outline = Path3.to_continuous ~closed:true outline in
   let build loc =
-    let idx, closest = find loc in
-    let cw, neighbour =
-      let budge p = V3.(add (map (( *. ) 0.1) (sub p closest)) closest)
-      and ccw_idx = wrap (idx - 1)
-      and cw_idx = wrap (idx + 1) in
-      let ccw = budge perim.(ccw_idx)
-      and cw = budge perim.(cw_idx) in
-      if dist loc cw < dist loc ccw then true, cw else false, ccw
+    let u = Path3.continuous_closest_point cont_inline loc in
+    let shift = half_width /. len_inline in
+    let lu =
+      let u = u -. shift in
+      if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
     in
-    let centre =
-      let diff = V3.sub neighbour closest
-      and step = 0.05 in
-      let rec loop last_dist last frac =
-        let next = V3.((diff *$ frac) +@ closest) in
-        let next_dist = dist loc next in
-        if next_dist > last_dist then last else loop next_dist next (frac +. step)
-      in
-      loop (dist loc closest) closest step
+    let n_steps = 16 in
+    let step = shift *. 2. /. (Float.of_int @@ (n_steps - 1)) in
+    let move = V2.add V3.(to_v2 @@ ((cont_outline u -@ cont_inline u) *$ bury)) in
+    let ps =
+      List.init n_steps (fun i ->
+          move @@ V2.of_v3 @@ cont_inline (lu +. (Float.of_int i *. step)) )
     in
-    let side_point neighbour_wise =
-      let step i = wrap @@ if Bool.equal neighbour_wise cw then i + 1 else i - 1 in
-      let rec loop acc_dist last_pos i =
-        let pos = perim.(i) in
-        let acc_dist' = dist pos last_pos +. acc_dist in
-        if acc_dist' < half_width
-        then loop acc_dist' pos (step i)
-        else (
-          let vec = V3.(normalize (pos -@ last_pos)) in
-          V3.((vec *$ (half_width -. acc_dist)) +@ last_pos) )
-      in
-      (* Check that we aren't too far from the original closest point before
-           stepping over it. *)
-      let drift = V3.sub perim.(idx) centre in
-      if (not neighbour_wise) && V3.norm drift > half_width
-      then V2.of_v3 V3.(centre +@ (V3.normalize drift *$ half_width))
-      else V2.of_v3 @@ loop 0. centre (step idx)
-    in
-    Scad.union
-      [ Eyelet.(
-          make
-            ~placement:(Point (V2.of_v3 loc))
-            eyelet_config
-            (side_point false)
-            (side_point true)
-          |> to_scad)
-        |> Scad.ztrans (V3.get_z screw_l +. thickness +. z_off)
-      ]
+    Eyelet.(to_scad @@ make ~placement:(Point (V2.of_v3 loc)) eyelet_config ps)
+    |> Scad.ztrans (V3.get_z screw_l +. thickness +. z_off)
   in
   Scad.union [ build screw_l; build screw_r ]
 

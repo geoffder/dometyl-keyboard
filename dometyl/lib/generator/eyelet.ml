@@ -66,42 +66,50 @@ let magnet_6x3_config =
 
 let m4_countersunk_fastener = screw_fastener ()
 
-let make ?(fn = 7) ~placement ({ outer_rad; inner_rad; thickness; hole } as config) p1 p2 =
-  let base_centre = V2.mid p1 p2 in
-  let hole_offset, foot_offset =
+let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as config) ps =
+  let p1 = List.hd ps
+  and p2 = Util.last ps in
+  let base_centre = (Path2.to_continuous ps) 0.5 in
+  let normal, hole_offset, _foot_offset =
     match placement with
-    | Normal n -> V2.smul n outer_rad, V2.smul n (-0.1)
+    | Normal n -> n, V2.smul n outer_rad, V2.smul n (-0.1)
     | Point p ->
       let diff = V2.(p -@ base_centre) in
-      diff, V2.smul (V2.normalize diff) (-0.1)
+      V2.normalize diff, diff, V2.smul (V2.normalize diff) (-0.1)
   in
   let hole_centre = V2.(base_centre +@ hole_offset) in
-  let outer = Scad.circle ~fn:16 outer_rad |> Scad.translate hole_centre
-  and inner = Scad.circle ~fn:16 inner_rad |> Scad.translate hole_centre
-  and swoop p =
-    let rad_offset = V2.(normalize (p -@ base_centre) *$ outer_rad) in
-    hole_centre
-    :: base_centre
-    :: V2.add p foot_offset
-    :: Bezier2.(
-         curve
-           ~fn
-           (make V2.[ p; mid (base_centre +@ rad_offset) p; hole_centre +@ rad_offset ]))
-    |> Scad.polygon
+  let l = V2.(hole_centre +@ (v2 normal.y (-.normal.x) *$ outer_rad))
+  and r = V2.(hole_centre -@ (v2 normal.y (-.normal.x) *$ outer_rad)) in
+  let outer = List.tl @@ Path2.arc_about_centre ~dir:`CW ~centre:hole_centre ~fn l r
+  and inner = List.rev_map (V2.add hole_centre) @@ Path2.circle ~fn inner_rad in
+  let swoop_l =
+    let rad_offset = V2.(normalize (p1 -@ base_centre) *$ outer_rad) in
+    List.tl @@ Bezier2.(curve ~fn (make V2.[ p1; base_centre +@ rad_offset; l ]))
   in
-  let outline = Scad.union [ outer; swoop p1; swoop p2 ] in
+  let swoop_r =
+    let rad_offset = V2.(normalize (p2 -@ base_centre) *$ outer_rad) in
+    List.tl @@ Bezier2.(curve ~fn (make V2.[ r; base_centre +@ rad_offset; p2 ]))
+  in
+  let outline =
+    let fudge = V2.(normal *$ -0.01) in
+    List.concat [ List.tl @@ List.rev_map (V2.add fudge) ps; swoop_l; outer; swoop_r ]
+  in
   let scad, cut =
     match hole with
     | Through ->
-      Scad.difference outline [ inner ] |> Scad.linear_extrude ~height:thickness, None
+      ( Poly2.make ~holes:[ inner ] outline
+        |> Poly2.to_scad
+        |> Scad.linear_extrude ~height:thickness
+      , None )
     | Inset depth ->
       let inset =
         Scad.union
-          [ Scad.linear_extrude ~height:depth inner
-          ; Scad.cylinder ~fn:16 ~height:(thickness -. depth) (inner_rad /. 2.)
-            |> Scad.translate (V3.of_v2 ~z:depth hole_centre)
+          [ Scad.linear_extrude ~height:(depth +. 0.01) (Scad.polygon inner)
+            |> Scad.ztrans (-0.01)
+          ; Scad.cylinder ~fn ~height:(thickness -. depth +. 0.02) (inner_rad /. 2.)
+            |> Scad.translate (V3.of_v2 ~z:(depth -. 0.01) hole_centre)
           ]
-      and foot = Scad.linear_extrude ~height:thickness outline in
+      and foot = Scad.linear_extrude ~height:thickness (Scad.polygon outline) in
       Scad.difference foot [ inset ], Some inset
   in
   { scad; cut; centre = V3.of_v2 hole_centre; config }
