@@ -83,14 +83,7 @@ let wall_builder plate =
           plate
     }
 
-let base_connector =
-  Connect.closed
-    ~body_steps:(`Flat 3)
-    ~thumb_steps:(`Flat 3)
-    ~overlap_factor:1.5
-    ~east_link:(Connect.snake ~height:15. ())
-    ~west_link:(Connect.straight ~height:15. ())
-
+let base_connector = Connect.closed ~overlap_factor:1.5
 let plate_welder = Plate.column_joins
 let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
 

@@ -28,13 +28,7 @@ let wall_builder plate =
           plate
     }
 
-let base_connector =
-  Connect.closed
-    ~body_steps:(`PerZ 6.)
-    ~thumb_steps:(`Flat 4)
-    ~east_link:(Connect.snake ~height:15. ())
-    ~west_link:(Connect.straight ~height:15. ())
-
+let base_connector = Connect.closed
 let plate_welder = Plate.column_joins
 let ports_cutter = Splaytyl.ports_cutter
 

@@ -82,17 +82,10 @@ let base_connector =
     ~height:9.
     ~index_height:15.
     ~thumb_height:17.
-    ~east_link:(Connect.snake ~scale:1.3 ~d:1.4 ())
-    ~west_link:(Connect.straight ~height:15. ())
-    ~cubic_d:2.
-    ~cubic_scale:1.
-    ~n_steps:9
-    ~body_join_steps:(`Flat 3)
-    ~thumb_join_steps:(`Flat 4)
+    ~fn:64
     ~fudge_factor:8.
     ~overlap_factor:1.2
     ~close_thumb:true
-    ~pinky_elbow:false
 
 let ports_cutter = BastardShield.(cutter ~x_off:0.5 ~y_off:(-1.2) (make ()))
 

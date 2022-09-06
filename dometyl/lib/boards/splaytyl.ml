@@ -51,12 +51,13 @@ let plate_builder =
 
 let wall_builder plate =
   let eyelet_config = Eyelet.magnet_6x3_config in
+  (* let eyelet_config = Eyelet.m4_config in *)
   Walls.
     { body =
         auto_body
           ~d1:(`Abs 14.) (* ~d1:(`Rel 0.4) *)
           ~d2:10. (* ~n_steps:(`Flat 10) *)
-          ~n_steps:(`PerZ 2.)
+          ~n_steps:(`PerZ 1.)
           ~scale:(v2 0.8 0.9) (* ~scale_ez:(v2 0.42 0., v2 1. 1.) *)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
           ~north_clearance:0.
@@ -70,7 +71,7 @@ let wall_builder plate =
         (* ~d1:12. *)
           ~d1:(`Abs 14.)
           ~d2:8.
-          ~n_steps:(`PerZ 2.)
+          ~n_steps:(`PerZ 1.)
           ~north_lookup:(fun _ -> No)
           ~south_lookup:(fun i -> if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
@@ -86,19 +87,14 @@ let wall_builder plate =
 
 let base_connector =
   Connect.skeleton
-    ~height:9.
-    ~index_height:12.
-    ~thumb_height:12.
-    ~east_link:(Connect.snake ~height:12. ~scale:1.5 ~d:1.2 ())
-    ~west_link:(Connect.straight ~height:12. ())
-    ~cubic_d:2.
-    ~cubic_scale:1.5
-    ~body_join_steps:(`Flat 3)
-    ~thumb_join_steps:(`Flat 3)
-    ~fudge_factor:8. (* ~close_thumb:true *)
+    ~height:11.
+    ~index_height:13.
+    ~thumb_height:11.
+    ~fudge_factor:8.
     ~close_thumb:false
-    ~pinky_elbow:false
     ~overlap_factor:1.
+    ~north_joins:(Fun.const false)
+    ~south_joins:(Fun.const false)
 
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]

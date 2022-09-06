@@ -69,17 +69,7 @@ let wall_builder plate =
     }
 
 let base_connector =
-  Connect.skeleton
-    ~height:5.
-    ~thumb_height:9.
-    ~east_link:(Connect.snake ~height:9. ~scale:1. ~d:1.4 ())
-    ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
-    ~cubic_d:2.
-    ~cubic_scale:1.
-    ~body_join_steps:(`Flat 5)
-    ~thumb_join_steps:(`Flat 5)
-    ~fudge_factor:8.
-    ~close_thumb:false
+  Connect.skeleton ~height:5. ~thumb_height:9. ~fudge_factor:8. ~close_thumb:false
 
 let ports_cutter = BastardShield.(cutter (make ()))
 

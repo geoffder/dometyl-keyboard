@@ -76,12 +76,6 @@ let base_connector =
     ~height:5.
     ~index_height:14.
     ~thumb_height:9.
-    ~east_link:(Connect.snake ~height:9. ~n_facets:3 ~scale:1.4 ~d:1. ())
-    ~west_link:(Connect.cubic ~height:11. ~scale:1.25 ~d:1. ~bow_out:false ())
-    ~cubic_d:2.
-    ~cubic_scale:1.
-    ~body_join_steps:(`Flat 3)
-    ~thumb_join_steps:(`Flat 3)
     ~fudge_factor:8.
     ~close_thumb:false
 
