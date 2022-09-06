@@ -50,31 +50,54 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~n_steps:(`Flat 5)
-          ~north_clearance:1.5
-          ~south_clearance:1.5
-          ~side_clearance:1.5
+          ~d1:(`Abs 10.)
+          ~d2:5.
+          ~n_steps:(`PerZ 1.5)
+          ~scale:(v2 0.8 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           plate
     ; thumb =
         auto_thumb
-          ~south_lookup:(fun i -> if not (i = 1) then Yes else No)
+          ~d1:(`Abs 10.)
+          ~d2:5.
+          ~n_steps:(`Flat 20)
+          ~scale:(v2 0.8 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
+          ~south_lookup:(fun i -> if i = 0 then Eye else if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye)
-          ~north_clearance:0.5
-          ~south_clearance:0.5
-          ~side_clearance:0.5 (* ~d1:4. *)
-          ~d2:4.75
-          ~n_steps:(`PerZ 5.)
+          ~west_lookup:(fun _ -> No)
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           plate
     }
 
 let base_connector =
-  Connect.skeleton ~height:5. ~thumb_height:9. ~fudge_factor:8. ~close_thumb:false
+  Connect.skeleton
+    ~fn:64
+    ~height:9.
+    ~spline_d:1.5
+    ~thumb_height:9.
+    ~fudge_factor:8.
+    ~close_thumb:false
+    ~corner:(Path3.Round.chamf (`Cut 0.5))
+    ~north_joins:(Fun.const true)
 
 let ports_cutter = BastardShield.(cutter (make ()))
 
 let build ?right_hand ?hotswap () =
-  let keyhole = Mx.make_hole ~clearance:2.75 ?hotswap () in
+  (* let keyhole = Mx.make_hole ~clearance:2.75 ?hotswap () in *)
+  let keyhole =
+    Mx.make_hole
+      ~cap_cutout_height:None
+      ?hotswap
+      ~clearance:2.75
+      ~corner:(Path3.Round.chamf (`Cut 0.5))
+      ()
+  in
   Case.make
     ?right_hand
     ~plate_builder
