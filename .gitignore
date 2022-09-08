@@ -34,3 +34,7 @@ _esy/
 # various junk
 *tester_board.ml
 *Tester_board/
+
+# output directories
+dometyl/models/scads/
+dometyl/models/stls/

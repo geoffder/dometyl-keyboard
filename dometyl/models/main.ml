@@ -13,17 +13,17 @@ let splaytyl_right = Splaytyl.build ()
 
 let () =
   print_endline "Building keyboards...";
-  Write.thing "skeletyl_right" (Case.to_scad ~show_caps:false @@ Skeletyl.build ());
-  Write.thing "skeletyl_compare" (Skeletyl.bastard_compare ());
-  Write.thing "splaytyl_right" (Case.to_scad ~show_caps:false splaytyl_right);
-  Write.thing "splaytyl_right_plate" (Plate.to_scad splaytyl_right.plate);
-  (* Write.thing "splaytyl_left" (Case.to_scad splaytyl_left); *)
-  Write.thing "bottom_plate_right" (Bottom.make splaytyl_right);
+  Scad.to_file "skeletyl_right.scad" (Case.to_scad ~show_caps:false @@ Skeletyl.build ());
+  Scad.to_file "skeletyl_compare.scad" (Skeletyl.bastard_compare ());
+  Scad.to_file "splaytyl_right.scad" (Case.to_scad ~show_caps:false splaytyl_right);
+  Scad.to_file "splaytyl_right_plate.scad" (Plate.to_scad splaytyl_right.plate);
+  (* Scad.to_file "splaytyl_left.scad" (Case.to_scad splaytyl_left); *)
+  Scad.to_file "bottom_plate_right.scad" (Bottom.make splaytyl_right);
   (* Write.thing *)
   (*   "splaytyl_right_with_plate" *)
   (*   ( Case.to_scad ~show_caps:false splaytyl_right *)
   (*   |> Scad.add (Scad.ztrans (-8.) (Bottom.make splaytyl_right)) ); *)
-  (* Write.thing "tent_right" (Tent.make splaytyl_right); *)
+  (* Scad.to_file "tent_right.scad" (Tent.make splaytyl_right); *)
   print_endline "Done!"
 
 let k =

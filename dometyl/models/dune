@@ -1,0 +1,39 @@
+(executable
+ (name main)
+ (libraries generator boards))
+
+
+; Convenience rule/alias for building and running examples (promoted to examples/scads diectory)
+; This pattern enables automatic scad re-generation on changes with `dune build -w @run`.
+
+(rule
+ (alias models)
+ (deps
+  (sandbox always)
+  (:runner "helpers/runner.exe")
+  (:scads
+   (glob_files "*.exe")))
+ (targets
+  (dir "scads"))
+ (mode promote)
+ (action
+  (chdir
+   "scads"
+   (run %{runner} %{scads}))))
+
+; Export scad examples to stl.
+
+(rule
+ (alias export_models)
+ (deps
+  (sandbox always)
+  (:exporter "helpers/exporter.exe")
+  (:scads
+   (glob_files "scads/*.scad")))
+ (targets
+  (dir "stls"))
+ (mode promote)
+ (action
+  (chdir
+   "stls"
+   (run %{exporter} %{scads}))))
