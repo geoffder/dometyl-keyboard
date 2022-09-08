@@ -71,23 +71,34 @@ Online documentation is available
 be filling in over time.
 
 ## Usage
-1. Modify [main.ml](dometyl/bin/main.ml), adding lines to generate and write
-   your case model to the [things](dometyl/things) directory. This can be done
-   simply with the helper function `Write.thing` which can also optionally
-   export and `.stl` using the OpenSCAD cli. You can also pass your generated
-   `Case.t` to tent and bottom plate generation functions while you're there and
-   write those to `.scad` as well.
-2. Make a new `.ml` file in the [boards library](dometyl/lib/boards), maybe
+1. Make a new `.ml` file in the [boards library](dometyl/lib/boards), maybe
    starting with a copy of and existing one and and modifying it to suit your
    preferences / fit your hand.
-3. Generate scads/stls by running `dune exec dometyl` from the [dometyl](dometyl)
-   project folder. Files will be output to the [things](things) directory.
-   Alteratively, if you have/install `fswatch` (cross-platform) or `inotify`
-   (GNU/linux) on your system, you can use `dune build -w @run` to automatically
-   build and execute on file changes.
+2. Modify [main.ml](dometyl/models/main.ml), adding lines to generate and write
+   your case models/parts to file with `Scad.to_file`.
+3. Run your [main.ml](dometyl/models/main.ml) with `dune build @models` from the [dometyl](dometyl)
+   project folder. Any `.scad` files produced will then appear in the
+   [models](dometyl/models/scads) directory. For a more fluid experience, you
+   can install `fswatch` (cross-platform) or `inotify` (GNU/linux) on your
+   system, and use `dune build -w @models` to automatically build and execute on
+   file changes.
 4. Open generated `.scad` files in OpenSCAD where they can be
    previewed/rendered/exported to `.stl`. If a viewed `.scad` is overwritten by
    compiling and running the generator, the changes will be visible in the GUI.
+
+### Direct Export
+`dune build @export_models` is also made available for convenient batch `stl`
+export. When run, this rule will call out to the `openscad` cli (assumed to be
+installed on your system) to asynchronously export *all* of the `scad` files in
+[models](dometyl/models/scads) directory to `stl` models in the
+[models](dometyl/models/stls) directory at once.
+
+**Note:**
+- STL export can take quite a while (which is why this can be helpful) and
+ consume a lot of resources, so one should be mindful of what one is signing up
+ for by building this rule.
+- Unfortunately, CLI export sometimes fails in CGAL when the same model would
+ pass via the GUI.
 
 ## Example Output
 * An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
