@@ -229,11 +229,13 @@ let poly_siding
     let c1 = V3.sub p1 cleared_face.points.centre in
     let trans = List.rev transforms
     and f (i, m) = V3.affine m (scaler i c1) in
+    let last = f (List.hd trans) in
+    let flat = V3.(last *@ v 1. 1. 0.) in
     p0
     :: List.fold_left
          (fun acc im -> f im :: acc)
-         [ V3.(f (List.hd trans) *@ v3 1. 1. 0.) ]
-         trans
+         (if V3.approx ~eps:0.1 last flat then [ flat ] else [ last; flat ])
+         (List.tl trans)
   in
   let screw =
     match eyelet_config with
