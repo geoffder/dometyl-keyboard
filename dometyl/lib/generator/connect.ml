@@ -95,7 +95,6 @@ let id = ref 0
    - d adjustment parameters, such as min distance / angle ratio, or some way to
      accomplish similar (give more control over d as well with variant that
      takes a function?)
-   - maximum edge "resolution" (required for dedup)
    - transform pruning epsilon
    - bezier spline size *)
 let spline_base
@@ -104,11 +103,10 @@ let spline_base
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
     ?(fn = 64)
-    (* ?(max_edge_res = 0.5) *)
-      (w1 : Wall.t)
+    ?(max_edge_res = 0.75)
+    (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let max_edge_res = 0.5 in
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let end_edges ?(shrink = 0.) ?frac left =
@@ -441,16 +439,17 @@ type config =
       ; fn : int option
       ; corner_fn : int option
       ; corner : Path3.Round.corner option
+      ; max_edge_res : float option
       }
 
 let full_join ?fudge_factor ?overlap_factor () = FullJoin { fudge_factor; overlap_factor }
 
-let spline ?height ?d ?fn ?corner_fn ?corner () =
-  Spline { height; d; fn; corner_fn; corner }
+let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
+  Spline { height; d; fn; corner_fn; corner; max_edge_res }
 
 let connect = function
-  | Spline { height; d; fn; corner_fn; corner } ->
-    spline_base ?height ?d ?fn ?corner_fn ?corner
+  | Spline { height; d; fn; corner_fn; corner; max_edge_res } ->
+    spline_base ?height ?d ?fn ?corner_fn ?corner ?max_edge_res
   | FullJoin _ -> join_walls
 
 let manual_joiner ~join key next (i, last, scads) =
@@ -567,6 +566,7 @@ let skeleton
     ?fn
     ?corner_fn
     ?corner
+    ?max_edge_res
     ?fudge_factor
     ?overlap_factor
     ?thumb_height
@@ -577,16 +577,11 @@ let skeleton
     ?(close_thumb = false)
     (Walls.{ body; thumb } as walls)
   =
-  let body_spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ()
-  and index_spline = spline ~height:index_height ?d:spline_d ?fn ?corner_fn ?corner ()
+  let spline = spline ?fn ?corner ?corner_fn ?max_edge_res in
+  let body_spline = spline ?height ?d:spline_d ()
+  and index_spline = spline ~height:index_height ?d:spline_d ()
   and thumb_spline =
-    spline
-      ?height:(Util.first_some thumb_height height)
-      ?d:spline_d
-      ?fn
-      ?corner_fn
-      ?corner
-      ()
+    spline ?height:(Util.first_some thumb_height height) ?d:spline_d ()
   in
   let east_link = Option.value ~default:thumb_spline east_link
   and west_link = Option.value ~default:thumb_spline west_link in
@@ -639,13 +634,14 @@ let closed
     ?fn
     ?corner_fn
     ?corner
+    ?max_edge_res
     ?(west_link = full_join ~fudge_factor:0. ())
     ?(east_link = spline ())
     (Walls.{ body; _ } as walls)
   =
   let join = full_join ?fudge_factor ?overlap_factor ()
   and corner_join = full_join ~fudge_factor:0. ?overlap_factor ()
-  and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner () in
+  and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ?max_edge_res () in
   let side last_idx i = if i = last_idx then corner_join else join
   and max_key m = fst (IMap.max_binding m) in
   let north =

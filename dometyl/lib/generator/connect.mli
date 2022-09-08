@@ -34,6 +34,7 @@ val spline
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
+  -> ?max_edge_res:float
   -> unit
   -> config
 
@@ -58,6 +59,7 @@ val skeleton
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
+  -> ?max_edge_res:float
   -> ?fudge_factor:float
   -> ?overlap_factor:float
   -> ?thumb_height:float
@@ -77,6 +79,7 @@ val closed
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
+  -> ?max_edge_res:float
   -> ?west_link:config
   -> ?east_link:config
   -> Walls.t
