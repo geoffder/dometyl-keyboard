@@ -128,7 +128,7 @@ let poly_siding
     match d1 with
     | `Abs d -> d
     | `Rel frac -> cleared_face.points.centre.z *. frac
-  in
+  and step = 1. /. Float.of_int fn in
   let bz end_z =
     let ({ x; y; z } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
@@ -139,8 +139,7 @@ let poly_siding
     (* counter the rotation created by the z tilt of the face, such that the
        angle of the wall is more in line with the xy angle of the originating face *)
     let a = V3.angle dir (v3 dir.x dir.y 0.) *. Math.sign dir.z *. -1. in
-    let s = Quaternion.(slerp (make ortho 0.) (make ortho a)) in
-    let step = 1. /. Float.of_int fn
+    let s = Quaternion.(slerp (make ortho 0.) (make ortho a))
     and ez = Easing.make (v2 0.42 0.) (v2 1. 1.) in
     let f i = Affine3.of_quaternion @@ s (ez (Float.of_int i *. step)) in
     List.init (fn + 1) f
@@ -152,8 +151,7 @@ let poly_siding
     | Some s ->
       let p = Path3.to_plane centred in
       let a = V2.angle (V3.project p dir) (v2 1. 0.) in
-      let step = 1. /. Float.of_int fn
-      and ez =
+      let ez =
         match scale_ez with
         | Some (a, b) -> Easing.make a b
         | None -> Fun.id
@@ -180,6 +178,10 @@ let poly_siding
     |> List.map2 (fun c m -> Affine3.(c %> m)) counter
     |> Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred)
   in
+  if List.length transforms < 2
+  then
+    failwith
+      "Insufficient valid wall sweep transformations, consider tweaking d parameters.";
   let scad =
     let rows =
       List.map

@@ -133,6 +133,16 @@ let fillet ?(style = `Scale) ~d ~h rows =
 
 let id = ref 0
 
+(* TODO: params to add
+
+   - ending profile shrink parameter
+   - fillet parameters
+   - d adjustment parameters, such as min distance / angle ratio, or some way to
+     accomplish similar (give more control over d as well with variant that
+     takes a function?)
+   - maximum edge "resolution" (required for dedup)
+   - transform pruning epsilon
+   - bezier spline size *)
 let spline_base
     ?(height = 11.)
     ?(d = 1.)
@@ -144,7 +154,7 @@ let spline_base
   =
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
-  let end_edges ?frac left =
+  let end_edges ?(shrink = 0.) ?frac left =
     let edger (w : Wall.t) corner =
       let edge = w.drawer corner in
       let u =
@@ -158,11 +168,12 @@ let spline_base
       if left then w1, V3.neg @@ Wall.foot_direction w1 else w2, Wall.foot_direction w2
     in
     let b_loc, t_loc =
+      let s = shrink /. 2. in
       match left, frac with
-      | true, None -> `B 0.99, `T 0.99 (* fudging for union *)
-      | false, None -> `B 0.01, `T 0.01
-      | true, Some frac -> `XY (1. -. frac, 0.05), `XY (1. -. frac, 0.95)
-      | false, Some frac -> `XY (frac, 0.05), `XY (frac, 0.95)
+      | true, None -> `XY (0.99, s), `XY (0.99, 1. -. s) (* fudging for union *)
+      | false, None -> `XY (0.01, s), `XY (0.01, 1. -. s)
+      | true, Some frac -> `XY (1. -. frac, s), `XY (1. -. frac, 1. -. s)
+      | false, Some frac -> `XY (frac, s), `XY (frac, 1. -. s)
     in
     let bot = edger w b_loc
     and top = edger w t_loc in
@@ -223,9 +234,9 @@ let spline_base
   let min_spline_ratio = 6. in
   let ang_ratio = dist /. Float.abs ang /. Float.pi in
   Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
-  let step = 1. /. Float.of_int fn in
   let fillet_d = `Rel 0.2 in
   let fillet_h = `Rel 0.3 in
+  let step = 1. /. Float.of_int fn in
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
   (* TODO: experiment with automatic "out" d adjustment as well as size as
     mentioned above. I think I can remove the need for most uses of the
@@ -264,9 +275,8 @@ let spline_base
     in
     let last_row = Util.last rows in
     let a =
-      let m = V3.(mean a *@ v3 1. 1. 0.)
-      and s = v3 0.8 0.8 1. in
-      List.map (fun p -> V3.(((p -@ m) *@ s) +@ m)) a
+      let _, bot, top = end_edges ~shrink:0.05 ~frac:0.01 true in
+      round (subdiv bot) (subdiv top)
     and b =
       let d =
         let true_b' = Path3.quaternion (Quaternion.conj align_q) b' in
@@ -286,7 +296,7 @@ let spline_base
         above -. (below *. slope)
       in
       let rel = d /. V3.distance w2.foot.top_left w2.foot.top_right in
-      let _, bot, top = end_edges ~frac:(Float.min 0.99 rel) false in
+      let _, bot, top = end_edges ~shrink:0.05 ~frac:(Float.min 0.99 rel) false in
       round (subdiv bot) (subdiv top)
     in
     Mesh.of_rows ~style:`MinEdge
