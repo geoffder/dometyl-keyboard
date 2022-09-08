@@ -48,8 +48,7 @@ the generated models.
 
 After installing `opam`, you can run the [setup.sh](setup.sh) script for
 convenience, or follow the instructions under the [opam
-dependencies](#opam-dependencies) sub-section, followed by copying
-[main.ml.example](dometyl/bin/main.ml.example) to `dometyl/bin/main.ml`.
+dependencies](#opam-dependencies) sub-section.
 
 ### opam dependencies
 All dependencies are available from the opam package manager including the build
@@ -72,9 +71,8 @@ Online documentation is available
 be filling in over time.
 
 ## Usage
-1. If you haven't already, copy [main.ml.example](dometyl/bin/main.ml.example)
-   to `dometyl/bin/main.ml` and add a line for writing the scad of your
-   generated model to the [things](dometyl/things) directory. This can be done
+1. Modify [main.ml](dometyl/bin/main.ml), adding lines to generate and write
+   your case model to the [things](dometyl/things) directory. This can be done
    simply with the helper function `Write.thing` which can also optionally
    export and `.stl` using the OpenSCAD cli. You can also pass your generated
    `Case.t` to tent and bottom plate generation functions while you're there and

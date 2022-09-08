@@ -31,9 +31,6 @@ _opam/
 # junk _esy directory
 _esy/
 
-# main.ml (user customized, don't commit)
-main.ml
-
 # various junk
 *tester_board.ml
 *Tester_board/

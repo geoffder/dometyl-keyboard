@@ -22,12 +22,6 @@ $opam_exec install ./dometyl.opam --deps-only --with-doc
 $opam_exec install \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
-# make user copy of main.ml from example
-if [ ! -f dometyl/bin/main.ml ]
-then
-    cp bin/main.ml.example bin/main.ml
-fi
-
 dune build
 
 # return to dometyl and build
