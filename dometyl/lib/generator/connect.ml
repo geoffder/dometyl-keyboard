@@ -28,60 +28,15 @@ let clockwise_union ts =
 let outline_2d t = Path3.to_path2 t.outline
 let inline_2d t = Path3.to_path2 t.inline
 
-(* true if connection between w1 and w2 moves away from centre of mass *)
-(* let is_outward (w1 : Wall.t) (w2 : Wall.t) = *)
-(*   V3.distance w1.foot.top_right w2.foot.top_left *)
-(*   > V3.distance w1.foot.top_right w2.foot.bot_left *)
-
+(* since connections are always made in the clockwise direction, a ccw sign can
+   here can be interpreted as w2 being "outward" (away from plate centre)
+   relative to w1 *)
 let outward_sign (w1 : Wall.t) (w2 : Wall.t) =
   V3.clockwise_sign w1.foot.top_left w1.foot.top_right w2.foot.top_left
-
-(* let facet_points ?(rev = false) ?(n_facets = 1) ?(init = []) ~height bez = *)
-(*   let step = height /. Float.of_int n_facets *)
-(*   and start, continue, next = *)
-(*     if rev then 1, ( >= ) n_facets, ( + ) 1 else n_facets, ( < ) 0, ( + ) (-1) *)
-(*   in *)
-(*   let rec loop ps i = *)
-(*     if continue i *)
-(*     then loop (Wall.Edge.point_at_z bez (Float.of_int i *. step) :: ps) (next i) *)
-(*     else ps *)
-(*   in *)
-(*   loop init start *)
-
-(* let endpoints ?n_facets ~height top top_bez bot_bez bot = *)
-(*   top *)
-(*   :: facet_points *)
-(*        ?n_facets *)
-(*        ~height *)
-(*        ~init:(facet_points ~rev:true ?n_facets ~height ~init:[ bot ] bot_bez) *)
-(*        top_bez *)
-
-(* let base_endpoints ?(n_facets = 1) ~height hand (w : Wall.t) = *)
-(*   let top, bot = *)
-(*     match hand with *)
-(*     | `Left -> `TL, `BL *)
-(*     | `Right -> `TR, `BR *)
-(*   in *)
-(*   endpoints *)
-(*     ~n_facets *)
-(*     ~height *)
-(*     (Points.get w.foot top) *)
-(*     (Wall.Edges.get w.edges top) *)
-(*     (Wall.Edges.get w.edges bot) *)
-(*     (Points.get w.foot bot) *)
-
-(* let base_steps ~n_steps starts dests = *)
-(*   let norms = List.map2 V3.distance starts dests in *)
-(*   let lowest_norm = List.fold_left ~init:Float.max_value Float.min norms in *)
-(*   let adjust norm = Float.(to_int (norm /. lowest_norm *. of_int n_steps)) in *)
-(*   `Ragged (List.map adjust norms) *)
 
 (* Apply the roundover corner to the two topmost points of the connector drawn
    by bot_edge and top_edge. Edges must have the same length. *)
 let rounder ?fn ~corner bot_edge top_edge =
-  (* TODO: ability to autocalculate cut/joint based on
-      the distance between the upper (first) points of bot' and top'?
-    (corner as a poly variant e.g. [`AutoBez | `AutoChamf | `Corner of corner]) *)
   let corners = Some corner :: List.init (List.length bot_edge - 1) (Fun.const None) in
   let zip a b = List.map2 (fun a b -> a, b) a b in
   List.rev_append (zip bot_edge corners) (zip top_edge corners)
@@ -149,9 +104,11 @@ let spline_base
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
     ?(fn = 64)
-    (w1 : Wall.t)
+    (* ?(max_edge_res = 0.5) *)
+      (w1 : Wall.t)
     (w2 : Wall.t)
   =
+  let max_edge_res = 0.5 in
   let dir1 = Wall.foot_direction w1
   and dir2 = Wall.foot_direction w2 in
   let end_edges ?(shrink = 0.) ?frac left =
@@ -180,8 +137,7 @@ let spline_base
     let plane = Plane.of_normal ~point:(Util.last bot) dir in
     let dedup =
       let proj = V3.project plane in
-      (* TODO: expose as max connection resolution? *)
-      let eq a b = V2.approx ~eps:2. (proj a) (proj b) in
+      let eq a b = V2.approx ~eps:max_edge_res (proj a) (proj b) in
       Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq
     in
     plane, dedup bot, dedup top
@@ -268,16 +224,23 @@ let spline_base
     Util.prune_transforms ~shape:transition @@ Path3.to_transforms ~mode:`NoAlign path
   in
   let in_start', out_start' = base_points a' in
-  let mesh =
+  let scad =
     let rows =
       List.map (fun (i, m) -> Path3.affine m (transition i)) transforms
       |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
     in
-    let last_row = Util.last rows in
-    let a =
-      let _, bot, top = end_edges ~shrink:0.05 ~frac:0.01 true in
+    let slices, last_row =
+      (* while grabbing last row, make a slice count list (drop one to match
+            number of transitions) *)
+      let slices, r = List.fold_left (fun (zs, _) r -> 0 :: zs, r) ([ 5 ], []) rows in
+      `Mix (5 :: List.tl slices), r
+    and round_edges (_, bot, top) =
+      let n = Int.(max edge_len (max (List.length bot) (List.length top))) in
+      let subdiv = Path3.subdivide ~freq:(`N (n, `ByLen)) in
       round (subdiv bot) (subdiv top)
-    and b =
+    in
+    let start = round_edges @@ end_edges ~shrink:0.025 ~frac:0.01 true
+    and finish =
       let d =
         let true_b' = Path3.quaternion (Quaternion.conj align_q) b' in
         let end_plane = Path3.to_plane (Path3.translate p3 true_b') in
@@ -296,24 +259,18 @@ let spline_base
         above -. (below *. slope)
       in
       let rel = d /. V3.distance w2.foot.top_left w2.foot.top_right in
-      let _, bot, top = end_edges ~shrink:0.05 ~frac:(Float.min 0.99 rel) false in
-      round (subdiv bot) (subdiv top)
+      round_edges @@ end_edges ~shrink:0.025 ~frac:(Float.min 0.99 rel) false
     in
-    Mesh.of_rows ~style:`MinEdge
-    @@ List.concat
-         [ Mesh.slice_profiles ~slices:(`Flat 5) [ a; List.hd rows ]
-         ; rows
-         ; List.tl @@ Mesh.slice_profiles ~slices:(`Flat 5) [ last_row; b ]
-         ]
+    Mesh.to_scad @@ Mesh.skin ~slices (List.append (start :: rows) [ finish ])
   and inline = List.map (fun (_, m) -> V3.affine m in_start') transforms
   and outline = List.map (fun (_, m) -> V3.affine m out_start') transforms in
   let () =
     let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
-    Scad.union [ Mesh.to_scad mesh; show a; show b ]
+    Scad.union [ scad; show a; show b ]
     |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
   in
   id := !id + 1;
-  { scad = Mesh.to_scad mesh; inline; outline }
+  { scad; inline; outline }
 
 let join_walls (w1 : Wall.t) (w2 : Wall.t) =
   let dir1 = Wall.foot_direction w1
