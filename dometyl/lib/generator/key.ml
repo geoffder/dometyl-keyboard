@@ -4,6 +4,7 @@ module Face = struct
   type t =
     { path : Path3.t
     ; points : Points.t
+    ; bounds : Points.t
     }
   [@@deriving scad]
 
@@ -79,11 +80,11 @@ let make
     ( { outer_w; outer_h; inner_w; inner_h; thickness; clip; cap_height; corner; fn; _ }
     as config )
   =
+  let sq =
+    Path3.square ~center:true ~plane:Plane.(neg xz) (v2 outer_w thickness)
+    |> Path3.ytrans (outer_h /. -2.)
+  in
   let front =
-    let sq =
-      Path3.square ~center:true ~plane:Plane.(neg xz) (v2 outer_w thickness)
-      |> Path3.ytrans (outer_h /. -2.)
-    in
     match corner with
     | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
     | None -> sq
@@ -122,7 +123,7 @@ let make
           ; centre = v3 0. (outer_h /. -2.) 0.
           }
       in
-      Face.{ path = front; points }
+      Face.{ path = front; points; bounds = Points.of_ccw_path sq }
     in
     let north = Face.zrot Float.pi south in
     let east =
@@ -148,7 +149,7 @@ let make
           ; centre = v3 (outer_w /. 2.) 0. 0.
           }
       in
-      Face.{ path; points }
+      Face.{ path; points; bounds = Points.zrot (Float.pi /. 2.) south.bounds }
     in
     let west = Face.zrot Float.pi east in
     Faces.{ north; south; east; west }

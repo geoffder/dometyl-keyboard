@@ -61,6 +61,9 @@ type t =
   ; drawer : Drawer.t
         (** Generate {!Path3.t}s emerging from a point on the [start] face that
              follow along the same sweeping transforms as the wall. *)
+  ; bounds_drawer : Drawer.t
+        (** Same as drawer, but operating within the unrounded bounding corners
+            of the face instead. *)
   ; screw : Eyelet.t option
         (** Scad, coordinates, and config of screw offshoot if included. *)
   }

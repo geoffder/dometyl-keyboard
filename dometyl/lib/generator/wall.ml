@@ -71,6 +71,7 @@ type t =
   ; cleared : Points.t
   ; foot : Points.t
   ; drawer : Drawer.t
+  ; bounds_drawer : Drawer.t
   ; screw : Eyelet.t option
   }
 [@@deriving scad]
@@ -204,38 +205,44 @@ let poly_siding
       v3 x y 0.
     in
     Points.map f cleared_face.points
-  and drawer pt =
-    let p0, p1 =
-      let f x y =
-        let g (p : Points.t) =
-          let bot = V3.lerp p.bot_left p.bot_right x
-          and top = V3.lerp p.top_left p.top_right x in
-          V3.lerp bot top y
-        in
-        g start_face.points, g cleared_face.points
-      in
-      match pt with
-      | `TL -> start_face.points.top_left, cleared_face.points.top_left
-      | `TR -> start_face.points.top_right, cleared_face.points.top_right
-      | `BL -> start_face.points.bot_left, cleared_face.points.bot_left
-      | `BR -> start_face.points.bot_right, cleared_face.points.bot_right
-      | `CN -> start_face.points.centre, cleared_face.points.centre
-      | `T x -> f x 1.
-      | `B x -> f x 0.
-      | `L y -> f 0. y
-      | `R y -> f 1. y
-      | `XY (x, y) -> f x y
+  and drawer ~bounds =
+    let start, cleared =
+      if bounds
+      then start_face.bounds, cleared_face.bounds
+      else start_face.points, cleared_face.points
     in
-    let c1 = V3.sub p1 cleared_face.points.centre in
-    let trans = List.rev transforms
-    and f (i, m) = V3.affine m (scaler i c1) in
-    let last = f (List.hd trans) in
-    let flat = V3.(last *@ v 1. 1. 0.) in
-    p0
-    :: List.fold_left
-         (fun acc im -> f im :: acc)
-         (if V3.approx ~eps:0.1 last flat then [ flat ] else [ last; flat ])
-         (List.tl trans)
+    fun pt ->
+      let p0, p1 =
+        let f x y =
+          let g (p : Points.t) =
+            let bot = V3.lerp p.bot_left p.bot_right x
+            and top = V3.lerp p.top_left p.top_right x in
+            V3.lerp bot top y
+          in
+          g start, g cleared
+        in
+        match pt with
+        | `TL -> start_face.points.top_left, cleared_face.points.top_left
+        | `TR -> start_face.points.top_right, cleared_face.points.top_right
+        | `BL -> start_face.points.bot_left, cleared_face.points.bot_left
+        | `BR -> start_face.points.bot_right, cleared_face.points.bot_right
+        | `CN -> start_face.points.centre, cleared_face.points.centre
+        | `T x -> f x 1.
+        | `B x -> f x 0.
+        | `L y -> f 0. y
+        | `R y -> f 1. y
+        | `XY (x, y) -> f x y
+      in
+      let c1 = V3.sub p1 cleared_face.points.centre in
+      let trans = List.rev transforms
+      and f (i, m) = V3.affine m (scaler i c1) in
+      let last = f (List.hd trans) in
+      let flat = V3.(last *@ v 1. 1. 0.) in
+      p0
+      :: List.fold_left
+           (fun acc im -> f im :: acc)
+           (if V3.approx ~eps:0.1 last flat then [ flat ] else [ last; flat ])
+           (List.tl trans)
   in
   let screw =
     match eyelet_config with
@@ -258,7 +265,8 @@ let poly_siding
   ; start = start_face.points
   ; cleared = cleared_face.points
   ; foot
-  ; drawer
+  ; drawer = drawer ~bounds:false
+  ; bounds_drawer = drawer ~bounds:true
   ; screw
   }
 

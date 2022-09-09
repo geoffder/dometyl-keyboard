@@ -8,6 +8,7 @@ module Face : sig
     ; points : Points.t
           (** Corner and centre points of the face. If the face is rounded,
                 these are the points before the roundover begins. *)
+    ; bounds : Points.t (** Original unrounded corner points. *)
     }
   [@@deriving scad]
 

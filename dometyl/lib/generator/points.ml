@@ -32,19 +32,15 @@ let fold f init t =
 let to_cw_path t = [ t.top_left; t.top_right; t.bot_right; t.bot_left ]
 let to_ccw_path t = [ t.bot_left; t.bot_right; t.top_right; t.top_left ]
 
-let of_cw_path_exn = function
-  | [ top_left; top_right; bot_right; bot_left ] ->
-    { top_left
-    ; top_right
-    ; bot_left
-    ; bot_right
-    ; centre = V3.mean [ top_left; top_right; bot_left; bot_right ]
-    }
+let of_cw_path = function
+  | [ top_left; top_right; bot_right; bot_left ] as path ->
+    { top_left; top_right; bot_left; bot_right; centre = V3.mean path }
   | _ -> failwith "Expect list of length 4, with corner points in clockwise order."
 
-let of_cw_path l =
-  try Ok (of_cw_path_exn l) with
-  | Failure e -> Error e
+let of_ccw_path = function
+  | [ bot_left; bot_right; top_right; top_left ] as path ->
+    { top_left; top_right; bot_left; bot_right; centre = V3.mean path }
+  | _ -> failwith "Expect list of length 4, with corner points in clockwise order."
 
 let overlapping_bounds a b =
   let a = Path3.bbox (to_cw_path a)
