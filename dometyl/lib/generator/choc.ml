@@ -141,11 +141,9 @@ let make_hole
       clearance +. 1.5, clip, Some cutout
     | None -> clearance, teeth ~inner_w ~thickness, None
   and cap_cutout =
+    let block = Scad.cube ~center:true (v3 18.5 17.5 4.) in
     Option.map
-      (fun h ->
-        Scad.translate
-          (v3 0. 0. (2. +. h +. (thickness /. 2.)))
-          (Scad.cube ~center:true (v3 18.5 17.5 4.)) )
+      (fun h -> Scad.ztrans (2. +. h +. (thickness /. 2.)) block)
       cap_cutout_height
   in
   Key.(
