@@ -42,17 +42,6 @@ let k =
       ; fn = Some 5
       })
 
-let show_points (ps : Points.t) =
-  let s = Scad.sphere 1. in
-  Scad.union
-    Scad.
-      [ color Color.Red @@ translate ps.top_left s
-      ; color Color.Blue @@ translate ps.top_right s
-      ; color Color.Green @@ translate ps.bot_right s
-      ; color Color.Purple @@ translate ps.bot_left s
-      ; color Color.Black @@ translate ps.centre s
-      ]
-
 let old_mx = Key.ztrans 10. (Mx.make_hole ())
 
 let () =
@@ -60,8 +49,9 @@ let () =
   @@ Scad.union
        [ k.scad
        ; old_mx.scad
-       ; show_points k.faces.south.points
-       ; show_points old_mx.faces.south.points
+       ; Points.mark k.faces.east.points
+       ; Points.mark old_mx.faces.east.points
+       ; Points.mark k.faces.east.bounds
          (* ; Path3.show_points *)
          (*     (fun i -> if i = 0 then Scad.sphere 1. else Scad.sphere 0.1) *)
          (*     k.faces.east.path *)
