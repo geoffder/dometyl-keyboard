@@ -289,13 +289,33 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
   (* TODO: rather than use the ends, I should calculate a factor to slide the
     more outward end along the wall (given to drawer) that will improve the
     angle when it is too sharp (razor thin / intersecting mesh) *)
-  let a_bot = dedup (w1.drawer (`B 0.99))
-  and a_top = dedup (w1.drawer (`T 0.99))
-  and b_bot = dedup (w2.drawer (`B 0.01))
-  and b_top = dedup (w2.drawer (`T 0.01)) in
-  let a = List.append a_top (List.rev a_bot)
-  and b = List.append b_top (List.rev b_bot) in
-  let scad = Mesh.skin_between ~slices:32 a b |> Mesh.to_scad in
+  (* let a_bot = dedup (w1.drawer (`B 0.99)) *)
+  (* and a_top = dedup (w1.drawer (`T 0.99)) *)
+  (* and b_bot = dedup (w2.drawer (`B 0.01)) *)
+  (* and b_top = dedup (w2.drawer (`T 0.01)) in *)
+  (* let a = List.append a_top (List.rev a_bot) *)
+  (* and b = List.append b_top (List.rev b_bot) in *)
+  (* let scad = Mesh.skin_between ~slices:32 a b |> Mesh.to_scad in *)
+  let prof drawer frac =
+    let bot = dedup (drawer (`B frac))
+    and top = dedup (drawer (`T frac)) in
+    bot, top, List.append top (List.rev bot)
+  in
+  (* NOTE: may break when not rounded over! (bounds and points drawers identical
+   need to test and special case if so.) *)
+  (* TODO: also, the extra step back away from the neighbour inherent in the
+    rounded points drawers is allowing less steep angling, making the join less
+    likely to be a bad mesh. This was already a problem in need of solving, but
+    trying to use the bounds to cover the roundover just makes it more obvious.
+    Need to slide back along the inner wall as before to make the angle less
+    aggressive. So, use the bounds as the target on the outer wall always, and
+    using the bounds on the inner if it is safe to do so, otherwise, step back
+    the points drawer enough on the inner wall to compensate. *)
+  let a_bot, a_top, a = prof w1.bounds_drawer 1.
+  and _, _, a' = prof w1.drawer 0.95
+  and _, _, b' = prof w2.drawer 0.05
+  and b_bot, b_top, b = prof w2.bounds_drawer 0. in
+  let scad = Mesh.skin ~slices:(`Mix [ 5; 32; 5 ]) [ a'; a; b; b' ] |> Mesh.to_scad in
   let () =
     let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
     Scad.union [ scad; show a; show b ]
