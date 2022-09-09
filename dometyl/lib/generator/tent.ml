@@ -39,7 +39,7 @@ let bumpon ?(fn = 5) ~outer_rad ~inner_rad ~thickness ~inset foot =
   in
   let bump =
     Scad.union [ circ; swoop (V3.to_v2 bot_left); swoop (V3.to_v2 bot_right) ]
-    |> Scad.linear_extrude ~height:thickness
+    |> Scad.extrude ~height:thickness
   and inset_cut =
     Scad.cylinder ~fn:16 ~height:inset inner_rad |> Scad.translate (V3.of_v2 centre)
   in
@@ -120,15 +120,15 @@ let make
         match sink with
         | Counter ->
           let s = shaft_rad /. head_rad in
-          Scad.linear_extrude ~height ~scale:(v2 s s) head_disc
+          Scad.extrude ~height ~scale:(v2 s s) head_disc
         | Pan inset ->
           Scad.union
-            [ Scad.linear_extrude ~height:inset head_disc
+            [ Scad.extrude ~height:inset head_disc
             ; Scad.cylinder ~fn:32 ~height shaft_rad
             ]
       and clearances =
         let cyl =
-          Scad.linear_extrude ~height:clearance head_disc
+          Scad.extrude ~height:clearance head_disc
           |> Scad.translate (v3 0. 0. (-.clearance))
         in
         List.map (fun Eyelet.{ centre; _ } -> trans @@ Scad.translate centre cyl) screws
@@ -146,17 +146,17 @@ let make
   in
   let top =
     Scad.difference
-      (Scad.linear_extrude ~height:top_height filled_top)
+      (Scad.extrude ~height:top_height filled_top)
       (List.map (fun Eyelet.{ centre; _ } -> Scad.translate centre hole) screws)
     |> trans
   and shell =
-    trans (Scad.linear_extrude ~height:0.001 perimeter)
+    trans (Scad.extrude ~height:0.001 perimeter)
     |> Scad.projection
-    |> Scad.linear_extrude ~height:base_height
+    |> Scad.extrude ~height:base_height
   in
   let cut =
     let bulked_top =
-      Scad.offset 2. filled_top |> Scad.linear_extrude ~height:top_height |> trans
+      Scad.offset 2. filled_top |> Scad.extrude ~height:top_height |> trans
     in
     Scad.hull [ bulked_top; Scad.translate (v3 0. 0. base_height) bulked_top ]
   in
@@ -184,7 +184,7 @@ let make
            top
            [ Scad.projection top
              |> Scad.offset 2.
-             |> Scad.linear_extrude ~height:10.
+             |> Scad.extrude ~height:10.
              |> Scad.translate (v3 0. 0. (-10.))
            ]
        :: Scad.difference shell [ Scad.translate (v3 0. 0. (-0.00001)) cut ]

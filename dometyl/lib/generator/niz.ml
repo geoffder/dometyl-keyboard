@@ -42,7 +42,7 @@ module Bottom = struct
 
   let scad =
     let bulges =
-      let b = Scad.linear_extrude ~height:bulge_height bulge in
+      let b = Scad.extrude ~height:bulge_height bulge in
       [ Scad.translate (v3 (bulge_length /. -2.) ((h /. 2.) -. 0.1) 0.) b
       ; Scad.translate (v3 (bulge_length /. -2.) ((h /. -2.) +. 0.1) 0.) b
       ]
@@ -56,7 +56,7 @@ module Bottom = struct
       ; corner (-1.) 1.
       ; corner (-1.) (-1.)
       ]
-    |> Scad.linear_extrude ~height:(thickness +. 0.001)
+    |> Scad.extrude ~height:(thickness +. 0.001)
     |> fun b -> Scad.union (b :: bulges)
 end
 
@@ -167,7 +167,7 @@ let hole_of_config
   let thickness = Float.max thickness (Bottom.thickness +. dome_thickness) in
   let clearance = Float.max clearance (base_thickness +. 0.5)
   and bottom_z = (thickness /. 2.) -. Bottom.thickness
-  and bottom_cut = Scad.linear_extrude ~height:(Bottom.thickness *. 2.) Bottom.shadow in
+  and bottom_cut = Scad.extrude ~height:(Bottom.thickness *. 2.) Bottom.shadow in
   let dome_z = bottom_z -. dome_thickness in
   let dome_cut =
     let waist_clip sign =
@@ -185,7 +185,7 @@ let hole_of_config
     Scad.difference
       (Scad.square ~center:true (v2 dome_w dome_w))
       [ waist_clip 1.; waist_clip (-1.) ]
-    |> Scad.linear_extrude ~height:(dome_thickness +. 0.001)
+    |> Scad.extrude ~height:(dome_thickness +. 0.001)
     |> Scad.translate (v3 0. 0. dome_z)
   and base =
     let slab =
@@ -194,7 +194,7 @@ let hole_of_config
     in
     Scad.difference slab [ sensor_cutter ~z:dome_z sensor_depth ]
   and pillars =
-    let cyl = Scad.linear_extrude ~height:dome_thickness Bottom.ellipse in
+    let cyl = Scad.extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(
       union
         [ translate (v3 Bottom.ellipse_x 0. 0.) cyl

@@ -56,8 +56,7 @@ let make
     match fastener with
     | Screw { head_rad; shaft_rad; sink = Counter; _ } ->
       let s = shaft_rad /. head_rad in
-      ( thickness
-      , Scad.circle head_rad |> Scad.linear_extrude ~height:thickness ~scale:(v2 s s) )
+      thickness, Scad.circle head_rad |> Scad.extrude ~height:thickness ~scale:(v2 s s)
     | Screw { head_rad; shaft_rad; sink = Pan depth; _ } ->
       ( thickness
       , Scad.union
@@ -81,8 +80,7 @@ let make
     |> Scad.union
   in
   let plate =
-    Scad.polygon (Connect.outline_2d case.connections)
-    |> Scad.linear_extrude ~height:thickness
+    Scad.polygon (Connect.outline_2d case.connections) |> Scad.extrude ~height:thickness
   in
   Scad.difference
     plate

@@ -27,7 +27,7 @@ let print_pcb ?(right_hand = true) thickness =
   Scad.difference
     (import "shield_plate")
     [ import "shield_screwholes"; import "shield_window"; import "shield_pinholes" ]
-  |> Scad.linear_extrude ~height:thickness
+  |> Scad.extrude ~height:thickness
   |> Scad.color ~alpha:0.5 Color.Crimson
 
 let screw_l_start = v2 (-0.45) (-31.25)
@@ -65,7 +65,7 @@ let pcb thickness =
     ; Scad.translate screw_r_start hole
     ; Scad.translate (v2 11.5 (-31.3)) (Scad.square (v2 17.65 15.9))
     ]
-  |> Scad.linear_extrude ~height:thickness
+  |> Scad.extrude ~height:thickness
   |> Scad.color ~alpha:0.5 Color.Crimson
 
 let make ?(inset_depth = 2.5) ?(thickness = 1.) () =

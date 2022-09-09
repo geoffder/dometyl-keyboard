@@ -99,17 +99,17 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
     | Through ->
       ( Poly2.make ~holes:[ inner ] outline
         |> Poly2.to_scad
-        |> Scad.linear_extrude ~height:thickness
+        |> Scad.extrude ~height:thickness
       , None )
     | Inset depth ->
       let inset =
         Scad.union
-          [ Scad.linear_extrude ~height:(depth +. 0.01) (Scad.polygon inner)
+          [ Scad.extrude ~height:(depth +. 0.01) (Scad.polygon inner)
             |> Scad.ztrans (-0.01)
           ; Scad.cylinder ~fn ~height:(thickness -. depth +. 0.02) (inner_rad /. 2.)
             |> Scad.translate (V3.of_v2 ~z:(depth -. 0.01) hole_centre)
           ]
-      and foot = Scad.linear_extrude ~height:thickness (Scad.polygon outline) in
+      and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
       Scad.difference foot [ inset ], Some inset
   in
   { scad; cut; centre = V3.of_v2 hole_centre; config }

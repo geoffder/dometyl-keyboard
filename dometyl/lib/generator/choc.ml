@@ -70,8 +70,7 @@ module Hotswap = struct
              ~height:(z -. socket_z +. (holder_thickness /. 2.))
              pin_radius )
       in
-      Scad.union
-        [ poly |> Scad.linear_extrude ~center:true ~height:socket_thickness; pin ]
+      Scad.union [ poly |> Scad.extrude ~center:true ~height:socket_thickness; pin ]
       |> Scad.translate (v3 0. 0. socket_z)
     in
     let hotswap =
@@ -87,7 +86,7 @@ module Hotswap = struct
         Scad.union [ main; plus; minus; fric_left; fric_right ]
       in
       Scad.difference (Scad.square ~center:true (v2 w h)) [ led_cut; holes ]
-      |> Scad.linear_extrude ~center:true ~height:holder_thickness
+      |> Scad.extrude ~center:true ~height:holder_thickness
       |> Scad.translate (v3 0. 0. z)
       |> Fun.flip Scad.difference [ cutout ]
     in
@@ -97,7 +96,7 @@ module Hotswap = struct
           Scad.difference
             (Scad.square ~center:true (v2 w h))
             [ Scad.square ~center:true (v2 inner_w inner_h) ]
-          |> Scad.linear_extrude ~height:shallowness
+          |> Scad.extrude ~height:shallowness
           |> Scad.translate (v3 0. 0. ((plate_thickness /. -2.) -. shallowness))
         in
         Scad.union [ hotswap; spacer ] )

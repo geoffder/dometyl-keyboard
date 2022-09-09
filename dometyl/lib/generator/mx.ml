@@ -34,7 +34,7 @@ module Hotswap = struct
         |> Scad.translate (v2 (w /. -4.5 *. sign) (4. *. sign))
       in
       Scad.union [ big; small ]
-      |> Scad.linear_extrude ~center:true ~height:socket_thickness
+      |> Scad.extrude ~center:true ~height:socket_thickness
       |> Scad.translate (v3 0. 0. socket_z)
     in
     let hotswap =
@@ -46,7 +46,7 @@ module Hotswap = struct
           [ Scad.translate (v2 x (y *. sign)) cut
           ; Scad.translate (v2 (-.x) (y *. sign)) cut
           ]
-        |> Scad.linear_extrude ~center:true ~height:socket_thickness
+        |> Scad.extrude ~center:true ~height:socket_thickness
         |> Scad.translate (v3 0. 0. socket_z)
       and led_cut =
         Scad.square ~center:true (v2 6. 6.) |> Scad.translate (v2 0. (-6. *. sign))
@@ -68,7 +68,7 @@ module Hotswap = struct
         Scad.union [ slab; tab ]
       in
       Scad.difference holder [ led_cut; holes ]
-      |> Scad.linear_extrude ~center:true ~height:holder_thickness
+      |> Scad.extrude ~center:true ~height:holder_thickness
       |> Scad.translate (v3 0. 0. z)
       |> Fun.flip Scad.difference [ access_cuts; cutout ]
     in
@@ -78,7 +78,7 @@ module Hotswap = struct
           Scad.difference
             (Scad.square ~center:true (v2 w h))
             [ Scad.square ~center:true (v2 inner_w inner_h) ]
-          |> Scad.linear_extrude ~height:shallowness
+          |> Scad.extrude ~height:shallowness
           |> Scad.translate (v3 0. 0. ((plate_thickness /. -2.) -. shallowness))
         in
         Scad.union [ hotswap; spacer ] )
