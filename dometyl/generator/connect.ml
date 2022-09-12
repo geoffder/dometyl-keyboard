@@ -331,9 +331,6 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
     let shift_sharp, _ = sharpest a' a b b' in
     Printf.printf "sharp ang = %f; shifted = %f\n" sharp shift_sharp
   in
-  (* TODO: should finding the ideal frac be done recursively? (shifted is
-    sometimes not all the way down to the target angle, should fracs be found
-    again with the new points from subsequent sharpest computation?) *)
   let scad = Mesh.skin ~slices:(`Mix [ 5; 32; 5 ]) [ a'; a; b; b' ] |> Mesh.to_scad in
   let () =
     let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
