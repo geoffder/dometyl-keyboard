@@ -90,7 +90,7 @@ let id = ref 0
 
 (* TODO: params to add
 
-   - ending profile shrink parameter
+   - ending profile shrink parameter (edge hiding)
    - fillet parameters
    - d adjustment parameters, such as min distance / angle ratio, or some way to
      accomplish similar (give more control over d as well with variant that
@@ -271,34 +271,11 @@ let spline_base
   { scad; inline; outline }
 
 let join_walls (w1 : Wall.t) (w2 : Wall.t) =
-  let dir1 = Wall.foot_direction w1
-  and dir2 = Wall.foot_direction w2 in
-  let d = V3.distance w2.start.top_left w1.start.top_right in
-  let ang =
-    V3.angle
-      (V3.neg dir1)
-      V3.(normalize (w2.start.top_left -@ w1.start.top_right) *@ v 1. 1. 0.)
-    *. outward_sign w1 w2
-  in
-  let ang_ratio = d /. Float.abs ang /. Float.pi in
-  let outward = outward_sign w1 w2 > 1. in
-  ignore (ang_ratio, outward, dir1, dir2);
-  let dedup =
-    Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1)
-  in
-  (* TODO: rather than use the ends, I should calculate a factor to slide the
-    more outward end along the wall (given to drawer) that will improve the
-    angle when it is too sharp (razor thin / intersecting mesh) *)
-  (* let a_bot = dedup (w1.drawer (`B 0.99)) *)
-  (* and a_top = dedup (w1.drawer (`T 0.99)) *)
-  (* and b_bot = dedup (w2.drawer (`B 0.01)) *)
-  (* and b_top = dedup (w2.drawer (`T 0.01)) in *)
-  (* let a = List.append a_top (List.rev a_bot) *)
-  (* and b = List.append b_top (List.rev b_bot) in *)
-  (* let scad = Mesh.skin_between ~slices:32 a b |> Mesh.to_scad in *)
+  let outward = outward_sign w1 w2 > 0. in
   let prof drawer frac =
-    let bot = dedup (drawer (`B frac))
-    and top = dedup (drawer (`T frac)) in
+    let f = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1) in
+    let bot = f (drawer (`B frac))
+    and top = f (drawer (`T frac)) in
     bot, top, List.append top (List.rev bot)
   in
   (* NOTE: may break when not rounded over! (bounds and points drawers identical
@@ -311,10 +288,52 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
     aggressive. So, use the bounds as the target on the outer wall always, and
     using the bounds on the inner if it is safe to do so, otherwise, step back
     the points drawer enough on the inner wall to compensate. *)
-  let a_bot, a_top, a = prof w1.bounds_drawer 1.
-  and _, _, a' = prof w1.drawer 0.95
-  and _, _, b' = prof w2.drawer 0.05
-  and b_bot, b_top, b = prof w2.bounds_drawer 0. in
+  Printf.printf "join wall id %i (%s):\n" !id (if outward then "outward" else "inward");
+  let sharpest l1 r1 l2 r2 =
+    let n = Int.max (List.length r1) (List.length l2) in
+    let subdiv = Path3.subdivide ~closed:true ~freq:(`N (n, `ByLen)) in
+    let l1, r1, l2, r2 = subdiv l1, subdiv r1, subdiv l2, subdiv r2 in
+    let f (mx, ps) p1 p2 p3 p4 =
+      let ang = Float.pi -. V3.(angle_points p1 p2 p3) in
+      if ang > mx then ang, (p1, p2, p3, p4) else mx, ps
+    in
+    let open List in
+    Util.fold_left4 f (0., (hd l1, hd r1, hd l2, hd r2)) (tl l1) (tl r1) (tl l2) (tl r2)
+  in
+  let sharp, (far_ap, ap, bp, far_bp) =
+    let _, _, a = prof w1.bounds_drawer 1.
+    and _, _, b = prof w2.bounds_drawer 0. in
+    let _, _, far_a = prof w1.bounds_drawer 0.
+    and _, _, far_b = prof w2.bounds_drawer 1. in
+    sharpest far_a a b far_b
+  in
+  let _target = 1.4 in
+  let a_frac', a_frac, b_frac, b_frac' =
+    if sharp > _target
+    then (
+      let alpha = Float.pi -. _target
+      and sa = if outward then V3.distance far_ap bp else V3.distance ap far_bp
+      and beta = V3.angle_points bp (if outward then far_ap else far_bp) ap in
+      let gamma = Float.pi -. alpha -. beta in
+      let full_sc = if outward then V3.distance far_ap ap else V3.distance far_bp bp
+      and shrunk_sc = sa *. Float.sin gamma /. Float.sin alpha in
+      let frac = shrunk_sc /. full_sc in
+      Printf.printf "alpha = %f; beta = %f; gamma = %f\n" alpha beta gamma;
+      Printf.printf "target frac = %f\n" frac;
+      if outward then frac, frac, 0., 0.01 else 0.99, 1., 1. -. frac, 1. -. frac )
+    else 0.99, 1., 0., 0.01
+  in
+  let a_bot, a_top, a = prof w1.bounds_drawer a_frac
+  and _, _, a' = prof w1.drawer a_frac'
+  and _, _, b' = prof w2.drawer b_frac'
+  and b_bot, b_top, b = prof w2.bounds_drawer b_frac in
+  let () =
+    let shift_sharp, _ = sharpest a' a b b' in
+    Printf.printf "sharp ang = %f; shifted = %f\n" sharp shift_sharp
+  in
+  (* TODO: should finding the ideal frac be done recursively? (shifted is
+    sometimes not all the way down to the target angle, should fracs be found
+    again with the new points from subsequent sharpest computation?) *)
   let scad = Mesh.skin ~slices:(`Mix [ 5; 32; 5 ]) [ a'; a; b; b' ] |> Mesh.to_scad in
   let () =
     let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
@@ -323,6 +342,7 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
   in
   id := !id + 1;
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
+
 (* let join_walls *)
 (*     ?(n_steps = `Flat 6) *)
 (*     ?(fudge_factor = 3.) *)

@@ -31,8 +31,8 @@ a case, and *voila* the rubber dometyl is born.
 ![niztyl - gone topless](things/boards/niztyl/images/topless.jpg)
 
 The relevant code for generating the required keyhole can be found in the [Niz
-module](dometyl/lib/generator/niz.ml), the first example of a board
-configuration using them [here](dometyl/lib/boards/niztyl.ml), and the build
+module](dometyl/generator/niz.ml), the first example of a board
+configuration using them [here](dometyl/boards/niztyl.ml), and the build
 showcase for it [here](things/boards/niztyl).
 
 Of course, if you aren't an insane person, the dometyl generator also supports
@@ -71,7 +71,7 @@ Online documentation is available
 be filling in over time.
 
 ## Usage
-1. Make a new `.ml` file in the [boards library](dometyl/lib/boards), maybe
+1. Make a new `.ml` file in the [boards library](dometyl/boards), maybe
    starting with a copy of and existing one and and modifying it to suit your
    preferences / fit your hand.
 2. Modify [main.ml](dometyl/models/main.ml), adding lines to generate and write
@@ -101,7 +101,7 @@ installed on your system) to asynchronously export *all* of the `scad` files in
  pass via the GUI.
 
 ## Example Output
-* An ugly [recreation](dometyl/lib/boards/skeletyl.ml) (yellow) of the
+* An ugly [recreation](dometyl/boards/skeletyl.ml) (yellow) of the
   [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
   ![bk skeletyl comparison](images/bk_skeletyl_mimic.png)
   This configuration can be a good place to start if what you are looking for is
@@ -119,7 +119,7 @@ installed on your system) to asynchronously export *all* of the `scad` files in
 There is a showcase of finished builds and some example STLs [here](things/boards), including some
 pictures, bills of materials, and notes. If you've designed and built a board
 with the dometyl generator, and you are happy with it, please consider contributing the
-configuration to the [boards library](dometyl/lib/boards), and adding a folder
+configuration to the [boards library](dometyl/boards), and adding a folder
 to the [boards showcase](things/boards).
 
 ## MCU / TRRS jack holders
@@ -158,7 +158,7 @@ to the [boards showcase](things/boards).
 ## The Hand
 ![Hand](images/hand_example.png)
 There is an as yet undocumented (and subject to evolution) [Hand
-module](dometyl/lib/generator/hand.ml) available to play around with. One can
+module](dometyl/generator/hand.ml) available to play around with. One can
 generate hand from knuckle (base of proximal bones, or the meta-carpal for the
 thumb) offset coordinates and bone lengths, then pose it with the available
 flexion/extension/abduction/adduction/etc functions, and place it over the home

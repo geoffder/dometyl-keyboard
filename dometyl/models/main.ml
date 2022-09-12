@@ -14,7 +14,7 @@ let splaytyl_right = Splaytyl.build ()
 let () =
   print_endline "Building keyboards...";
   Scad.to_file "skeletyl_right.scad" (Case.to_scad ~show_caps:false @@ Skeletyl.build ());
-  Scad.to_file "skeletyl_compare.scad" (Skeletyl.bastard_compare ());
+  (* Scad.to_file "skeletyl_compare.scad" (Skeletyl.bastard_compare ()); *)
   Scad.to_file "splaytyl_right.scad" (Case.to_scad ~show_caps:false splaytyl_right);
   Scad.to_file "splaytyl_right_plate.scad" (Plate.to_scad splaytyl_right.plate);
   (* Scad.to_file "splaytyl_left.scad" (Case.to_scad splaytyl_left); *)

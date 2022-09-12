@@ -48,6 +48,18 @@ let fold_init n f init =
   let rec loop acc i = if i < n then loop (f i acc) (i + 1) else acc in
   loop init 0
 
+let rec fold_left3 f acc l1 l2 l3 =
+  match l1, l2, l3 with
+  | [], [], [] -> acc
+  | a1 :: l1, a2 :: l2, a3 :: l3 -> fold_left3 f (f acc a1 a2 a3) l1 l2 l3
+  | _, _, _ -> invalid_arg "Util.fold_left3: lists of unequal lengths"
+
+let rec fold_left4 f acc l1 l2 l3 l4 =
+  match l1, l2, l3, l4 with
+  | [], [], [], [] -> acc
+  | a1 :: l1, a2 :: l2, a3 :: l3, a4 :: l4 -> fold_left4 f (f acc a1 a2 a3 a4) l1 l2 l3 l4
+  | _, _, _, _ -> invalid_arg "Util.fold_left4: lists of unequal lengths"
+
 let fill_points ?(init = []) ~n a b =
   if n < 1
   then b :: a :: init
