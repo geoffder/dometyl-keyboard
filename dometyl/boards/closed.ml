@@ -41,8 +41,9 @@ let plate_welder = Plate.column_joins
 let ports_cutter = Splaytyl.ports_cutter
 
 let build ?right_hand ?hotswap () =
-  let keyhole = Mx.make_hole ?hotswap () in
-  (* let keyhole = Mx.make_hole ?hotswap ~corner:(Path3.Round.chamf (`Cut 0.5)) () in *)
+  (* let keyhole = Mx.make_hole ?hotswap () in *)
+  let keyhole = Mx.make_hole ?hotswap ~corner:(Path3.Round.chamf (`Cut 0.5)) () in
+  (* let keyhole = Mx.make_hole ?hotswap ~corner:(Path3.Round.bez (`Cut 0.5))  () in *)
   Case.make
     ?right_hand
     ~plate_builder
