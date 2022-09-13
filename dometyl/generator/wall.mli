@@ -55,6 +55,8 @@ val default : config
 (** Record representing a wall extending from a {!Key.Face.t} to the ground. *)
 type t =
   { scad : Scad.d3 (** Aggregate scad, including screw outshoot if included *)
+  ; key : Key.t
+  ; side : [ `North | `East | `South | `West ] [@scad.ignore]
   ; start : Points.t (** Corner points of the {!Key.Face.t} this wall emerged from *)
   ; cleared : Points.t
         (** Corner points of the swung (vertical) and cleared [start] face *)
@@ -112,11 +114,11 @@ val make
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float
   -> ?eyelet_config:Eyelet.config
-  -> [< `East | `North | `South | `West ]
+  -> [ `East | `North | `South | `West ]
   -> Key.t
   -> t
 
-val of_config : config -> [< `East | `North | `South | `West ] -> Key.t -> t
+val of_config : config -> [ `East | `North | `South | `West ] -> Key.t -> t
 
 (** [start_direction t]
 

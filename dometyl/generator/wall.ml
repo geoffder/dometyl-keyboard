@@ -69,6 +69,8 @@ let default =
 
 type t =
   { scad : Scad.d3
+  ; key : Key.t
+  ; side : [ `North | `East | `South | `West ] [@scad.ignore]
   ; start : Points.t
   ; cleared : Points.t
   ; foot : Points.t
@@ -253,6 +255,8 @@ let make
     | None -> None
   in
   { scad = Util.value_map_opt ~default:scad (fun s -> Eyelet.apply s scad) screw
+  ; key
+  ; side
   ; start = start_face.points
   ; cleared = cleared_face.points
   ; foot
