@@ -139,17 +139,26 @@ let make
         | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
         | None -> sq
       in
-      let top_edge, bot_edge = edges path in
+      let top_edge, bot_edge = edges path
+      and centre = v3 (outer_w /. 2.) 0. 0. in
       let points =
         Points.
           { top_left = top_edge.b
           ; top_right = top_edge.a
           ; bot_left = bot_edge.a
           ; bot_right = bot_edge.b
-          ; centre = v3 (outer_w /. 2.) 0. 0.
+          ; centre
+          }
+      and bounds =
+        Points.
+          { top_left = north.points.top_right
+          ; top_right = south.points.top_left
+          ; bot_left = north.points.bot_right
+          ; bot_right = south.points.bot_left
+          ; centre
           }
       in
-      Face.{ path; points; bounds = Points.zrot (Float.pi /. 2.) south.bounds }
+      Face.{ path; points; bounds }
     in
     let west = Face.zrot Float.pi east in
     Faces.{ north; south; east; west }
