@@ -57,7 +57,7 @@ module Sides = struct
     ; east =
         IMap.filter_mapi
           (fun key data ->
-            let* k = IMap.find_opt 0 data.Column.keys in
+            let* _, k = IMap.max_binding_opt data.Column.keys in
             Option.map (fun c -> Wall.of_config c `East k) (east key) )
           columns
     ; south =
