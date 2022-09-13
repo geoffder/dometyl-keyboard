@@ -248,21 +248,30 @@ let spline_base
   id := !id + 1;
   { scad; inline; outline }
 
+(* TODO: add params
+   - slice count
+   - fill tri (whether to try, and what area to trigger on)
+*)
 let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
+  let slices = 12 in
+  let gap_fill = `Area 80. in
   let outward = outward_sign w1 w2 > 0.
-  and prof drawer frac =
+  and edges drawer frac =
     let f = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1) in
     let bot = f (drawer (`B frac))
     and top = f (drawer (`T frac)) in
-    bot, top, List.append top (List.rev bot)
-  and sharpest l1 r1 l2 r2 =
-    let n =
-      let n1 = Int.max (List.length l1) (List.length r1)
-      and n2 = Int.max (List.length l2) (List.length r2) in
-      Int.max n1 n2
+    bot, top
+  and profs l1 r1 l2 r2 =
+    let subdiv =
+      let n =
+        let f n (bot, top) = Int.max n List.(Int.max (length bot) (length top)) in
+        List.fold_left f 0 [ l1; r1; l2; r2 ]
+      in
+      Path3.subdivide ~closed:false ~freq:(`N (n, `ByLen))
     in
-    let subdiv = Path3.subdivide ~closed:true ~freq:(`N (n, `ByLen)) in
-    let l1, r1, l2, r2 = subdiv l1, subdiv r1, subdiv l2, subdiv r2 in
+    let prof (bot, top) = List.append (subdiv top) (List.rev @@ subdiv bot) in
+    prof l1, prof r1, prof l2, prof r2
+  and sharpest (l1, r1, l2, r2) =
     let f (mx, ps) p1 p2 p3 p4 =
       let ang = Float.pi -. V3.(angle_points p1 p2 p3) in
       if ang > mx then ang, (p1, p2, p3, p4) else mx, ps
@@ -271,11 +280,11 @@ let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
     Util.fold_left4 f (0., (hd l1, hd r1, hd l2, hd r2)) (tl l1) (tl r1) (tl l2) (tl r2)
   in
   let sharp, (far_ap, ap, bp, far_bp) =
-    let _, _, a = prof w1.bounds_drawer 1.
-    and _, _, b = prof w2.bounds_drawer 0. in
-    let _, _, far_a = prof w1.bounds_drawer 0.
-    and _, _, far_b = prof w2.bounds_drawer 1. in
-    sharpest far_a a b far_b
+    let a = edges w1.bounds_drawer 1.
+    and b = edges w2.bounds_drawer 0. in
+    let far_a = edges w1.bounds_drawer 0.
+    and far_b = edges w2.bounds_drawer 1. in
+    sharpest (profs far_a a b far_b)
   in
   let a_frac', a_frac, b_frac, b_frac' =
     if sharp > max_angle
@@ -294,11 +303,50 @@ let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
       else 0.97, 0.99, 1. -. frac, 1. -. frac +. 0.02 )
     else 0.97, 0.99, 0.01, 0.03
   in
-  let a_bot, a_top, a = prof w1.bounds_drawer a_frac
-  and _, _, a' = prof w1.drawer a_frac'
-  and _, _, b' = prof w2.drawer b_frac'
-  and b_bot, b_top, b = prof w2.bounds_drawer b_frac in
-  let scad = Mesh.skin ~slices:(`Mix [ 5; 32; 5 ]) [ a'; a; b; b' ] |> Mesh.to_scad in
+  let tri =
+    match gap_fill with
+    | `Area min_area when sharp > max_angle ->
+      let bot, top, bot', top' =
+        let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.01)
+        and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.01) in
+        if outward
+        then List.(hd b_bot, hd b_top, hd a_bot, hd a_top)
+        else List.(hd a_bot, hd a_top, hd b_bot, hd b_top)
+      in
+      let side_bot, side_top =
+        let w = if outward then w2 else w1 in
+        match outward, w.side with
+        | true, `North | false, `South ->
+          w.key.faces.west.bounds.bot_right, w.key.faces.west.bounds.top_right
+        | true, `East | false, `West ->
+          w.key.faces.north.bounds.bot_left, w.key.faces.north.bounds.top_left
+        | true, `South | false, `North ->
+          w.key.faces.east.bounds.bot_left, w.key.faces.east.bounds.top_left
+        | true, `West | false, `East ->
+          w.key.faces.south.bounds.bot_right, w.key.faces.south.bounds.top_right
+      in
+      let top_row = [ top; V3.lerp side_top top 0.01; top' ]
+      and bot_row = [ bot; V3.lerp side_bot bot 0.01; bot' ] in
+      let top_area = Path3.area top_row in
+      if top_area > min_area
+      then (
+        let is_ccw = V3.clockwise_sign top side_top top' < 0. in
+        let top_row = if is_ccw then top_row else List.rev top_row
+        and bot_row = if is_ccw then bot_row else List.rev bot_row in
+        Some (Mesh.to_scad @@ Mesh.skin_between ~slices:5 bot_row top_row) )
+      else None
+    | _ -> None
+  in
+  let ((a_bot, a_top) as a) = edges w1.bounds_drawer a_frac
+  and a' = edges w1.drawer a_frac'
+  and b' = edges w2.drawer b_frac'
+  and ((b_bot, b_top) as b) = edges w2.bounds_drawer b_frac in
+  let a', a, b, b' = profs a' a b b' in
+  let scad =
+    let s = Mesh.to_scad @@ Mesh.skin ~slices:(`Mix [ 2; slices; 2 ]) [ a'; a; b; b' ] in
+    Util.value_map_opt ~default:s (Scad.add s) tri
+  in
+  id := !id + 1;
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
 
 type config =
