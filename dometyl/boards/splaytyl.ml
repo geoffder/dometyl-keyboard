@@ -88,9 +88,7 @@ let base_connector =
     ~height:11.
     ~index_height:13.
     ~thumb_height:11.
-    ~fudge_factor:8.
     ~close_thumb:false
-    ~overlap_factor:1.
     ~north_joins:(Fun.const false)
     ~south_joins:(Fun.const false)
 

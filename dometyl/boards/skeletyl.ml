@@ -81,7 +81,6 @@ let base_connector =
     ~height:9.
     ~spline_d:1.5
     ~thumb_height:9.
-    ~fudge_factor:8.
     ~close_thumb:false
     ~corner:(Path3.Round.chamf (`Cut 0.5))
     ~north_joins:(Fun.const true)

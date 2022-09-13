@@ -83,7 +83,7 @@ let wall_builder plate =
           plate
     }
 
-let base_connector = Connect.closed ~overlap_factor:1.5
+let base_connector = Connect.closed
 let plate_welder = Plate.column_joins
 let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
 

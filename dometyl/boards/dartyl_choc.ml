@@ -31,7 +31,6 @@ let base_connector =
   Connect.skeleton
     ~height:6.
     ~thumb_height:9.5
-    ~fudge_factor:10.
     ~north_joins:(fun i -> i < 2)
     ~close_thumb:true
     ~south_joins:(fun _ -> false)
