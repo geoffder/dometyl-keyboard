@@ -26,7 +26,7 @@ val outline_2d : t -> Path2.t
     Retrieve the inline points of [t] and project them to 2d vectors. *)
 val inline_2d : t -> Path2.t
 
-val full_join : ?fudge_factor:float -> ?overlap_factor:float -> unit -> config
+val full_join : ?max_angle:float -> unit -> config
 
 val spline
   :  ?height:float
@@ -60,8 +60,7 @@ val skeleton
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
   -> ?max_edge_res:float
-  -> ?fudge_factor:float
-  -> ?overlap_factor:float
+  -> ?max_join_angle:float
   -> ?thumb_height:float
   -> ?east_link:config
   -> ?west_link:config
@@ -72,14 +71,13 @@ val skeleton
   -> t
 
 val closed
-  :  ?fudge_factor:float
-  -> ?overlap_factor:float
-  -> ?height:float
+  :  ?height:float
   -> ?spline_d:float
   -> ?fn:int
   -> ?corner_fn:int
   -> ?corner:Path3.Round.corner
   -> ?max_edge_res:float
+  -> ?max_join_angle:float
   -> ?west_link:config
   -> ?east_link:config
   -> Walls.t

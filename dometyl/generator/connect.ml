@@ -8,15 +8,6 @@ type t =
   }
 [@@deriving scad]
 
-(* TODO:
-   - break bezier spline and linear connectors into separate functions, and the
-    work that they share into a higher level helper. Another router function
-    can handle deciding which one to use.
-   - better angle logic for the linear connector (better knobs for how to do
-    rotation stepping, and handling the >90degrees cases)z
-   - elbow bezier case (subcase of bezier spline?), largely as an option
-    solution for the southern pinky to ring connection *)
-
 let clockwise_union ts =
   let collect ~init line = List.fold_left (fun ps p -> p :: ps) init line in
   let f (scads, out_pts, in_pts) { scad; outline; inline } =
@@ -43,7 +34,7 @@ let rounder ?fn ~corner bot_edge top_edge =
   |> Path3.Round.mix
   |> Path3.roundover ?fn
 
-let fillet ?(style = `Scale) ~d ~h rows =
+let fillet ~d ~h rows =
   let rel_dists, total_dist =
     let f (dists, sum, last) row =
       let p = V3.(mean row *@ v 1. 1. 0.) in
@@ -62,27 +53,14 @@ let fillet ?(style = `Scale) ~d ~h rows =
     Easing.make (v2 d 1.) (v2 d 1.)
   in
   let f =
-    match style with
-    | `Scale ->
-      let h =
-        match h with
-        | `Rel h -> h
-        | `Abs h -> h /. (Path3.bbox (List.hd rows)).max.z
-      in
-      fun u row ->
-        let u = if u > 0.5 then 1. -. u else u in
-        Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
-    | `Shift ->
-      let range =
-        match h with
-        | `Rel h -> (Path3.bbox (List.hd rows)).max.z *. h
-        | `Abs h -> h
-      in
-      fun u row ->
-        let u = if u > 0.5 then 1. -. u else u in
-        let diff = ez u *. range in
-        let shift p = if p.z > diff +. 0.1 then V3.ztrans (-.diff) p else p in
-        List.map shift row
+    let h =
+      match h with
+      | `Rel h -> h
+      | `Abs h -> h /. (Path3.bbox (List.hd rows)).max.z
+    in
+    fun u row ->
+      let u = if u > 0.5 then 1. -. u else u in
+      Path3.scale (v3 1. 1. (1. -. (ez u *. h))) row
   in
   List.map2 f rel_dists rows
 
@@ -225,7 +203,7 @@ let spline_base
   let scad =
     let rows =
       List.map (fun (i, m) -> Path3.affine m (transition i)) transforms
-      |> fillet ~style:`Scale ~d:fillet_d ~h:fillet_h
+      |> fillet ~d:fillet_d ~h:fillet_h
     in
     let slices, last_row =
       (* while grabbing last row, make a slice count list (drop one to match
@@ -270,27 +248,19 @@ let spline_base
   id := !id + 1;
   { scad; inline; outline }
 
-let join_walls (w1 : Wall.t) (w2 : Wall.t) =
-  let outward = outward_sign w1 w2 > 0. in
-  let prof drawer frac =
+let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
+  let outward = outward_sign w1 w2 > 0.
+  and prof drawer frac =
     let f = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1) in
     let bot = f (drawer (`B frac))
     and top = f (drawer (`T frac)) in
     bot, top, List.append top (List.rev bot)
-  in
-  (* NOTE: may break when not rounded over! (bounds and points drawers identical
-   need to test and special case if so.) *)
-  (* TODO: also, the extra step back away from the neighbour inherent in the
-    rounded points drawers is allowing less steep angling, making the join less
-    likely to be a bad mesh. This was already a problem in need of solving, but
-    trying to use the bounds to cover the roundover just makes it more obvious.
-    Need to slide back along the inner wall as before to make the angle less
-    aggressive. So, use the bounds as the target on the outer wall always, and
-    using the bounds on the inner if it is safe to do so, otherwise, step back
-    the points drawer enough on the inner wall to compensate. *)
-  Printf.printf "join wall id %i (%s):\n" !id (if outward then "outward" else "inward");
-  let sharpest l1 r1 l2 r2 =
-    let n = Int.max (List.length r1) (List.length l2) in
+  and sharpest l1 r1 l2 r2 =
+    let n =
+      let n1 = Int.max (List.length l1) (List.length r1)
+      and n2 = Int.max (List.length l2) (List.length r2) in
+      Int.max n1 n2
+    in
     let subdiv = Path3.subdivide ~closed:true ~freq:(`N (n, `ByLen)) in
     let l1, r1, l2, r2 = subdiv l1, subdiv r1, subdiv l2, subdiv r2 in
     let f (mx, ps) p1 p2 p3 p4 =
@@ -307,169 +277,32 @@ let join_walls (w1 : Wall.t) (w2 : Wall.t) =
     and _, _, far_b = prof w2.bounds_drawer 1. in
     sharpest far_a a b far_b
   in
-  let _target = 1.4 in
   let a_frac', a_frac, b_frac, b_frac' =
-    if sharp > _target
+    if sharp > max_angle
     then (
-      let alpha = Float.pi -. _target
-      and sa = if outward then V3.distance far_ap bp else V3.distance ap far_bp
+      (* use law of sines to compute shift required along the inner wall to
+           bring the sharpest edge angle down to the max_angle *)
+      let alpha = Float.pi -. max_angle
+      and side_a = if outward then V3.distance far_ap bp else V3.distance ap far_bp
       and beta = V3.angle_points bp (if outward then far_ap else far_bp) ap in
       let gamma = Float.pi -. alpha -. beta in
-      let full_sc = if outward then V3.distance far_ap ap else V3.distance far_bp bp
-      and shrunk_sc = sa *. Float.sin gamma /. Float.sin alpha in
-      let frac = shrunk_sc /. full_sc in
-      Printf.printf "alpha = %f; beta = %f; gamma = %f\n" alpha beta gamma;
-      Printf.printf "target frac = %f\n" frac;
-      if outward then frac, frac, 0., 0.01 else 0.99, 1., 1. -. frac, 1. -. frac )
-    else 0.99, 1., 0., 0.01
+      let full_c = if outward then V3.distance far_ap ap else V3.distance far_bp bp
+      and shrunk_c = side_a *. Float.sin gamma /. Float.sin alpha in
+      let frac = Float.min (shrunk_c /. full_c) 0.99 in
+      if outward
+      then frac -. 0.02, frac, 0.01, 0.03
+      else 0.97, 0.99, 1. -. frac, 1. -. frac +. 0.02 )
+    else 0.97, 0.99, 0.01, 0.03
   in
   let a_bot, a_top, a = prof w1.bounds_drawer a_frac
   and _, _, a' = prof w1.drawer a_frac'
   and _, _, b' = prof w2.drawer b_frac'
   and b_bot, b_top, b = prof w2.bounds_drawer b_frac in
-  let () =
-    let shift_sharp, _ = sharpest a' a b b' in
-    Printf.printf "sharp ang = %f; shifted = %f\n" sharp shift_sharp
-  in
   let scad = Mesh.skin ~slices:(`Mix [ 5; 32; 5 ]) [ a'; a; b; b' ] |> Mesh.to_scad in
-  let () =
-    let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
-    Scad.union [ scad; show a; show b ]
-    |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
-  in
-  id := !id + 1;
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
 
-(* let join_walls *)
-(*     ?(n_steps = `Flat 6) *)
-(*     ?(fudge_factor = 3.) *)
-(*     ?(overlap_factor = 1.2) *)
-(*     (w1 : Wall.t) *)
-(*     (w2 : Wall.t) *)
-(*   = *)
-(*   let ({ x = dx; y = dy; z = _ } as dir1) = Wall.foot_direction w1 *)
-(*   and dir2 = Wall.foot_direction w2 *)
-(*   and n_steps = *)
-(*     let summit (w : Wall.t) = *)
-(*       Points.fold (fun m p -> Float.max (V3.get_z p) m) ~init:Float.min_value w.start *)
-(*     in *)
-(*     Wall.Steps.to_int n_steps (Float.max (summit w1) (summit w2)) *)
-(*   in *)
-(*   let major_diff, minor_diff = *)
-(*     let { x; y; z = _ } = *)
-(*       V3.( *)
-(*         mid w1.foot.bot_right w1.foot.top_right -@ mid w2.foot.bot_left w2.foot.top_left) *)
-(*     in *)
-(*     if (abs dx > abs dy) then x, y else y, x *)
-(*   in *)
-(*   let outward = *)
-(*     (\* away from the centre of mass, or not? *\) *)
-(*     ( *)
-(*       V3.distance w1.foot.top_right w2.foot.top_left *)
-(*       > V3.distance w1.foot.top_right w2.foot.bot_left) *)
-(*   and overhang = *)
-(*     (\* Obtuse angle between wall top difference and the foot difference indicates *)
-(*        that the start wall is likely dodging the column below. If this is a corner, *)
-(*        don't flag. *\) *)
-(*     let foot_diff = V3.(w1.foot.top_right -@ w2.foot.top_right) *)
-(*     and top_diff = V3.(mul (w1.start.top_right -@ w2.start.top_left) (v3 1. 1. 0.)) in *)
-(*     let mag = V3.norm top_diff in *)
-(*     if (mag > 0.1 && V3.dot foot_diff top_diff < 0.) then Some mag else None *)
-(*   in *)
-(*   (\* Move the start or destination points along the outer face of the wall to improve angle. *\) *)
-(*   let fudge start = *)
-(*     if (not outward) && not start *)
-(*     then ( *)
-(*       let extra = *)
-(*         if (V3.(get_z w1.start.top_right > get_z w2.start.top_left)) *)
-(*         then (abs (max (fudge_factor -. major_diff) 0.)) *)
-(*         else 0. *)
-(*       in *)
-(*       V3.(add (mul dir2 (v3 (-.extra) (-.extra) 0.))) ) *)
-(*     else Fun.id *)
-(*   and overlap = *)
-(*     match overhang with *)
-(*     | Some over -> over *. overlap_factor *)
-(*     | None -> *)
-(*       let major_ax = if (abs dx > abs dy) then dx else dy *)
-(*       and intersect = Points.overlapping_bounds w1.foot w2.foot in *)
-(*       if ( *)
-(*            ( (not (Sign.equal (sign major_diff) (sign major_ax))) *)
-(*            && abs major_diff > abs minor_diff ) *)
-(*            || intersect > 0.) *)
-(*       then ( *)
-(*         let rough_area = *)
-(*           V3.( *)
-(*             distance w1.foot.top_right w1.foot.top_left *)
-(*             *. distance w1.foot.top_right w1.foot.bot_right) *)
-(*         in *)
-(*         Float.max (Float.abs major_diff) (intersect *. rough_area) *. overlap_factor ) *)
-(*       else 0.01 *)
-(*     (\* If the walls are overlapping, move back the start positions to counter. *\) *)
-(*   in *)
-(*   (\* HACK: The way I am using the overhang flag here seemed to partially rescue one case, *)
-(*      but I am not confident that it is a solid fix. *\) *)
-(*   let top_start, starts = *)
-(*     let shove = V3.(add (mul dir1 (v3 overlap overlap 0.))) in *)
-(*     let top = *)
-(*       w1.edges.top_right 0. *)
-(*       |> fudge true *)
-(*       |> (if Option.is_some overhang then Fun.id else shove) *)
-(*       |> w1.edge_drawer.top *)
-(*     in *)
-(*     ( top *)
-(*     , Bezier3.curve *)
-(*         ~rev:true *)
-(*         ~fn:n_steps *)
-(*         ~init: *)
-(*           (Bezier3.curve *)
-(*              ~fn:n_steps *)
-(*              (w1.edge_drawer.bot (shove @@ w1.edges.bot_right 0.)) ) *)
-(*         top ) *)
-(*   and top_dest, dests = *)
-(*     let shove = V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.))) in *)
-(*     let top = *)
-(*       w2.edges.top_left 0. *)
-(*       |> fudge false *)
-(*       |> (if Option.is_some overhang then Fun.id else shove) *)
-(*       |> w2.edge_drawer.top *)
-(*     in *)
-(*     ( top *)
-(*     , Bezier3.curve *)
-(*         ~rev:true *)
-(*         ~fn:n_steps *)
-(*         ~init: *)
-(*           (Bezier3.curve ~fn:n_steps (w2.edge_drawer.bot (shove @@ w2.edges.bot_left 0.))) *)
-(*         top ) *)
-(*   in *)
-(*   let wedge = *)
-(*     (\* Fill in the volume between the "wedge" hulls that are formed by swinging the *)
-(*      * key face and moving it out for clearance prior to drawing the walls. *\) *)
-(*     Util.prism *)
-(*       (List.map *)
-(*          V3.(add (mul (Wall.start_direction w1) (v3 overlap overlap 0.))) *)
-(*          [ w1.start.top_right *)
-(*          ; w1.start.bot_right *)
-(*          ; w1.edges.bot_right 0. *)
-(*          ; top_start 0.001 *)
-(*          ] ) *)
-(*       (List.map *)
-(*          V3.(add (mul (Wall.start_direction w2) (v3 (-0.01) (-0.01) 0.))) *)
-(*          [ w2.start.top_left; w2.start.bot_left; w2.edges.bot_left 0.; top_dest 0.001 ] ) *)
-(*   in *)
-(*   { scad = Scad.union [ Util.prism starts dests; wedge ] *)
-(*   ; outline = [ fudge true w1.foot.top_right; fudge false w2.foot.top_left ] *)
-(*   ; inline = *)
-(*       [ V3.(add (mul dir1 (v3 overlap overlap 0.)) w1.foot.bot_right) *)
-(*       ; V3.(add (mul dir2 (v3 (-.overlap) (-.overlap) 0.)) w2.foot.bot_left) *)
-(*       ] *)
-(*   } *)
-
 type config =
-  | FullJoin of
-      { fudge_factor : float option
-      ; overlap_factor : float option
-      }
+  | FullJoin of { max_angle : float option }
   | Spline of
       { height : float option
       ; d : float option
@@ -479,7 +312,7 @@ type config =
       ; max_edge_res : float option
       }
 
-let full_join ?fudge_factor ?overlap_factor () = FullJoin { fudge_factor; overlap_factor }
+let full_join ?max_angle () = FullJoin { max_angle }
 
 let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
   Spline { height; d; fn; corner_fn; corner; max_edge_res }
@@ -487,7 +320,7 @@ let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
 let connect = function
   | Spline { height; d; fn; corner_fn; corner; max_edge_res } ->
     spline_base ?height ?d ?fn ?corner_fn ?corner ?max_edge_res
-  | FullJoin _ -> join_walls
+  | FullJoin { max_angle } -> join_walls ?max_angle
 
 let manual_joiner ~join key next (i, last, scads) =
   let scads' =
@@ -590,11 +423,7 @@ let manual
   in
   (* unions separately, followed by final union so failures in CGAL can be narrowed
      down more easily (a section disappears, rather than the whole thing) *)
-  ignore (south, thumb_swoop, west, north, east);
   List.map clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
-(* List.map clockwise_union [ west; north; east ] |> clockwise_union *)
-(* List.map clockwise_union [ west; north; east; south ] |> clockwise_union *)
-(* List.map clockwise_union [ west; north; east; thumb_swoop ] |> clockwise_union *)
 
 let skeleton
     ?(index_height = 13.)
@@ -604,15 +433,14 @@ let skeleton
     ?corner_fn
     ?corner
     ?max_edge_res
-    ?fudge_factor
-    ?overlap_factor
+    ?max_join_angle
     ?thumb_height
     ?east_link
     ?west_link
     ?(north_joins = fun i -> i < 2)
     ?(south_joins = fun _ -> false)
     ?(close_thumb = false)
-    (Walls.{ body; thumb } as walls)
+    (Walls.{ body; _ } as walls)
   =
   let spline = spline ?fn ?corner ?corner_fn ?max_edge_res in
   let body_spline = spline ?height ?d:spline_d ()
@@ -622,11 +450,8 @@ let skeleton
   in
   let east_link = Option.value ~default:thumb_spline east_link
   and west_link = Option.value ~default:thumb_spline west_link in
-  let join = full_join ?fudge_factor ?overlap_factor ()
-  and thumb_corner =
-    if close_thumb then full_join ~fudge_factor:0. ?overlap_factor () else thumb_spline
-  in
-  let thumb_mid = if close_thumb then join else thumb_spline in
+  let join = full_join ?max_angle:max_join_angle () in
+  let thumber = Fun.const (if close_thumb then join else thumb_spline) in
   let west =
     let last_idx = Util.value_map_opt fst ~default:0 (IMap.max_binding_opt body.west) in
     fun i -> if i = last_idx then index_spline else body_spline
@@ -648,55 +473,52 @@ let skeleton
       | false, true -> join
       | _ -> body_spline
   in
-  let thumb_side last_idx i = if i = last_idx then thumb_corner else thumb_mid
-  and idx elt = Util.value_map_opt fst ~default:0 elt in
   manual
     ~west
     ~north
     ~east
     ~south
     ~east_link
-    ~thumb_east:(thumb_side (idx @@ IMap.max_binding_opt thumb.east))
-    ~thumb_south:(thumb_side (idx @@ IMap.min_binding_opt thumb.south))
-    ~thumb_west:(thumb_side (idx @@ IMap.min_binding_opt thumb.west))
-    ~thumb_north:(thumb_side (idx @@ IMap.max_binding_opt thumb.north))
+    ~thumb_east:thumber
+    ~thumb_south:thumber
+    ~thumb_west:thumber
+    ~thumb_north:thumber
     ~west_link
     walls
 
 let closed
-    ?fudge_factor
-    ?overlap_factor
     ?height
     ?spline_d
     ?fn
     ?corner_fn
     ?corner
     ?max_edge_res
-    ?(west_link = full_join ~fudge_factor:0. ())
-    ?(east_link = spline ())
+    ?max_join_angle
+    ?west_link
+    ?east_link
     (Walls.{ body; _ } as walls)
   =
-  let join = full_join ?fudge_factor ?overlap_factor ()
-  and corner_join = full_join ~fudge_factor:0. ?overlap_factor ()
+  let join = Fun.const (full_join ?max_angle:max_join_angle ())
   and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ?max_edge_res () in
-  let side last_idx i = if i = last_idx then corner_join else join
-  and max_key m = fst (IMap.max_binding m) in
+  let west_link = Option.value ~default:spline west_link
+  and east_link = Option.value ~default:spline east_link in
+  let max_key m = fst (IMap.max_binding m) in
   let north =
     let last_idx = max_key body.north in
     if IMap.cardinal walls.body.east = 0
-    then fun i -> if i = last_idx then spline else join
-    else side last_idx
+    then fun i -> if i = last_idx then spline else join i
+    else join
   in
   manual
-    ~west:(side (max_key body.west))
+    ~west:join
     ~north
-    ~east:(side 0)
-    ~south:(fun _ -> join)
+    ~east:join
+    ~south:join
     ~east_link
-    ~thumb_east:(fun _ -> corner_join)
-    ~thumb_south:(side 0)
-    ~thumb_west:(fun _ -> corner_join)
-    ~thumb_north:(fun _ -> join)
+    ~thumb_east:join
+    ~thumb_south:join
+    ~thumb_west:join
+    ~thumb_north:join
     ~west_link
     walls
 
