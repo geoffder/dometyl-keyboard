@@ -47,6 +47,7 @@ type config =
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
   ; eyelet_config : Eyelet.config option
+  ; end_z : float option
   }
 
 val default : config
@@ -77,13 +78,12 @@ type t =
     {!V3.t}. *)
 val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
 
-(** [poly_siding side keyhole]
+(** [make side keyhole]
 
     Generate a {!type:t} using an OpenScad polyhedron, drawn from a set of bezier curves
     from the [side] facing edges of [keyhole]. Optional parameters influence the shape of
     the generated wall:
 
-    - [x_off] and [y_off] shift the target endpoints (on the ground) of the wall
     - [clearance] moves the start of the wall out from the face of the keyhole
     - [n_steps] controls the number of points used to draw the wall (see:
       {!module:Steps}). This impact the aeshetics of the wall, but it also determines how
@@ -103,57 +103,20 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
       the sweep of the projected wall (linearly, or easing according to [scale_ez])
     - If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
       to the bottom of the generated wall. *)
-val poly_siding
-  :  ?x_off:float
-  -> ?y_off:float
-  -> ?clearance:float
-  -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
-  -> ?d1:[ `Abs of float | `Rel of float ]
-  -> ?d2:float
-  -> ?scale:V2.t
-  -> ?scale_ez:V2.t * V2.t
-  -> ?eyelet_config:Eyelet.config
-  -> [< `East | `North | `South | `West ]
-  -> Key.t
-  -> t
-
-val poly_of_config
-  :  ?x_off:float
-  -> ?y_off:float
-  -> config
-  -> [< `East | `North | `South | `West ]
-  -> Key.t
-  -> t
-
-(** [column_drop ~spacing ~columns idx]
-
-    Wrapper function for {!val:poly_siding} specifically for (north and south) column end
-    walls. Unlike {!val:poly_siding}, which takes a {!Key.t}, this takes the map
-    [columns], and an [idx] specifying the column to generate the wall for. Overhang over
-    the next column (to the right) that may have been introduced by tenting is checked
-    for, and an x offset that will reclaim the desired column [spacing] is calculated and
-    passed along to {!val:poly_siding}. *)
-val column_drop
+val make
   :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
   -> ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
+  -> ?end_z:float
   -> ?eyelet_config:Eyelet.config
-  -> spacing:float
-  -> columns:Columns.t
-  -> [< `North | `South ]
-  -> int
+  -> [< `East | `North | `South | `West ]
+  -> Key.t
   -> t
 
-val drop_of_config
-  :  spacing:float
-  -> config
-  -> columns:Columns.t
-  -> [< `North | `South ]
-  -> int
-  -> t
+val of_config : config -> [< `East | `North | `South | `West ] -> Key.t -> t
 
 (** [start_direction t]
 

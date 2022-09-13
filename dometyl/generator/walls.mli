@@ -28,15 +28,12 @@ module Sides : sig
     }
   [@@deriving scad]
 
-  (** [manual_body ?spacing ~west ~north ~east ~south columns]
+  (** [manual_body ~west ~north ~east ~south columns]
 
       Construct a {!t} with the given {!Side.config}s for each of the edges of the
-      provided {!Plate.t} body [columns] (columns oriented along the Y-axis (N-S)).
-      [?spacing] is passed along to {!Wall.column_drop}, and should match the spacing
-      config parameter of the {!Plate.t} that [columns] belongs to. *)
+      provided {!Plate.t} body [columns] (columns oriented along the Y-axis (N-S)). *)
   val manual_body
-    :  ?spacing:float
-    -> west:Side.config
+    :  west:Side.config
     -> north:Side.config
     -> east:Side.config
     -> south:Side.config
@@ -68,8 +65,6 @@ module Sides : sig
         the body.
       - [{north,south,side}_clearance] provide clearance to {!Wall.poly_siding} for the
         corresponding sections.
-      - [spacing] is given to {!Wall.column_drop} for north and south walls when [thumb]
-        is false
       - [thumb] flags whether [columns] represents a thumb plate (default is false)
       - [{north,south,west,east}_lookup] parameters are functions from index to
         {!presence}, indicating whether there is a wall present at a position or not (and
@@ -83,13 +78,13 @@ module Sides : sig
     -> ?n_steps:Wall.Steps.t
     -> ?scale:V2.t
     -> ?scale_ez:V2.t * V2.t
+    -> ?end_z:float
     -> ?index_scale:V2.t
     -> ?north_lookup:(int -> presence)
     -> ?south_lookup:(int -> presence)
     -> ?west_lookup:(int -> presence)
     -> ?east_lookup:(int -> presence)
     -> ?eyelet_config:Eyelet.config
-    -> ?spacing:float
     -> ?thumb:bool
     -> Columns.t
     -> t
@@ -109,6 +104,7 @@ val auto_body
   -> ?n_steps:Wall.Steps.t
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
+  -> ?end_z:float
   -> ?index_scale:V2.t
   -> ?north_lookup:(int -> presence)
   -> ?south_lookup:(int -> presence)
@@ -128,6 +124,7 @@ val auto_thumb
   -> ?n_steps:Wall.Steps.t
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
+  -> ?end_z:float
   -> ?north_lookup:(int -> presence)
   -> ?south_lookup:(int -> presence)
   -> ?west_lookup:(int -> presence)

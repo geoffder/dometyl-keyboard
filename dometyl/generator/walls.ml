@@ -20,30 +20,26 @@ module Sides = struct
     }
   [@@deriving scad]
 
-  let manual_body ?(spacing = 1.) ~west ~north ~east ~south (columns : Columns.t) =
+  let manual_body ~west ~north ~east ~south (columns : Columns.t) =
     { west =
         IMap.filter_mapi
-          (fun key data ->
-            Option.map (fun c -> Wall.poly_of_config c `West data) (west key) )
+          (fun key data -> Option.map (fun c -> Wall.of_config c `West data) (west key))
           (IMap.find 0 columns).keys
     ; north =
         IMap.filter_mapi
-          (fun key _ ->
-            Option.map
-              (fun c -> Wall.drop_of_config ~spacing ~columns c `North key)
-              (north key) )
+          (fun key data ->
+            let* _, k = IMap.max_binding_opt data.Column.keys in
+            Option.map (fun c -> Wall.of_config c `North k) (north key) )
           columns
     ; east =
         IMap.filter_mapi
-          (fun key data ->
-            Option.map (fun c -> Wall.poly_of_config c `East data) (east key) )
+          (fun key data -> Option.map (fun c -> Wall.of_config c `East data) (east key))
           (snd @@ IMap.max_binding columns).keys
     ; south =
         IMap.filter_mapi
-          (fun key _data ->
-            Option.map
-              (fun c -> Wall.drop_of_config ~spacing ~columns c `South key)
-              (south key) )
+          (fun key data ->
+            let* _, k = IMap.min_binding_opt data.Column.keys in
+            Option.map (fun c -> Wall.of_config c `South k) (south key) )
           columns
     }
 
@@ -52,35 +48,34 @@ module Sides = struct
         IMap.filter_mapi
           (fun key data ->
             let* _, k = IMap.min_binding_opt data.Column.keys in
-            Option.map (fun c -> Wall.poly_of_config c `West k) (west key) )
+            Option.map (fun c -> Wall.of_config c `West k) (west key) )
           columns
     ; north =
         IMap.filter_mapi
-          (fun key data ->
-            Option.map (fun c -> Wall.poly_of_config c `North data) (north key) )
+          (fun key data -> Option.map (fun c -> Wall.of_config c `North data) (north key))
           (snd @@ IMap.min_binding columns).keys
     ; east =
         IMap.filter_mapi
           (fun key data ->
             let* k = IMap.find_opt 0 data.Column.keys in
-            Option.map (fun c -> Wall.poly_of_config c `East k) (east key) )
+            Option.map (fun c -> Wall.of_config c `East k) (east key) )
           columns
     ; south =
         IMap.filter_mapi
-          (fun key data ->
-            Option.map (fun c -> Wall.poly_of_config c `South data) (south key) )
+          (fun key data -> Option.map (fun c -> Wall.of_config c `South data) (south key))
           (snd @@ IMap.max_binding columns).keys
     }
 
   let auto
       ?(d1 = `Abs 14.)
       ?(d2 = 8.)
-      ?(north_clearance = 2.5)
-      ?(south_clearance = 2.5)
-      ?(side_clearance = 3.0)
+      ?(north_clearance = 0.)
+      ?(south_clearance = 0.)
+      ?(side_clearance = 0.)
       ?(n_steps = `Flat 4)
       ?scale:s
       ?scale_ez
+      ?end_z
       ?index_scale
       ?(north_lookup = fun i -> if i = 2 || i = 4 then Eye else Yes)
       ?(south_lookup =
@@ -91,7 +86,6 @@ module Sides = struct
       ?(west_lookup = fun i -> if i = 0 then Eye else No)
       ?(east_lookup = fun _ -> No)
       ?(eyelet_config = Eyelet.m4_config)
-      ?(spacing = 1.)
       ?(thumb = false)
       (columns : Columns.t)
     =
@@ -108,6 +102,7 @@ module Sides = struct
         ; scale = s
         ; scale_ez
         ; eyelet_config = None
+        ; end_z
         }
     and init = IMap.empty in
     let west =
@@ -152,7 +147,7 @@ module Sides = struct
     in
     if thumb
     then manual_thumb ~west ~north ~east ~south columns
-    else manual_body ~west ~north ~east ~south ~spacing columns
+    else manual_body ~west ~north ~east ~south columns
 
   let fold f init (t : t) =
     let init = IMap.fold f t.west init in
@@ -184,13 +179,14 @@ let auto_body
     ?n_steps
     ?scale
     ?scale_ez
+    ?end_z
     ?index_scale
     ?north_lookup
     ?south_lookup
     ?west_lookup
     ?east_lookup
     ?eyelet_config
-    Plate.{ config = { spacing; _ }; body; _ }
+    Plate.{ body; _ }
   =
   Sides.auto
     ?d1
@@ -201,13 +197,13 @@ let auto_body
     ?n_steps
     ?scale
     ?scale_ez
+    ?end_z
     ?index_scale
     ?north_lookup
     ?south_lookup
     ?west_lookup
     ?east_lookup
     ?eyelet_config
-    ~spacing
     body
 
 let auto_thumb
@@ -219,6 +215,7 @@ let auto_thumb
     ?(n_steps = `PerZ 4.)
     ?scale
     ?scale_ez
+    ?end_z
     ?(north_lookup = fun i -> if i = 0 then Yes else No)
     ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
     ?(west_lookup = fun i -> if i = 0 then Yes else No)
@@ -235,6 +232,7 @@ let auto_thumb
     ~n_steps
     ?scale
     ?scale_ez
+    ?end_z
     ~north_lookup
     ~south_lookup
     ~west_lookup
@@ -260,7 +258,7 @@ let manual
     ~thumb_north
     ~thumb_east
     ~thumb_west
-    Plate.{ config = { spacing; _ }; body; thumb; _ }
+    Plate.{ body; thumb; _ }
   =
   { body =
       Sides.manual_body
@@ -268,7 +266,6 @@ let manual
         ~north:body_north
         ~east:body_east
         ~south:body_south
-        ~spacing
         body
   ; thumb =
       Sides.manual_thumb

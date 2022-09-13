@@ -53,6 +53,7 @@ type config =
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
   ; eyelet_config : Eyelet.config option
+  ; end_z : float option
   }
 
 let default =
@@ -63,6 +64,7 @@ let default =
   ; scale = None
   ; scale_ez = None
   ; eyelet_config = None
+  ; end_z = None
   }
 
 type t =
@@ -95,30 +97,20 @@ let swing_face key_origin face =
   in
   Key.Face.quaternion ~about q face, V3.quaternion q ortho
 
-(* TODO: Think of scaling d1 based on how high the key is, though maybe should
-   do so in the higher level functions in walls that call this one. Having a larger
-   d1 value will improve the clearance for the tall columns, which aren't in such a
-   hurry to move in xy (since they have a larger distance to do it).
-
-   NOTE: `Flat and `ZRatio as the type for d1? `ZRatio being a % of Z that should
-   be assigned as d1. Would that make the bow of the curve more consistent? *)
-
-let poly_siding
-    ?(x_off = 0.)
-    ?(y_off = 0.)
+let make
     ?(clearance = 1.5)
     ?(n_steps = `Flat 4)
     ?(d1 = `Abs 14.)
     ?(d2 = 10.)
     ?scale
     ?scale_ez
+    ?(end_z = 0.1)
     ?eyelet_config
     side
     (key : Key.t)
   =
   (* TODO: may do away with the x_off logic, since it really messes with the
     rotation of the sweep transforms. Instead, may users should just scale the walls? *)
-  let x_off = x_off *. 0. in
   let start_face = Key.Faces.face key.faces side in
   let pivoted_face, ortho = swing_face key.origin start_face in
   let cleared_face = Key.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face in
@@ -131,10 +123,10 @@ let poly_siding
     | `Rel frac -> cleared_face.points.centre.z *. frac
   and step = 1. /. Float.of_int fn in
   let bz end_z =
-    let ({ x; y; z } as cx) = cleared_face.points.centre in
+    let ({ x; y; z = _ } as cx) = cleared_face.points.centre in
     let p1 = V3.(cx -@ (ortho *$ 0.01)) (* fudge for union *)
-    and p2 = V3.((xy *@ v3 d1 d1 0.) +@ v3 (x +. x_off) (y +. y_off) z)
-    and p3 = V3.((xy *@ v3 d2 d2 0.) +@ v3 (x +. x_off) (y +. y_off) end_z) in
+    and p2 = V3.((xy *@ v d1 d1 0.) +@ cx)
+    and p3 = V3.((xy *@ v d2 d2 0.) +@ v x y end_z) in
     Bezier3.make [ p1; p2; p3 ]
   and counter =
     (* counter the rotation created by the z tilt of the face, such that the
@@ -167,14 +159,13 @@ let poly_siding
     | None -> fun _ pt -> pt
   in
   let transforms =
-    (* TODO: decide whether the end_z fudge should be parameterized *)
     let trans =
       Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz 0.))
       |> Util.last
       |> Affine3.compose (Util.last counter)
     in
     let last_shape = Path3.affine trans (List.map (scaler fn) centred) in
-    let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. 0.05 in
+    let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. end_z in
     Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
     |> List.map2 (fun c m -> Affine3.(c %> m)) counter
     |> Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred)
@@ -270,66 +261,8 @@ let poly_siding
   ; screw
   }
 
-let poly_of_config
-    ?x_off
-    ?y_off
-    { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config }
-  =
-  poly_siding ~d1 ~d2 ?x_off ?y_off ~clearance ~n_steps ?eyelet_config ?scale ?scale_ez
-
-let column_drop
-    ?clearance
-    ?n_steps
-    ?d1
-    ?d2
-    ?scale
-    ?scale_ez
-    ?eyelet_config
-    ~spacing
-    ~columns
-    side
-    idx
-  =
-  let key, face, hanging =
-    let c : Column.t = IMap.find idx columns in
-    match side with
-    | `North ->
-      let key = snd @@ IMap.max_binding c.keys in
-      let edge_y = V3.get_y key.faces.north.points.centre in
-      key, key.faces.north, ( <= ) edge_y
-    | `South ->
-      let key = IMap.find 0 c.keys in
-      let edge_y = V3.get_y key.faces.south.points.centre in
-      key, key.faces.south, ( >= ) edge_y
-  in
-  let x_dodge =
-    match IMap.find_opt (idx + 1) columns with
-    | Some next_c ->
-      let right_x = V3.get_x face.points.top_right
-      and next_face = Key.Faces.face (snd @@ IMap.max_binding next_c.keys).faces side in
-      let diff =
-        if hanging (V3.get_y next_face.points.centre)
-        then right_x -. V3.get_x next_face.points.bot_left
-        else -.spacing
-      in
-      if diff > 0. then diff +. spacing else Float.max 0. (spacing +. diff)
-    | _ -> 0.
-  in
-  poly_siding
-    ~x_off:(x_dodge *. -1.)
-    ?clearance
-    ?d1
-    ?d2
-    ?n_steps
-    ?eyelet_config
-    ?scale
-    ?scale_ez
-    side
-    key
-
-let drop_of_config ~spacing { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config }
-  =
-  column_drop ~d1 ~d2 ~clearance ~n_steps ~spacing ?scale ?scale_ez ?eyelet_config
+let of_config { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config; end_z } =
+  make ~d1 ~d2 ~clearance ~n_steps ?eyelet_config ?scale ?scale_ez ?end_z
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   V3.normalize V3.(top_left -@ top_right)
