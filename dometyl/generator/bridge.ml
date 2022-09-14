@@ -91,19 +91,15 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
       let w_z =
         V3.(
           get_z
-          @@ mean
-               Key.Faces.
-                 [ (face w_last.faces start).points.centre
-                 ; (face w_next.faces start).points.centre
-                 ])
+          @@ mid
+               (Key.Faces.face w_last.faces start).points.centre
+               (Key.Faces.face w_next.faces start).points.centre)
       and e_z =
         V3.(
           get_z
-          @@ mean
-               Key.Faces.
-                 [ (face e_last.faces dest).points.centre
-                 ; (face e_next.faces dest).points.centre
-                 ])
+          @@ mid
+               (Key.Faces.face e_last.faces dest).points.centre
+               (Key.Faces.face e_next.faces dest).points.centre)
       in
       if w_z > e_z
       then huller ~low_west:false e_set w_set :: hulls
