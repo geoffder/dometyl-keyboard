@@ -92,6 +92,7 @@ let spline_base
       let edge = w.drawer corner in
       let u =
         Path3.continuous_closest_point
+          ~n_steps:45
           (Path3.to_continuous edge)
           (V3.add (Util.last edge) (v3 0. 0. height))
       in
@@ -248,13 +249,13 @@ let spline_base
   id := !id + 1;
   { scad; inline; outline }
 
-(* TODO: add params
-   - slice count
-   - fill tri (whether to try, and what area to trigger on)
-*)
-let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
-  let slices = 12 in
-  let gap_fill = `Area 80. in
+let join_walls
+    ?(max_angle = 1.4)
+    ?(slices = 12)
+    ?(gap_fill = `MinArea 30.)
+    (w1 : Wall.t)
+    (w2 : Wall.t)
+  =
   let outward = outward_sign w1 w2 > 0.
   and edges drawer frac =
     let f = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1) in
@@ -303,44 +304,54 @@ let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
       else 0.97, 0.99, 1. -. frac, 1. -. frac +. 0.02 )
     else 0.97, 0.99, 0.01, 0.03
   in
+  let ((a_bot, a_top) as a) = edges w1.bounds_drawer a_frac
+  and ((_, a'_top) as a') = edges w1.drawer a_frac'
+  and ((_, b'_top) as b') = edges w2.drawer b_frac'
+  and ((b_bot, b_top) as b) = edges w2.bounds_drawer b_frac in
   let tri =
     match gap_fill with
-    | `Area min_area when sharp > max_angle ->
-      let bot, top, bot', top' =
+    | `MinArea min_area when sharp > max_angle ->
+      let bot, top, bot', top', far_top' =
         let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.01)
         and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.01) in
         if outward
-        then List.(hd b_bot, hd b_top, hd a_bot, hd a_top)
-        else List.(hd a_bot, hd a_top, hd b_bot, hd b_top)
+        then List.(hd b_bot, hd b_top, hd a_bot, hd a_top, hd a'_top)
+        else List.(hd a_bot, hd a_top, hd b_bot, hd b_top, hd b'_top)
       in
-      let side_bot, side_top =
-        let w = if outward then w2 else w1 in
+      let w = if outward then w2 else w1 in
+      let ps =
+        (* get key face perpendicular to the outer wall face *)
         match outward, w.side with
-        | true, `North | false, `South ->
-          w.key.faces.west.bounds.bot_right, w.key.faces.west.bounds.top_right
-        | true, `East | false, `West ->
-          w.key.faces.north.bounds.bot_left, w.key.faces.north.bounds.top_left
-        | true, `South | false, `North ->
-          w.key.faces.east.bounds.bot_left, w.key.faces.east.bounds.top_left
-        | true, `West | false, `East ->
-          w.key.faces.south.bounds.bot_right, w.key.faces.south.bounds.top_right
+        | true, `North | false, `South -> w.key.faces.west.bounds
+        | true, `East | false, `West -> w.key.faces.north.bounds
+        | true, `South | false, `North -> w.key.faces.east.bounds
+        | true, `West | false, `East -> w.key.faces.south.bounds
       in
-      let top_row = [ top; V3.lerp side_top top 0.01; top' ]
-      and bot_row = [ bot; V3.lerp side_bot bot 0.01; bot' ] in
-      let top_area = Path3.area top_row in
-      if top_area > min_area
-      then (
-        let is_ccw = V3.clockwise_sign top side_top top' < 0. in
-        let top_row = if is_ccw then top_row else List.rev top_row
-        and bot_row = if is_ccw then bot_row else List.rev bot_row in
-        Some (Mesh.to_scad @@ Mesh.skin_between ~slices:5 bot_row top_row) )
-      else None
-    | _ -> None
+      let plane = Path3.to_plane (Points.to_ccw_path ps) in
+      (* find the best points along the perpendicular edges to use as the third
+            point of the gap filling triangle *)
+      ( match Plane.line_intersection plane V3.{ a = far_top'; b = top' } with
+      | `Point (pt, _) ->
+        let side l r =
+          let f = Path3.to_continuous [ l; r ] in
+          let u = Path3.continuous_closest_point ~n_steps:45 f pt in
+          f u
+        in
+        let side_bot = side ps.bot_left ps.bot_right
+        and side_top = side ps.top_left ps.top_right in
+        let top_row = [ top; side_top; top' ]
+        and bot_row = [ bot; side_bot; bot' ] in
+        let top_area = Path3.area top_row in
+        if top_area > min_area
+        then (
+          let is_ccw = V3.clockwise_sign top side_top top' < 0. in
+          let top_row = if is_ccw then top_row else List.rev top_row
+          and bot_row = if is_ccw then bot_row else List.rev bot_row in
+          Some (Mesh.to_scad @@ Mesh.skin_between ~slices:5 bot_row top_row) )
+        else None (* small gap, don't bother to fill *)
+      | _ -> None (* inner edge line does not hit outer perpendicular face *) )
+    | _ -> None (* no shift perfomed, so no gap to fill *)
   in
-  let ((a_bot, a_top) as a) = edges w1.bounds_drawer a_frac
-  and a' = edges w1.drawer a_frac'
-  and b' = edges w2.drawer b_frac'
-  and ((b_bot, b_top) as b) = edges w2.bounds_drawer b_frac in
   let a', a, b, b' = profs a' a b b' in
   let scad =
     let s = Mesh.to_scad @@ Mesh.skin ~slices:(`Mix [ 2; slices; 2 ]) [ a'; a; b; b' ] in
@@ -350,7 +361,11 @@ let join_walls ?(max_angle = 1.4) (w1 : Wall.t) (w2 : Wall.t) =
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
 
 type config =
-  | FullJoin of { max_angle : float option }
+  | FullJoin of
+      { slices : int option
+      ; max_angle : float option
+      ; gap_fill : [ `MinArea of float | `No ] option
+      }
   | Spline of
       { height : float option
       ; d : float option
@@ -360,7 +375,7 @@ type config =
       ; max_edge_res : float option
       }
 
-let full_join ?max_angle () = FullJoin { max_angle }
+let full_join ?slices ?max_angle ?gap_fill () = FullJoin { slices; max_angle; gap_fill }
 
 let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
   Spline { height; d; fn; corner_fn; corner; max_edge_res }
@@ -368,7 +383,7 @@ let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
 let connect = function
   | Spline { height; d; fn; corner_fn; corner; max_edge_res } ->
     spline_base ?height ?d ?fn ?corner_fn ?corner ?max_edge_res
-  | FullJoin { max_angle } -> join_walls ?max_angle
+  | FullJoin { slices; max_angle; gap_fill } -> join_walls ?slices ?max_angle ?gap_fill
 
 let manual_joiner ~join key next (i, last, scads) =
   let scads' =
@@ -481,7 +496,9 @@ let skeleton
     ?corner_fn
     ?corner
     ?max_edge_res
+    ?join_slices
     ?max_join_angle
+    ?gap_fill
     ?thumb_height
     ?east_link
     ?west_link
@@ -498,7 +515,7 @@ let skeleton
   in
   let east_link = Option.value ~default:thumb_spline east_link
   and west_link = Option.value ~default:thumb_spline west_link in
-  let join = full_join ?max_angle:max_join_angle () in
+  let join = full_join ?slices:join_slices ?max_angle:max_join_angle ?gap_fill () in
   let thumber = Fun.const (if close_thumb then join else thumb_spline) in
   let west =
     let last_idx = Util.value_map_opt fst ~default:0 (IMap.max_binding_opt body.west) in
@@ -541,12 +558,14 @@ let closed
     ?corner_fn
     ?corner
     ?max_edge_res
+    ?join_slices
     ?max_join_angle
+    ?gap_fill
     ?west_link
     ?east_link
     (Walls.{ body; _ } as walls)
   =
-  let join = Fun.const (full_join ?max_angle:max_join_angle ())
+  let join _ = full_join ?slices:join_slices ?max_angle:max_join_angle ?gap_fill ()
   and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ?max_edge_res () in
   let west_link = Option.value ~default:spline west_link
   and east_link = Option.value ~default:spline east_link in
