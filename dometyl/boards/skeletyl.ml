@@ -106,6 +106,19 @@ let build ?right_hand ?hotswap () =
     ~ports_cutter
     keyhole
 
+let bottom case =
+  let bump_locs =
+    Bottom.
+      [ thumb ~loc:(v2 0. 0.5) Last First
+      ; thumb ~loc:(v2 0.7 0.) Last Last
+      ; body ~loc:(v2 0.1 0.9) First Last
+      ; body ~loc:(v2 0.5 1.) (Idx 3) Last
+      ; body ~loc:(v2 0.9 0.6) Last Last
+      ; body ~loc:(v2 0.8 0.) Last First
+      ]
+  in
+  Bottom.make ~bump_locs case
+
 let bastard_skelly =
   Scad.import3 "../things/others/bastardkb_skeletyl_v3_v5.stl"
   |> Scad.translate (v3 87. 0. 25.)

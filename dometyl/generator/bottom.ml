@@ -2,28 +2,41 @@ open! Scad_ml
 open Syntax
 
 type bump_loc =
-  | Thumb of Util.idx * Util.idx
-  | Body of Util.idx * Util.idx
-  | Point of V3.t
+  | Thumb of Util.idx * Util.idx * v2 option
+  | Body of Util.idx * Util.idx * v2 option
+  | Point of v2
+
+let thumb ?loc col row = Thumb (col, row, loc)
+let body ?loc col row = Body (col, row, loc)
+let point p = Point p
+
+let locate (key : Key.t) = function
+  | Some (loc : v2) ->
+    let xaxis = V3.(normalize @@ (key.faces.east.bounds.centre -@ key.origin))
+    and yaxis = V3.(normalize @@ (key.faces.north.bounds.centre -@ key.origin)) in
+    let xshift = V3.(xaxis *$ (key.config.outer_w *. (loc.x -. 0.5)))
+    and yshift = V3.(yaxis *$ (key.config.outer_h *. (loc.y -. 0.5))) in
+    V3.(to_v2 @@ (key.origin +@ xshift +@ yshift))
+  | None -> V2.of_v3 key.origin
 
 let locate_bump (plate : Plate.t) = function
-  | Thumb (c, k) ->
+  | Thumb (c, k, loc) ->
     let* col = Util.idx_to_find c plate.thumb in
     let+ key = Util.idx_to_find k col.keys in
-    V3.mul (v3 1. 1. 0.) key.origin
-  | Body (c, k) ->
+    locate key loc
+  | Body (c, k, loc) ->
     let* col = Util.idx_to_find c plate.body in
     let+ key = Util.idx_to_find k col.keys in
-    V3.mul (v3 1. 1. 0.) key.origin
+    locate key loc
   | Point p -> Some p
 
 let default_bumps =
-  [ Thumb (Last, First)
-  ; Thumb (Last, Last)
-  ; Body (First, Last)
-  ; Body (Idx 3, Last)
-  ; Body (Last, Last)
-  ; Body (Last, First)
+  [ thumb Last First
+  ; thumb Last Last
+  ; body First Last
+  ; body (Idx 3) Last
+  ; body Last Last
+  ; body Last First
   ]
 
 let make
@@ -48,21 +61,26 @@ let make
       let thickness = Float.max thickness (h +. 0.6) in
       ( thickness
       , Scad.union
-          [ Scad.translate (v3 0. 0. (thickness -. h))
-            @@ Scad.cylinder ~fn:32 ~height:h rad
-          ; Scad.cylinder ~fn:32 ~height:(thickness -. h) (rad /. 2.)
+          [ Scad.ztrans (thickness -. h -. 0.05)
+            @@ Scad.cylinder ~fn:32 ~height:(h +. 0.1) rad
+          ; Scad.ztrans (-0.05)
+            @@ Scad.cylinder ~fn:32 ~height:(thickness -. h +. 0.1) (rad /. 2.)
           ] )
     in
     match fastener with
     | Screw { head_rad; shaft_rad; sink = Counter; _ } ->
       let s = shaft_rad /. head_rad in
-      thickness, Scad.circle head_rad |> Scad.extrude ~height:thickness ~scale:(v2 s s)
+      ( thickness
+      , Scad.circle head_rad
+        |> Scad.extrude ~height:(thickness +. 0.05) ~scale:(v2 s s)
+        |> Scad.ztrans (-0.025) )
     | Screw { head_rad; shaft_rad; sink = Pan depth; _ } ->
       ( thickness
-      , Scad.union
-          [ Scad.cylinder ~fn:32 ~height:depth head_rad
-          ; Scad.cylinder ~fn:32 ~height:thickness shaft_rad
-          ] )
+      , Scad.ztrans (-0.05)
+        @@ Scad.union
+             [ Scad.cylinder ~fn:32 ~height:(depth +. 0.1) head_rad
+             ; Scad.cylinder ~fn:32 ~height:(thickness +. 0.1) shaft_rad
+             ] )
     | SameMagnet ->
       let Eyelet.{ inner_rad; hole; _ } = screw_config in
       let h =
@@ -73,11 +91,15 @@ let make
       magnetize inner_rad h
     | Magnet { rad; thickness } -> magnetize rad thickness
   and insets =
-    let cut = Scad.cylinder ~height:bumpon_inset bumpon_rad in
+    let cut =
+      Scad.ztrans (-0.05) @@ Scad.cylinder ~height:(bumpon_inset +. 0.1) bumpon_rad
+    in
     List.filter_map
-      (locate_bump case.plate >> Option.map (Fun.flip Scad.translate cut))
+      ( locate_bump case.plate
+      >> Option.map V3.of_v2
+      >> Option.map (Fun.flip Scad.translate cut) )
       bump_locs
-    |> Scad.union
+    |> Scad.union3
   in
   let plate =
     Scad.polygon (Connect.outline_2d case.connections) |> Scad.extrude ~height:thickness

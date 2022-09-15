@@ -120,8 +120,17 @@ let bottom ?(chonk = false) case =
      NOTE: this behaviour does not apply if the case has through-hole eyelets *)
   let fastener =
     if not chonk then Some (Eyelet.Magnet { rad = 2.65; thickness = 1.2 }) else None
+  and bump_locs =
+    Bottom.
+      [ thumb ~loc:(v2 0.5 0.2) Last First
+      ; thumb ~loc:(v2 0.7 0.) Last Last
+      ; body ~loc:(v2 0. 1.) First Last
+      ; body ~loc:(v2 0.5 1.2) (Idx 3) Last
+      ; body ~loc:(v2 0.9 0.8) Last Last
+      ; body ~loc:(v2 0.8 0.) Last First
+      ]
   in
-  Bottom.make ?fastener case
+  Bottom.make ?fastener ~bump_locs case
 
 let tent case = Tent.make ~degrees:30. case
 

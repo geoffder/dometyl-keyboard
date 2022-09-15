@@ -9,16 +9,24 @@ open! Boards
    left cases directly here as well. *)
 
 let splaytyl_right = Splaytyl.build ()
+
 (* let splaytyl_left = Splaytyl.build ~right_hand:false () *)
+let skeletyl_right = Skeletyl.build ()
+let closed_right = Closed.build ()
 
 let () =
   print_endline "Building keyboards...";
-  Scad.to_file "skeletyl_right.scad" (Case.to_scad ~show_caps:false @@ Skeletyl.build ());
+  Scad.to_file "skeletyl_right.scad" (Case.to_scad ~show_caps:false @@ skeletyl_right);
   (* Scad.to_file "skeletyl_compare.scad" (Skeletyl.bastard_compare ()); *)
   Scad.to_file "splaytyl_right.scad" (Case.to_scad ~show_caps:false splaytyl_right);
   Scad.to_file "splaytyl_right_plate.scad" (Plate.to_scad splaytyl_right.plate);
   (* Scad.to_file "splaytyl_left.scad" (Case.to_scad splaytyl_left); *)
   Scad.to_file "bottom_plate_right.scad" (Bottom.make splaytyl_right);
+  Scad.to_file "closed_right.scad" (Case.to_scad ~show_caps:false @@ closed_right);
+  Scad.to_file
+    "closed_bottom_plate_right.scad"
+    (Bottom.make ~bump_locs:Closed.bump_locs_right closed_right);
+  Scad.to_file "skeletyl_bottom_plate_right.scad" (Skeletyl.bottom skeletyl_right);
   (* Write.thing *)
   (*   "splaytyl_right_with_plate" *)
   (*   ( Case.to_scad ~show_caps:false splaytyl_right *)
