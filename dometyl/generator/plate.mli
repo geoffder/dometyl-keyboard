@@ -142,7 +142,16 @@ val make
     {!Bridges.cols} to control how far the lower key's face is moved out, and the upper
     keys face is moved in before being hulled with its neighbours across the gap. This can
     be used to thicken the generated supports. *)
-val column_joins : ?in_d:float -> ?out_d1:float -> ?out_d2:float -> t -> Scad.d3
+val column_joins
+  :  ?in_d:float
+  -> ?out_d1:float
+  -> ?out_d2:float
+  -> ?body_skip:(int * int) list
+  -> ?body_join_skip:(int * int) list
+  -> ?thumb_skip:(int * int) list
+  -> ?thumb_join_skip:(int * int) list
+  -> t
+  -> Scad.d3
 
 (** [skeleton_bridges ?in_d ?out_d1 ?out_d2 t]
 

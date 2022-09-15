@@ -47,7 +47,17 @@ let keys
   then aux (start, k1) (dest, k2)
   else aux (dest, k2) (start, k1)
 
-let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
+let cols
+    ?(ax = `EW)
+    ?(in_d = 0.25)
+    ?out_d1
+    ?out_d2
+    ?(skip = [])
+    ?(join_skip = [])
+    ~columns
+    a_i
+    b_i
+  =
   let a : Column.t = IMap.find a_i columns
   and b : Column.t = IMap.find b_i columns
   and bookends keys join_idx = IMap.find join_idx keys, IMap.find (join_idx + 1) keys
@@ -56,9 +66,10 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
     | `EW -> `East, `West
     | `NS -> `South, `North
   in
-  let key_folder _key data hulls =
+  let key_folder key data hulls =
     match data with
-    | `Both (a', b') -> keys ~start ~dest ~in_d ?out_d1 ?out_d2 a' b' :: hulls
+    | `Both (a', b') when not (List.mem key skip) ->
+      keys ~start ~dest ~in_d ?out_d1 ?out_d2 a' b' :: hulls
     | _ -> hulls
   and join_folder key data hulls =
     let huller ~low_west (out_last, out_next, out_join) (in_last, in_next, in_join) =
@@ -72,7 +83,8 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
       Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
     in
     match data with
-    | `Both ((w_join : Column.Join.t), (e_join : Column.Join.t)) ->
+    | `Both ((w_join : Column.Join.t), (e_join : Column.Join.t))
+      when not (List.mem key join_skip) ->
       let w_last, w_next = bookends a.keys key
       and e_last, e_next = bookends b.keys key in
       let w_set =
@@ -89,17 +101,13 @@ let cols ?(ax = `EW) ?(in_d = 0.25) ?out_d1 ?out_d2 ~columns a_i b_i =
           | `NS -> e_join.faces.east )
       in
       let w_z =
-        V3.(
-          get_z
-          @@ mid
-               (Key.Faces.face w_last.faces start).points.centre
-               (Key.Faces.face w_next.faces start).points.centre)
+        let last_c = (Key.Faces.face w_last.faces start).points.centre
+        and next_c = (Key.Faces.face w_next.faces start).points.centre in
+        V3.(get_z @@ mid last_c next_c)
       and e_z =
-        V3.(
-          get_z
-          @@ mid
-               (Key.Faces.face e_last.faces dest).points.centre
-               (Key.Faces.face e_next.faces dest).points.centre)
+        let last_c = (Key.Faces.face e_last.faces dest).points.centre
+        and next_c = (Key.Faces.face e_next.faces dest).points.centre in
+        V3.(get_z @@ mid last_c next_c)
       in
       if w_z > e_z
       then huller ~low_west:false e_set w_set :: hulls

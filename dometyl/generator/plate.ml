@@ -201,15 +201,30 @@ let make
   ; thumb
   }
 
-let join_thumb ?in_d ?out_d1 ?out_d2 thumb =
-  let join = Bridge.cols ~ax:`NS ?in_d ?out_d1 ?out_d2 ~columns:thumb in
-  Scad.union3 (List.init (IMap.cardinal thumb - 1) (fun i -> join i (i + 1)))
+let col_skip skip i = List.filter_map (fun (c, r) -> if c = i then Some r else None) skip
 
-let column_joins ?in_d ?out_d1 ?out_d2 { config = { n_body_cols; _ }; body; thumb; _ } =
+let join_thumb ?in_d ?out_d1 ?out_d2 ?(skip = []) ?(join_skip = []) thumb =
+  let join = Bridge.cols ~ax:`NS ?in_d ?out_d1 ?out_d2 ~columns:thumb in
+  let f i = join ~skip:(col_skip skip i) ~join_skip:(col_skip join_skip i) i (i + 1) in
+  Scad.union3 (List.init (IMap.cardinal thumb - 1) f)
+
+let column_joins
+    ?in_d
+    ?out_d1
+    ?out_d2
+    ?(body_skip = [])
+    ?(body_join_skip = [])
+    ?thumb_skip
+    ?thumb_join_skip
+    { config = { n_body_cols; _ }; body; thumb; _ }
+  =
   let join = Bridge.cols ?in_d ?out_d1 ?out_d2 ~columns:body in
+  let f i =
+    join ~skip:(col_skip body_skip i) ~join_skip:(col_skip body_join_skip i) i (i + 1)
+  in
   Scad.union
-    [ Scad.union (List.init (n_body_cols - 1) (fun i -> join i (i + 1)))
-    ; join_thumb ?in_d ?out_d1 ?out_d2 thumb
+    [ Scad.union (List.init (n_body_cols - 1) f)
+    ; join_thumb ?in_d ?out_d1 ?out_d2 ?skip:thumb_skip ?join_skip:thumb_join_skip thumb
     ]
 
 let skeleton_bridges

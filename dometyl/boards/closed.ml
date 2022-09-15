@@ -37,7 +37,7 @@ let wall_builder plate =
     }
 
 let base_connector = Connect.closed ~spline_d:0.1 ~max_edge_res:1.
-let plate_welder = Plate.column_joins
+let plate_welder = Plate.column_joins ~body_skip:[ 3, 0 ]
 let ports_cutter = Splaytyl.ports_cutter
 
 let build ?right_hand ?hotswap () =
