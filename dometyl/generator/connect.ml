@@ -288,7 +288,8 @@ let join_walls
     sharpest (profs far_a a b far_b)
   in
   let a_frac', a_frac, b_frac, b_frac' =
-    if sharp > max_angle
+    let dir_angle = V3.angle (Wall.start_direction w1) (Wall.start_direction w2) in
+    if sharp > max_angle && not (Math.approx dir_angle (Float.pi /. 2.))
     then (
       (* use law of sines to compute shift required along the inner wall to
            bring the sharpest edge angle down to the max_angle *)
