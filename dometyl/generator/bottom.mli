@@ -1,9 +1,6 @@
 open! Scad_ml
 
-type bump_loc =
-  | Thumb of Util.idx * Util.idx * v2 option
-  | Body of Util.idx * Util.idx * v2 option
-  | Point of V2.t
+type bump_loc
 
 val thumb : ?loc:v2 -> Util.idx -> Util.idx -> bump_loc
 val body : ?loc:v2 -> Util.idx -> Util.idx -> bump_loc

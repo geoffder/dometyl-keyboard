@@ -55,5 +55,5 @@ let build ?right_hand ?hotswap () =
 
 let bump_locs_right =
   List.map
-    (fun p -> Bottom.Point (V2.of_tup p))
+    (fun p -> Bottom.point (V2.of_tup p))
     [ 105., 5.; 80., -55.; 20., -55.; -25., -55.; -5., 32.; 75., 32. ]
