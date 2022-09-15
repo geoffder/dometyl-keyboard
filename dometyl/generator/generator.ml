@@ -23,3 +23,4 @@ module Syntax = Syntax
 module Sigs = Sigs
 module Hand = Hand
 module Key = Key
+module IMap = IMap
