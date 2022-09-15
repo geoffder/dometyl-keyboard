@@ -301,8 +301,8 @@ let join_walls
       and shrunk_c = side_a *. Float.sin gamma /. Float.sin alpha in
       let frac = Float.min (shrunk_c /. full_c) 0.99 in
       if outward
-      then frac -. 0.02, frac, 0.01, 0.03
-      else 0.97, 0.99, 1. -. frac, 1. -. frac +. 0.02 )
+      then frac -. 0.02, frac, 0.005, 0.03
+      else 0.97, 0.995, 1. -. frac, 1. -. frac +. 0.02 )
     else 0.97, 0.99, 0.01, 0.03
   in
   let ((a_bot, a_top) as a) = edges w1.bounds_drawer a_frac
@@ -313,33 +313,35 @@ let join_walls
     match gap_fill with
     | `MinArea min_area when sharp > max_angle ->
       let bot, top, bot', top', far_top' =
-        let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.01)
-        and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.01) in
+        let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.001)
+        and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.001) in
         if outward
         then List.(hd b_bot, hd b_top, hd a_bot, hd a_top, hd a'_top)
         else List.(hd a_bot, hd a_top, hd b_bot, hd b_top, hd b'_top)
       in
       let w = if outward then w2 else w1 in
-      let ps =
+      let face =
         (* get key face perpendicular to the outer wall face *)
         match outward, w.side with
-        | true, `North | false, `South -> w.key.faces.west.bounds
-        | true, `East | false, `West -> w.key.faces.north.bounds
-        | true, `South | false, `North -> w.key.faces.east.bounds
-        | true, `West | false, `East -> w.key.faces.south.bounds
+        | true, `North | false, `South -> w.key.faces.west
+        | true, `East | false, `West -> w.key.faces.north
+        | true, `South | false, `North -> w.key.faces.east
+        | true, `West | false, `East -> w.key.faces.south
       in
-      let plane = Path3.to_plane (Points.to_ccw_path ps) in
+      let plane = Path3.to_plane (Points.to_ccw_path face.bounds) in
       (* find the best points along the perpendicular edges to use as the third
             point of the gap filling triangle *)
       ( match Plane.line_intersection plane V3.{ a = far_top'; b = top' } with
       | `Point (pt, _) ->
         let side l r =
           let f = Path3.to_continuous [ l; r ] in
-          let u = Path3.continuous_closest_point ~n_steps:45 f pt in
-          f u
+          let u = Path3.continuous_closest_point ~n_steps:45 f pt
+          and normal = V3.(normalize @@ (face.bounds.centre -@ w.key.origin)) in
+          V3.(f u -@ (normal *$ 0.1))
+          (* fudge in to avoid coincident face *)
         in
-        let side_bot = side ps.bot_left ps.bot_right
-        and side_top = side ps.top_left ps.top_right in
+        let side_bot = side face.bounds.bot_left face.bounds.bot_right
+        and side_top = side face.bounds.top_left face.bounds.top_right in
         let top_row = [ top; side_top; top' ]
         and bot_row = [ bot; side_bot; bot' ] in
         let top_area = Path3.area top_row in
@@ -348,7 +350,7 @@ let join_walls
           let is_ccw = V3.clockwise_sign top side_top top' < 0. in
           let top_row = if is_ccw then top_row else List.rev top_row
           and bot_row = if is_ccw then bot_row else List.rev bot_row in
-          Some (Mesh.to_scad @@ Mesh.skin_between ~slices:5 bot_row top_row) )
+          Some (Mesh.to_scad @@ Mesh.skin_between ~slices:10 bot_row top_row) )
         else None (* small gap, don't bother to fill *)
       | _ -> None (* inner edge line does not hit outer perpendicular face *) )
     | _ -> None (* no shift perfomed, so no gap to fill *)
