@@ -7,6 +7,7 @@ type t =
 
 type cutter = walls:Walls.t -> connections:Connect.t -> t
 
+val blank : cutter
 val apply : t -> Scad.d3 -> Scad.d3
 
 val make

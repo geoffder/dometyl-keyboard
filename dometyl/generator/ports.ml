@@ -12,6 +12,8 @@ let apply t scad =
   let added = value_map_opt ~default:scad (fun s -> Scad.union [ s; scad ]) t.plus in
   value_map_opt ~default:added (fun s -> Scad.difference added [ s ]) t.minus
 
+let blank ~walls:_ ~connections:_ = { plus = None; minus = None }
+
 let make
     ?(length = 2.)
     ?(jack_radius = 2.49)
