@@ -333,25 +333,30 @@ let join_walls
             point of the gap filling triangle *)
       ( match Plane.line_intersection plane V3.{ a = far_top'; b = top' } with
       | `Point (pt, _) ->
-        let side l r =
-          let f = Path3.to_continuous [ l; r ] in
-          let u = Path3.continuous_closest_point ~n_steps:45 f pt
-          and normal = V3.(normalize @@ (face.bounds.centre -@ w.key.origin)) in
-          V3.(f u -@ (normal *$ 0.1))
-          (* fudge in to avoid coincident face *)
-        in
-        let side_bot = side face.bounds.bot_left face.bounds.bot_right
-        and side_top = side face.bounds.top_left face.bounds.top_right in
-        let top_row = [ top; side_top; top' ]
-        and bot_row = [ bot; side_bot; bot' ] in
-        let top_area = Path3.area top_row in
-        if top_area > min_area
-        then (
-          let is_ccw = V3.clockwise_sign top side_top top' < 0. in
-          let top_row = if is_ccw then top_row else List.rev top_row
-          and bot_row = if is_ccw then bot_row else List.rev bot_row in
-          Some (Mesh.to_scad @@ Mesh.skin_between ~slices:10 bot_row top_row) )
-        else None (* small gap, don't bother to fill *)
+        ( try
+            let side l r =
+              let f = Path3.to_continuous [ l; r ] in
+              let u = Path3.continuous_closest_point ~n_steps:90 f pt
+              and normal = V3.(normalize @@ (face.bounds.centre -@ w.key.origin)) in
+              V3.(f u -@ (normal *$ 0.1))
+              (* fudge in to avoid coincident face *)
+            in
+            let side_bot = side face.bounds.bot_left face.bounds.bot_right
+            and side_top = side face.bounds.top_left face.bounds.top_right in
+            let top_row = [ top; side_top; top' ]
+            and bot_row = [ bot; side_bot; bot' ] in
+            let top_area = Path3.area top_row in
+            if top_area > min_area
+            then (
+              let is_ccw = V3.clockwise_sign top side_top top' < 0. in
+              let top_row = if is_ccw then top_row else List.rev top_row
+              and bot_row = if is_ccw then bot_row else List.rev bot_row in
+              Some (Mesh.to_scad @@ Mesh.skin_between ~slices:10 bot_row top_row) )
+            else None (* small gap, don't bother to fill *)
+          with
+        | Failure _ ->
+          print_endline "NOTE: Full wall join gap filling failed.";
+          None )
       | _ -> None (* inner edge line does not hit outer perpendicular face *) )
     | _ -> None (* no shift perfomed, so no gap to fill *)
   in
