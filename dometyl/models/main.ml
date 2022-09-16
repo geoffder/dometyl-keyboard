@@ -13,6 +13,7 @@ let splaytyl_right = Splaytyl.build ()
 (* let splaytyl_left = Splaytyl.build ~right_hand:false () *)
 let skeletyl_right = Skeletyl.build ()
 let closed_right = Closed.build ()
+let deractyl_right = Deractyl.build ()
 
 let () =
   print_endline "Building keyboards...";
@@ -23,6 +24,7 @@ let () =
   (* Scad.to_file "splaytyl_left.scad" (Case.to_scad splaytyl_left); *)
   Scad.to_file "bottom_plate_right.scad" (Bottom.make splaytyl_right);
   Scad.to_file "closed_right.scad" (Case.to_scad ~show_caps:false @@ closed_right);
+  Scad.to_file "deractyl_right.scad" (Case.to_scad ~show_caps:false @@ deractyl_right);
   Scad.to_file
     "closed_bottom_plate_right.scad"
     (Bottom.make ~bump_locs:Closed.bump_locs_right closed_right);
