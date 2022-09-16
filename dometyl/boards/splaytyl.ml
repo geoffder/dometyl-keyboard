@@ -60,9 +60,6 @@ let wall_builder plate =
           ~n_steps:(`PerZ 1.)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~north_clearance:0.
-          ~south_clearance:0.
-          ~side_clearance:0.
           ~eyelet_config
           plate
     ; thumb =
@@ -76,20 +73,18 @@ let wall_builder plate =
           ~west_lookup:(fun _ -> Eye)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~north_clearance:0.
-          ~south_clearance:0.
-          ~side_clearance:0.
           ~eyelet_config
           plate
     }
 
 let base_connector =
   Connect.skeleton
-    ~height:11.
+    ~height:13.
     ~index_height:13.
-    ~thumb_height:11.
+    ~thumb_height:13.
+    ~corner_fn:6
     ~close_thumb:false
-    ~north_joins:(Fun.const false)
+    ~north_joins:(fun i -> i < 2)
     ~south_joins:(Fun.const false)
 
 let plate_welder plate =
@@ -105,8 +100,7 @@ let build ?right_hand ?hotswap () =
     ~wall_builder
     ~base_connector
     ~ports_cutter
-    (Mx.make_hole
-       ~cap_cutout_height:None
+    (Mx.make_hole (* ~cap_cutout_height:None *)
        ?hotswap
        ~clearance:2.
        ~corner:(Path3.Round.bez (`Cut 0.5))
