@@ -46,10 +46,11 @@ module Drawer = struct
 end
 
 type config =
-  { d1 : [ `Abs of float | `Rel of float ]
-  ; d2 : float
-  ; clearance : float
-  ; n_steps : Steps.t
+  { d1 : [ `Abs of float | `Rel of float ] option
+  ; d2 : float option
+  ; clearance : float option
+  ; n_steps : Steps.t option
+  ; min_step_dist : float option
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
   ; eyelet_config : Eyelet.config option
@@ -57,10 +58,11 @@ type config =
   }
 
 let default =
-  { d1 = `Abs 14.
-  ; d2 = 8.
-  ; clearance = 1.5
-  ; n_steps = `Flat 4
+  { d1 = None
+  ; d2 = None
+  ; clearance = None
+  ; n_steps = None
+  ; min_step_dist = None
   ; scale = None
   ; scale_ez = None
   ; eyelet_config = None
@@ -100,8 +102,9 @@ let swing_face key_origin face =
   Key.Face.quaternion ~about q face, V3.quaternion q ortho
 
 let make
-    ?(clearance = 1.5)
+    ?(clearance = 0.)
     ?(n_steps = `Flat 4)
+    ?(min_step_dist = 0.02)
     ?(d1 = `Abs 14.)
     ?(d2 = 10.)
     ?scale
@@ -170,7 +173,8 @@ let make
     let end_z = Float.max ((Path3.bbox last_shape).min.z *. -1.) 0. +. end_z in
     Path3.to_transforms ~mode:`NoAlign (Bezier3.curve ~fn (bz end_z))
     |> List.map2 (fun c m -> Affine3.(c %> m)) counter
-    |> Util.prune_transforms ~shape:(fun i -> List.map (scaler i) centred)
+    |> Util.prune_transforms ~min_dist:min_step_dist ~shape:(fun i ->
+           List.map (scaler i) centred )
   in
   if List.length transforms < 2
   then
@@ -265,8 +269,10 @@ let make
   ; screw
   }
 
-let of_config { d1; d2; clearance; n_steps; scale; scale_ez; eyelet_config; end_z } =
-  make ~d1 ~d2 ~clearance ~n_steps ?eyelet_config ?scale ?scale_ez ?end_z
+let of_config
+    { d1; d2; clearance; n_steps; min_step_dist; scale; scale_ez; eyelet_config; end_z }
+  =
+  make ?d1 ?d2 ?clearance ?n_steps ?min_step_dist ?eyelet_config ?scale ?scale_ez ?end_z
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   V3.normalize V3.(top_left -@ top_right)

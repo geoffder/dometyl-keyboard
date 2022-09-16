@@ -36,10 +36,16 @@ val full_join
 val spline
   :  ?height:float
   -> ?d:float
+  -> ?size:float
   -> ?fn:int
-  -> ?corner_fn:int
+  -> ?min_step_dist:float
+  -> ?fillet_d:[ `Abs of float | `Rel of float ]
+  -> ?fillet_h:[ `Abs of float | `Rel of float ]
   -> ?corner:Path3.Round.corner
+  -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?tight_threshold:float
+  -> ?tight_d:float
   -> unit
   -> config
 
@@ -58,17 +64,23 @@ val manual
   -> t
 
 val skeleton
-  :  ?index_height:float
-  -> ?height:float
+  :  ?height:float
+  -> ?index_height:float
+  -> ?thumb_height:float
   -> ?spline_d:float
+  -> ?spline_size:float
   -> ?fn:int
-  -> ?corner_fn:int
+  -> ?min_step_dist:float
+  -> ?fillet_d:[ `Abs of float | `Rel of float ]
+  -> ?fillet_h:[ `Abs of float | `Rel of float ]
   -> ?corner:Path3.Round.corner
+  -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?tight_threshold:float
+  -> ?tight_spline_d:float
   -> ?join_slices:int
   -> ?max_join_angle:float
   -> ?gap_fill:[ `MinArea of float | `No ]
-  -> ?thumb_height:float
   -> ?east_link:config
   -> ?west_link:config
   -> ?north_joins:(int -> bool)
@@ -80,10 +92,16 @@ val skeleton
 val closed
   :  ?height:float
   -> ?spline_d:float
+  -> ?spline_size:float
   -> ?fn:int
-  -> ?corner_fn:int
+  -> ?min_step_dist:float
+  -> ?fillet_d:[ `Abs of float | `Rel of float ]
+  -> ?fillet_h:[ `Abs of float | `Rel of float ]
   -> ?corner:Path3.Round.corner
+  -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?tight_threshold:float
+  -> ?tight_spline_d:float
   -> ?join_slices:int
   -> ?max_join_angle:float
   -> ?gap_fill:[ `MinArea of float | `No ]

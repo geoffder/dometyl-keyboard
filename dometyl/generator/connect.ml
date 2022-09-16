@@ -64,24 +64,22 @@ let fillet ~d ~h rows =
   in
   List.map2 f rel_dists rows
 
-let id = ref 0
-
 (* TODO: params to add
 
-   - ending profile shrink parameter (edge hiding)
-   - fillet parameters
-   - d adjustment parameters, such as min distance / angle ratio, or some way to
-     accomplish similar (give more control over d as well with variant that
-     takes a function?)
-   - transform pruning epsilon
-   - bezier spline size *)
+   - ending profile shrink parameter (edge hiding) *)
 let spline_base
     ?(height = 11.)
     ?(d = 1.)
+    ?(size = 8.)
+    ?(fn = 64)
+    ?(min_step_dist = 0.02)
+    ?(fillet_d = `Rel 0.2)
+    ?(fillet_h = `Rel 0.3)
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
-    ?(fn = 64)
-    ?(max_edge_res = 0.75)
+    ?(max_edge_res = 0.85)
+    ?(tight_threshold = 6.)
+    ?(tight_d = 0.05)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
@@ -147,9 +145,7 @@ let spline_base
   let bot_l', top_l' = planer plane_l bot_l top_l
   and bot_r', top_r' = planer plane_r bot_r top_r in
   let round = rounder ~fn:corner_fn ~corner in
-  let a = round bot_l top_l
-  and a' = round bot_l' top_l'
-  and b = round bot_r top_r
+  let a' = round bot_l' top_l'
   and b' = round bot_r' top_r' in
   let base_points = function
     | inner :: pts -> inner, Util.last pts
@@ -162,30 +158,14 @@ let spline_base
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
   let ang = V3.angle (V3.neg dir1) V3.(p3 -@ p0) *. outward_sign w1 w2 in
-  let min_spline_dist = d *. 4. in
   let dist = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
-  let min_spline_ratio = 6. in
   let ang_ratio = dist /. Float.abs ang /. Float.pi in
-  Printf.printf "id %i: ang = %f; ratio = %f\n" !id ang ang_ratio;
-  let fillet_d = `Rel 0.2 in
-  let fillet_h = `Rel 0.3 in
   let step = 1. /. Float.of_int fn in
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in
-  (* TODO: experiment with automatic "out" d adjustment as well as size as
-    mentioned above. I think I can remove the need for most uses of the
-    linear/rot connectors this way and make it more of an option rather than a
-     necessity. The auto function could optionally take bow params to only be
-    used when one is encountered for example (e.g.
-     - decrease out d when harsh angles or short distances are detected
-     - increasing d, when bowing is detected
-      *)
   let out =
-    (* TODO: possible to roughly calculate an out distance based on these
-    factors rather than hardcoding to 0.1 or some other small number? Or is the
-    iterative "least pruned" approach I was thinking of the best? *)
-    if (dist < min_spline_dist || ang_ratio < min_spline_ratio) && V3.angle dir1 dir2 < 3.
-    then 0.1
-    else d
+    if ang_ratio < tight_threshold && V3.angle dir1 dir2 < 3.
+    then tight_d
+    else Float.min d (dist /. 4.)
   in
   (* TODO: what about trying a range of out/size values and keeping the one that
     drops the least? *)
@@ -195,10 +175,10 @@ let spline_base
       and p2 = V3.(p3 +@ (dir2 *$ out)) in
       (* TODO: related to above, the size param of of_path may be useful for
            automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
-      Bezier3.curve ~fn
-      @@ Bezier3.of_path ~size:(`Abs [ out *. 0.1; 8.; out *. 0.1 ]) [ p0; p1; p2; p3 ]
+      Bezier3.curve ~fn @@ Bezier3.of_path ~size:(`Flat (`Abs size)) [ p0; p1; p2; p3 ]
     in
-    Util.prune_transforms ~shape:transition @@ Path3.to_transforms ~mode:`NoAlign path
+    Util.prune_transforms ~min_dist:min_step_dist ~shape:transition
+    @@ Path3.to_transforms ~mode:`NoAlign path
   in
   let in_start', out_start' = base_points a' in
   let scad =
@@ -241,12 +221,6 @@ let spline_base
     Mesh.to_scad @@ Mesh.skin ~slices (List.append (start :: rows) [ finish ])
   and inline = List.map (fun (_, m) -> V3.affine m in_start') transforms
   and outline = List.map (fun (_, m) -> V3.affine m out_start') transforms in
-  let () =
-    let show = Path3.show_points (Fun.const (Scad.sphere 0.4)) >> Scad.color Color.Red in
-    Scad.union [ scad; show a; show b ]
-    |> Scad.to_file (Printf.sprintf "conn_%i.scad" !id)
-  in
-  id := !id + 1;
   { scad; inline; outline }
 
 let join_walls
@@ -365,7 +339,6 @@ let join_walls
     let s = Mesh.to_scad @@ Mesh.skin ~slices:(`Mix [ 2; slices; 2 ]) [ a'; a; b; b' ] in
     Util.value_map_opt ~default:s (Scad.add s) tri
   in
-  id := !id + 1;
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }
 
 type config =
@@ -377,20 +350,78 @@ type config =
   | Spline of
       { height : float option
       ; d : float option
+      ; size : float option
       ; fn : int option
-      ; corner_fn : int option
+      ; min_step_dist : float option
+      ; fillet_d : [ `Abs of float | `Rel of float ] option
+      ; fillet_h : [ `Abs of float | `Rel of float ] option
       ; corner : Path3.Round.corner option
+      ; corner_fn : int option
       ; max_edge_res : float option
+      ; tight_threshold : float option
+      ; tight_d : float option
       }
 
 let full_join ?slices ?max_angle ?gap_fill () = FullJoin { slices; max_angle; gap_fill }
 
-let spline ?height ?d ?fn ?corner_fn ?corner ?max_edge_res () =
-  Spline { height; d; fn; corner_fn; corner; max_edge_res }
+let spline
+    ?height
+    ?d
+    ?size
+    ?fn
+    ?min_step_dist
+    ?fillet_d
+    ?fillet_h
+    ?corner
+    ?corner_fn
+    ?max_edge_res
+    ?tight_threshold
+    ?tight_d
+    ()
+  =
+  Spline
+    { height
+    ; d
+    ; size
+    ; fn
+    ; min_step_dist
+    ; fillet_d
+    ; fillet_h
+    ; corner
+    ; corner_fn
+    ; max_edge_res
+    ; tight_threshold
+    ; tight_d
+    }
 
 let connect = function
-  | Spline { height; d; fn; corner_fn; corner; max_edge_res } ->
-    spline_base ?height ?d ?fn ?corner_fn ?corner ?max_edge_res
+  | Spline
+      { height
+      ; d
+      ; size
+      ; fn
+      ; min_step_dist
+      ; fillet_d
+      ; fillet_h
+      ; corner
+      ; corner_fn
+      ; max_edge_res
+      ; tight_threshold
+      ; tight_d
+      } ->
+    spline_base
+      ?height
+      ?d
+      ?size
+      ?fn
+      ?min_step_dist
+      ?fillet_d
+      ?fillet_h
+      ?corner
+      ?corner_fn
+      ?max_edge_res
+      ?tight_threshold
+      ?tight_d
   | FullJoin { slices; max_angle; gap_fill } -> join_walls ?slices ?max_angle ?gap_fill
 
 let manual_joiner ~join key next (i, last, scads) =
@@ -497,17 +528,23 @@ let manual
   List.map clockwise_union [ west; north; east; south; thumb_swoop ] |> clockwise_union
 
 let skeleton
-    ?(index_height = 13.)
     ?height
+    ?(index_height = 13.)
+    ?thumb_height
     ?spline_d
+    ?spline_size
     ?fn
-    ?corner_fn
+    ?min_step_dist
+    ?fillet_d
+    ?fillet_h
     ?corner
+    ?corner_fn
     ?max_edge_res
+    ?tight_threshold
+    ?tight_spline_d
     ?join_slices
     ?max_join_angle
     ?gap_fill
-    ?thumb_height
     ?east_link
     ?west_link
     ?(north_joins = fun i -> i < 2)
@@ -515,12 +552,23 @@ let skeleton
     ?(close_thumb = false)
     (Walls.{ body; _ } as walls)
   =
-  let spline = spline ?fn ?corner ?corner_fn ?max_edge_res in
-  let body_spline = spline ?height ?d:spline_d ()
-  and index_spline = spline ~height:index_height ?d:spline_d ()
-  and thumb_spline =
-    spline ?height:(Util.first_some thumb_height height) ?d:spline_d ()
+  let spline =
+    spline
+      ?d:spline_d
+      ?fn
+      ?size:spline_size
+      ?min_step_dist
+      ?fillet_d
+      ?fillet_h
+      ?corner
+      ?corner_fn
+      ?max_edge_res
+      ?tight_threshold
+      ?tight_d:tight_spline_d
   in
+  let body_spline = spline ?height ()
+  and index_spline = spline ~height:index_height ()
+  and thumb_spline = spline ?height:(Util.first_some thumb_height height) () in
   let east_link = Option.value ~default:thumb_spline east_link
   and west_link = Option.value ~default:thumb_spline west_link in
   let join = full_join ?slices:join_slices ?max_angle:max_join_angle ?gap_fill () in
@@ -562,10 +610,16 @@ let skeleton
 let closed
     ?height
     ?spline_d
+    ?spline_size
     ?fn
-    ?corner_fn
+    ?min_step_dist
+    ?fillet_d
+    ?fillet_h
     ?corner
+    ?corner_fn
     ?max_edge_res
+    ?tight_threshold
+    ?tight_spline_d
     ?join_slices
     ?max_join_angle
     ?gap_fill
@@ -574,7 +628,22 @@ let closed
     (Walls.{ body; _ } as walls)
   =
   let join _ = full_join ?slices:join_slices ?max_angle:max_join_angle ?gap_fill ()
-  and spline = spline ?height ?d:spline_d ?fn ?corner_fn ?corner ?max_edge_res () in
+  and spline =
+    spline
+      ?height
+      ?d:spline_d
+      ?size:spline_size
+      ?fn
+      ?min_step_dist
+      ?fillet_d
+      ?fillet_h
+      ?corner
+      ?corner_fn
+      ?max_edge_res
+      ?tight_threshold
+      ?tight_d:tight_spline_d
+      ()
+  in
   let west_link = Option.value ~default:spline west_link
   and east_link = Option.value ~default:spline east_link in
   let max_key m = fst (IMap.max_binding m) in

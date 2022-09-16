@@ -67,12 +67,13 @@ module Sides = struct
     }
 
   let auto
-      ?(d1 = `Abs 14.)
-      ?(d2 = 8.)
-      ?(north_clearance = 0.)
-      ?(south_clearance = 0.)
-      ?(side_clearance = 0.)
-      ?(n_steps = `Flat 4)
+      ?d1
+      ?d2
+      ?north_clearance
+      ?south_clearance
+      ?side_clearance
+      ?n_steps
+      ?min_step_dist
       ?scale:s
       ?scale_ez
       ?end_z
@@ -99,6 +100,7 @@ module Sides = struct
         ; d2
         ; clearance = side_clearance
         ; n_steps
+        ; min_step_dist
         ; scale = s
         ; scale_ez
         ; eyelet_config = None
@@ -122,11 +124,10 @@ module Sides = struct
     and north =
       let index = Util.first_some index_scale s in
       let f m i =
-        present
-          m
-          i
+        let conf =
           { conf with clearance = north_clearance; scale = (if i < 2 then index else s) }
-          (north_lookup i)
+        in
+        present m i conf (north_lookup i)
       in
       Fun.flip IMap.find_opt
       @@ Seq.fold_left
@@ -177,6 +178,7 @@ let auto_body
     ?south_clearance
     ?side_clearance
     ?n_steps
+    ?min_step_dist
     ?scale
     ?scale_ez
     ?end_z
@@ -195,6 +197,7 @@ let auto_body
     ?south_clearance
     ?side_clearance
     ?n_steps
+    ?min_step_dist
     ?scale
     ?scale_ez
     ?end_z
@@ -207,12 +210,13 @@ let auto_body
     body
 
 let auto_thumb
-    ?(d1 = `Abs 14.)
-    ?(d2 = 8.)
-    ?(north_clearance = 2.5)
-    ?(south_clearance = 2.5)
-    ?(side_clearance = 3.0)
-    ?(n_steps = `PerZ 4.)
+    ?d1
+    ?d2
+    ?north_clearance
+    ?south_clearance
+    ?side_clearance
+    ?n_steps
+    ?min_step_dist
     ?scale
     ?scale_ez
     ?end_z
@@ -224,12 +228,13 @@ let auto_thumb
     Plate.{ thumb; _ }
   =
   Sides.auto
-    ~d1
-    ~d2
-    ~north_clearance
-    ~south_clearance
-    ~side_clearance
-    ~n_steps
+    ?d1
+    ?d2
+    ?north_clearance
+    ?south_clearance
+    ?side_clearance
+    ?n_steps
+    ?min_step_dist
     ?scale
     ?scale_ez
     ?end_z

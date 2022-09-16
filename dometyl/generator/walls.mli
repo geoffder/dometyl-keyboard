@@ -76,6 +76,7 @@ module Sides : sig
     -> ?south_clearance:float
     -> ?side_clearance:float
     -> ?n_steps:Wall.Steps.t
+    -> ?min_step_dist:float
     -> ?scale:V2.t
     -> ?scale_ez:V2.t * V2.t
     -> ?end_z:float
@@ -102,6 +103,7 @@ val auto_body
   -> ?south_clearance:float
   -> ?side_clearance:float
   -> ?n_steps:Wall.Steps.t
+  -> ?min_step_dist:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float
@@ -122,6 +124,7 @@ val auto_thumb
   -> ?south_clearance:float
   -> ?side_clearance:float
   -> ?n_steps:Wall.Steps.t
+  -> ?min_step_dist:float
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float

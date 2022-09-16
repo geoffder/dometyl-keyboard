@@ -40,10 +40,11 @@ module Drawer : sig
 end
 
 type config =
-  { d1 : [ `Abs of float | `Rel of float ]
-  ; d2 : float
-  ; clearance : float
-  ; n_steps : Steps.t
+  { d1 : [ `Abs of float | `Rel of float ] option
+  ; d2 : float option
+  ; clearance : float option
+  ; n_steps : Steps.t option
+  ; min_step_dist : float option
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
   ; eyelet_config : Eyelet.config option
@@ -108,6 +109,7 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
 val make
   :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
+  -> ?min_step_dist:float
   -> ?d1:[ `Abs of float | `Rel of float ]
   -> ?d2:float
   -> ?scale:V2.t
