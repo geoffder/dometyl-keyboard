@@ -39,6 +39,9 @@ let place ?well ?fan ~centre_idx i key =
   let fan_theta' = fan_theta centre_idx in
   match well, fan with
   | Some spec, None ->
+    (* TODO: expose tilt correction factor (-2. by default), not really
+         relevant for fan though I don't think, so would have to differentiate them
+         perhaps, rather than using the same spec type for each as I do now. *)
     let r = well_theta' spec i in
     Key.rotate (v3 0. spec.tilt (r.x *. spec.tilt /. -2.)) key
     |> Key.rotate ~about:(well_point spec) r

@@ -1,6 +1,18 @@
 open! Scad_ml
 
-let path n = Printf.sprintf "../things/caps/%s" n
+(* TODO: This is an awful hack, also it lacks windows compatibility. *)
+let path n =
+  let cwd = Sys.getcwd () in
+  let parts = String.split_on_char (String.get Filename.dir_sep 0) cwd in
+  let rec loop acc = function
+    | hd :: tl ->
+      let acc = Printf.sprintf "%s%s%s" acc hd Filename.dir_sep in
+      if String.equal hd "dometyl" then acc else loop acc tl
+    | _ -> failwith "dometyl library expected in path"
+  in
+  let path = loop "/" parts in
+  Printf.sprintf "%s/assets/caps/%s" path n
+
 let color = Scad.color Color.DarkSlateBlue
 
 module SA = struct
