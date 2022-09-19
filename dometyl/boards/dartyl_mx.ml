@@ -51,10 +51,10 @@ let body_lookups =
   and curve = function
     | 0 ->
       Curvature.(
-        curve ~well:(spec ~radius:48.5 (Float.pi /. 5.95) ~tilt:(Float.pi /. 5.)) ())
+        curve ~well:(well ~radius:48.5 (Float.pi /. 5.95) ~tilt:(Float.pi /. 5.)) ())
     | _ ->
       Curvature.(
-        curve ~well:(spec ~radius:48. (Float.pi /. 6.1) ~tilt:(Float.pi /. 15.)) ())
+        curve ~well:(well ~radius:48. (Float.pi /. 6.1) ~tilt:(Float.pi /. 15.)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -23.
@@ -71,8 +71,8 @@ let thumb_lookups =
   let curve _ =
     Curvature.(
       curve
-        ~fan:{ angle = Float.pi /. 11.0; radius = 87.; tilt = Float.pi /. 48. }
-        ~well:{ angle = Float.pi /. 7.5; radius = 49.; tilt = 0. }
+        ~fan:(fan ~radius:87. ~tilt:(Float.pi /. 48.) (Float.pi /. 11.0))
+        ~well:(well ~radius:59. (Float.pi /. 7.5))
         ())
   and rows _ = 2 in
   Plate.Lookups.thumb ~curve ~rows ()

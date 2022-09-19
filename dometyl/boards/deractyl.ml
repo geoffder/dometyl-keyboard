@@ -18,8 +18,8 @@ let body_lookups =
         | _ -> Fun.id
       in
       Curvature.(
-        post_tweak ~well:(spec ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
-    | _ -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 5.2)) ())
+        post_tweak ~well:(well ~tilt:(Float.pi /. 6.7) ~radius:44.1 (Float.pi /. 5.4)) f)
+    | _ -> Curvature.(curve ~well:(well ~radius:42. (Float.pi /. 5.2)) ())
   and swing = function
     | _ -> 0.
   and splay = function
@@ -85,8 +85,8 @@ let thumb_lookups =
   let curve _ =
     Curvature.(
       curve
-        ~fan:{ angle = Float.pi /. 9.; radius = 70.; tilt = Float.pi /. 48. }
-        ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
+        ~fan:(fan ~radius:70. ~tilt:(Float.pi /. 48.) (Float.pi /. 9.))
+        ~well:(well ~radius:47. (Float.pi /. 7.5))
         ())
   in
   Plate.Lookups.thumb ~curve ()
@@ -155,7 +155,12 @@ let holder ?reset_button () =
 
 let build ?right_hand ?hotswap () =
   let keyhole =
-    Mx.make_hole ?hotswap ~clearance:(-15.) ~corner:(Path3.Round.chamf (`Cut 0.5)) ()
+    Mx.make_hole
+      ?hotswap
+      ~cap_cutout_height:None
+      ~clearance:(-15.)
+      ~corner:(Path3.Round.chamf (`Cut 0.5))
+      ()
   in
   Case.make
     ~plate_builder

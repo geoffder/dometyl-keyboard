@@ -20,13 +20,13 @@ module Lookups = struct
 
   let default_curve = function
     | i when i = 3 ->
-      Curvature.(curve ~well:(spec ~radius:37. (Float.pi /. 4.5)) ()) (* ring *)
+      Curvature.(curve ~well:(well ~radius:37. (Float.pi /. 4.5)) ()) (* ring *)
     | i when i > 3 ->
-      Curvature.(curve ~well:(spec ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
+      Curvature.(curve ~well:(well ~radius:35. (Float.pi /. 4.1)) ()) (* pinky *)
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 6.75) ~radius:45. (Float.pi /. 6.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:46. (Float.pi /. 6.3)) ())
+        curve ~well:(well ~tilt:(Float.pi /. 6.75) ~radius:45. (Float.pi /. 6.)) ())
+    | _ -> Curvature.(curve ~well:(well ~radius:46. (Float.pi /. 6.3)) ())
 
   (* post tenting, this can be used to undo tent angle (y-rotation) *)
   let default_swing _ = 0.
@@ -52,9 +52,7 @@ module Lookups = struct
 
   let thumb
       ?(offset = fun _ -> V3.zero)
-      ?(curve =
-        fun _ ->
-          Curvature.(curve ~fan:{ angle = Float.pi /. 12.5; radius = 85.; tilt = 0. } ()))
+      ?(curve = fun _ -> Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 12.5)) ()))
       ?(swing = fun _ -> 0.)
       ?(splay = fun _ -> 0.)
       ?(rows = fun _ -> 3)

@@ -12,12 +12,12 @@ let body_lookups =
   and curve = function
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(spec ~tilt:(Float.pi /. 7.25) ~radius:41. (Float.pi /. 4.9)) ())
+        curve ~well:(well ~tilt:(Float.pi /. 7.25) ~radius:41. (Float.pi /. 4.9)) ())
       (* tilted inner index *)
-    | i when i = 1 -> Curvature.(curve ~well:(spec ~radius:42. (Float.pi /. 4.9)) ())
+    | i when i = 1 -> Curvature.(curve ~well:(well ~radius:42. (Float.pi /. 4.9)) ())
     | i when i >= 3 ->
-      Curvature.(curve ~well:(spec ~radius:37.75 (Float.pi /. 4.)) ()) (* ring / pinky *)
-    | _ -> Curvature.(curve ~well:(spec ~radius:47.25 (Float.pi /. 5.9)) ())
+      Curvature.(curve ~well:(well ~radius:37.75 (Float.pi /. 4.)) ()) (* ring / pinky *)
+    | _ -> Curvature.(curve ~well:(well ~radius:47.25 (Float.pi /. 5.9)) ())
   (* middle *)
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
@@ -36,8 +36,8 @@ let thumb_lookups =
     in
     Curvature.(
       post_tweak
-        ~fan:{ angle = Float.pi /. 8.8; radius = 70.; tilt = Float.pi /. 48. }
-        ~well:{ angle = Float.pi /. 7.5; radius = 47.; tilt = 0. }
+        ~fan:(fan ~radius:70. ~tilt:(Float.pi /. 48.) (Float.pi /. 8.8))
+        ~well:(well ~radius:47. (Float.pi /. 7.5))
         f)
   in
   Plate.Lookups.thumb ~curve ()

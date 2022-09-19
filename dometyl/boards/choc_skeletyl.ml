@@ -14,8 +14,8 @@ let body_lookups =
   and curve = function
     | 0 ->
       Curvature.(
-        curve ~well:(spec ~radius:57. (Float.pi /. 9.) ~tilt:(Float.pi /. 11.)) ())
-    | _ -> Curvature.(curve ~well:(spec ~radius:56.5 (Float.pi /. 9.)) ())
+        curve ~well:(well ~radius:57. (Float.pi /. 9.) ~tilt:(Float.pi /. 11.)) ())
+    | _ -> Curvature.(curve ~well:(well ~radius:56.5 (Float.pi /. 9.)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -19.
@@ -26,9 +26,7 @@ let body_lookups =
   Plate.Lookups.body ~offset ~curve ~splay ~swing ~rows ()
 
 let thumb_lookups =
-  let curve _ =
-    Curvature.(curve ~fan:{ angle = Float.pi /. 13.8; radius = 85.; tilt = 0. } ())
-  in
+  let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 13.8)) ()) in
   Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
