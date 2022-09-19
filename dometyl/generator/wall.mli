@@ -98,12 +98,16 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
       (can be done preferentially for short walls with `PerZ), or increasing [d1]
       which will spread out the points at the beginning of the sweep (which is
       typically the most problematic) may help.
-
+    - [min_step_dist] sets the minimum distance that each profile (step) of the
+      walls sweep must be away from the previous. To avoid self intersecting
+      meshes, any steps that are closer than this minimum will be skipped.
     - [d1] and [d2] set the distance projected outward along the orthogonal of the [side]
       of the [keyhole] on the xy-plane used to for the second and third quadratic bezier
       control points respectively.
     - [scale] specifies width ([x]), and thickness ([y]) scaling to apply along
       the sweep of the projected wall (linearly, or easing according to [scale_ez])
+    - [end_z] specifies the height above the xy plane the bezier sweep portion
+      of the wall should end (from there dropping straight down to lie flat on the plane)
     - If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
       to the bottom of the generated wall. *)
 val make

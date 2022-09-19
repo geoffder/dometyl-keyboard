@@ -59,12 +59,12 @@ module Sides : sig
       Construct a {!t} from a collection of parameters to be applied consistently across
       the generated {!Wall.t}s.
 
-      - [d1], [d2], [n_steps], [scale], [scale_ez], and [eyelet_config] are as described in
-        the documentation of {!Wall.poly_siding}
+      - [d1], [d2], [n_steps], [min_step_dist],[scale], [scale_ez], [end_z], and
+        [eyelet_config] are as described in the documentation of {!Wall.make}
       - [index_scale] can be used to override [scale] for the first two columns of
         the body.
-      - [{north,south,side}_clearance] provide clearance to {!Wall.poly_siding} for the
-        corresponding sections.
+      - [{north,south,side}_clearance] provide clearance to {!Wall.make} for the
+        corresponding sections (defaults = [0.]).
       - [thumb] flags whether [columns] represents a thumb plate (default is false)
       - [{north,south,west,east}_lookup] parameters are functions from index to
         {!presence}, indicating whether there is a wall present at a position or not (and
