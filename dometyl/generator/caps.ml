@@ -1,6 +1,9 @@
 open! Scad_ml
 
-(* TODO: This is an awful hack, also it lacks windows compatibility. *)
+(* TODO: This is an awful hack, also it lacks windows compatibility. Once it is
+    possible to install directories of files
+    (soon: https://github.com/ocaml/dune/pull/6139), should install the stl
+    assets used by the generator, and have the models rule depend on @install *)
 let path n =
   let cwd = Sys.getcwd () in
   let parts = String.split_on_char (String.get Filename.dir_sep 0) cwd in

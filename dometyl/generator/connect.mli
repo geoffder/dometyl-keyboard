@@ -44,6 +44,7 @@ val spline
   -> ?corner:Path3.Round.corner
   -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?end_shrink:float
   -> ?tight_threshold:float
   -> ?tight_d:float
   -> unit
@@ -76,6 +77,7 @@ val skeleton
   -> ?corner:Path3.Round.corner
   -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?end_shrink:float
   -> ?tight_threshold:float
   -> ?tight_spline_d:float
   -> ?join_slices:int
@@ -100,6 +102,7 @@ val closed
   -> ?corner:Path3.Round.corner
   -> ?corner_fn:int
   -> ?max_edge_res:float
+  -> ?end_shrink:float
   -> ?tight_threshold:float
   -> ?tight_spline_d:float
   -> ?join_slices:int

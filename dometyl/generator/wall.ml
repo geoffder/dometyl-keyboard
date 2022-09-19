@@ -114,8 +114,6 @@ let make
     side
     (key : Key.t)
   =
-  (* TODO: may do away with the x_off logic, since it really messes with the
-    rotation of the sweep transforms. Instead, may users should just scale the walls? *)
   let start_face = Key.Faces.face key.faces side in
   let pivoted_face, ortho = swing_face key.origin start_face in
   let cleared_face = Key.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face in

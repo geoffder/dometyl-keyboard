@@ -64,9 +64,6 @@ let fillet ~d ~h rows =
   in
   List.map2 f rel_dists rows
 
-(* TODO: params to add
-
-   - ending profile shrink parameter (edge hiding) *)
 let spline_base
     ?(height = 11.)
     ?(d = 1.)
@@ -78,6 +75,7 @@ let spline_base
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
     ?(max_edge_res = 0.85)
+    ?(end_shrink = 0.025)
     ?(tight_threshold = 6.)
     ?(tight_d = 0.05)
     (w1 : Wall.t)
@@ -167,14 +165,10 @@ let spline_base
     then tight_d
     else Float.min d (dist /. 4.)
   in
-  (* TODO: what about trying a range of out/size values and keeping the one that
-    drops the least? *)
   let transforms =
     let path =
       let p1 = V3.(p0 +@ (dir1 *$ -.out))
       and p2 = V3.(p3 +@ (dir2 *$ out)) in
-      (* TODO: related to above, the size param of of_path may be useful for
-           automatic mesh intersection avoidance (e.x. allow more "S" shape when tight). *)
       Bezier3.curve ~fn @@ Bezier3.of_path ~size:(`Flat (`Abs size)) [ p0; p1; p2; p3 ]
     in
     Util.prune_transforms ~min_dist:min_step_dist ~shape:transition
@@ -196,7 +190,7 @@ let spline_base
       let subdiv = Path3.subdivide ~freq:(`N (n, `ByLen)) in
       round (subdiv bot) (subdiv top)
     in
-    let start = round_edges @@ end_edges ~shrink:0.025 ~frac:0.01 true
+    let start = round_edges @@ end_edges ~shrink:end_shrink ~frac:0.01 true
     and finish =
       let d =
         let true_b' = Path3.quaternion (Quaternion.conj align_q) b' in
@@ -216,7 +210,7 @@ let spline_base
         above -. (below *. slope)
       in
       let rel = d /. V3.distance w2.foot.top_left w2.foot.top_right in
-      round_edges @@ end_edges ~shrink:0.025 ~frac:(Float.min 0.99 rel) false
+      round_edges @@ end_edges ~shrink:end_shrink ~frac:(Float.min 0.99 rel) false
     in
     Mesh.to_scad @@ Mesh.skin ~slices (List.append (start :: rows) [ finish ])
   and inline = List.map (fun (_, m) -> V3.affine m in_start') transforms
@@ -358,6 +352,7 @@ type config =
       ; corner : Path3.Round.corner option
       ; corner_fn : int option
       ; max_edge_res : float option
+      ; end_shrink : float option
       ; tight_threshold : float option
       ; tight_d : float option
       }
@@ -375,6 +370,7 @@ let spline
     ?corner
     ?corner_fn
     ?max_edge_res
+    ?end_shrink
     ?tight_threshold
     ?tight_d
     ()
@@ -390,6 +386,7 @@ let spline
     ; corner
     ; corner_fn
     ; max_edge_res
+    ; end_shrink
     ; tight_threshold
     ; tight_d
     }
@@ -406,6 +403,7 @@ let connect = function
       ; corner
       ; corner_fn
       ; max_edge_res
+      ; end_shrink
       ; tight_threshold
       ; tight_d
       } ->
@@ -420,6 +418,7 @@ let connect = function
       ?corner
       ?corner_fn
       ?max_edge_res
+      ?end_shrink
       ?tight_threshold
       ?tight_d
   | FullJoin { slices; max_angle; gap_fill } -> join_walls ?slices ?max_angle ?gap_fill
@@ -540,6 +539,7 @@ let skeleton
     ?corner
     ?corner_fn
     ?max_edge_res
+    ?end_shrink
     ?tight_threshold
     ?tight_spline_d
     ?join_slices
@@ -563,6 +563,7 @@ let skeleton
       ?corner
       ?corner_fn
       ?max_edge_res
+      ?end_shrink
       ?tight_threshold
       ?tight_d:tight_spline_d
   in
@@ -618,6 +619,7 @@ let closed
     ?corner
     ?corner_fn
     ?max_edge_res
+    ?end_shrink
     ?tight_threshold
     ?tight_spline_d
     ?join_slices
@@ -640,6 +642,7 @@ let closed
       ?corner
       ?corner_fn
       ?max_edge_res
+      ?end_shrink
       ?tight_threshold
       ?tight_d:tight_spline_d
       ()
