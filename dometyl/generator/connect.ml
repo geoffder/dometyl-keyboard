@@ -670,6 +670,7 @@ let closed
     walls
 
 let place_eyelet
+    ?(fn = 16)
     ?width
     ?(bury = 0.1)
     ?(eyelet_config = Eyelet.m4_config)
@@ -690,11 +691,10 @@ let place_eyelet
     let u = u -. shift in
     if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
   in
-  let n_steps = 16 in
-  let step = shift *. 2. /. (Float.of_int @@ (n_steps - 1)) in
+  let step = shift *. 2. /. Float.of_int fn in
   let move = V2.add V3.(to_v2 @@ ((cont_outline u -@ cont_inline u) *$ bury)) in
   let ps =
-    List.init n_steps (fun i ->
+    List.init (fn + 1) (fun i ->
         move @@ V2.of_v3 @@ cont_inline (lu +. (Float.of_int i *. step)) )
   in
   let placement =

@@ -114,7 +114,8 @@ val closed
   -> t
 
 val place_eyelet
-  :  ?width:float
+  :  ?fn:int
+  -> ?width:float
   -> ?bury:float
   -> ?eyelet_config:Eyelet.config
   -> ?relocate:bool
