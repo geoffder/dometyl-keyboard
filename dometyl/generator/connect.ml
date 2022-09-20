@@ -669,4 +669,39 @@ let closed
     ~west_link
     walls
 
+let place_eyelet
+    ?width
+    ?(bury = 0.1)
+    ?(eyelet_config = Eyelet.m4_config)
+    ?(relocate = false)
+    ~inline
+    ~outline
+    loc
+  =
+  let half_width =
+    Util.value_map_opt ~default:(eyelet_config.outer_rad +. 3.) (( *. ) 0.5) width
+  in
+  let len_inline = Path3.length ~closed:true inline
+  and cont_inline = Path3.to_continuous ~closed:true inline
+  and cont_outline = Path3.to_continuous ~closed:true outline in
+  let u = Path3.continuous_closest_point cont_inline loc in
+  let shift = half_width /. len_inline in
+  let lu =
+    let u = u -. shift in
+    if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
+  in
+  let n_steps = 16 in
+  let step = shift *. 2. /. (Float.of_int @@ (n_steps - 1)) in
+  let move = V2.add V3.(to_v2 @@ ((cont_outline u -@ cont_inline u) *$ bury)) in
+  let ps =
+    List.init n_steps (fun i ->
+        move @@ V2.of_v3 @@ cont_inline (lu +. (Float.of_int i *. step)) )
+  in
+  let placement =
+    if relocate
+    then Eyelet.Normal V2.(normalize @@ ortho @@ sub (List.hd ps) (Util.last ps))
+    else Eyelet.Point (V2.of_v3 loc)
+  in
+  Eyelet.(make ~placement eyelet_config ps)
+
 let to_scad t = t.scad

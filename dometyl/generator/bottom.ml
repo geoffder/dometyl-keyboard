@@ -85,7 +85,7 @@ let make
       let Eyelet.{ inner_rad; hole; _ } = screw_config in
       let h =
         match hole with
-        | Eyelet.Inset inset -> inset
+        | Eyelet.Inset { depth; _ } -> depth
         | _ -> failwith "Case eyelet expected to be magnet inset."
       in
       magnetize inner_rad h

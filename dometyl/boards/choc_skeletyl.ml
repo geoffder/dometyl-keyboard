@@ -42,7 +42,7 @@ let plate_builder =
     ~caps:Caps.MBK.uniform
 
 let plate_welder = Plate.skeleton_bridges
-let eyelet_config = Eyelet.{ bumpon_config with hole = Inset 0.8 }
+let eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 }
 
 let wall_builder plate =
   Walls.

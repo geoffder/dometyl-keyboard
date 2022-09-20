@@ -50,8 +50,8 @@ let plate_builder =
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 let wall_builder plate =
-  let eyelet_config = Eyelet.magnet_6x3_config in
-  (* let eyelet_config = Eyelet.m4_config in *)
+  (* let eyelet_config = Eyelet.magnet_6x3_config in *)
+  let eyelet_config = Eyelet.m4_config in
   Walls.
     { body =
         auto_body
@@ -86,6 +86,7 @@ let base_connector =
     ~close_thumb:false
     ~north_joins:(fun i -> i < 2)
     ~south_joins:(Fun.const false)
+    ~max_edge_res:0.75
 
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]

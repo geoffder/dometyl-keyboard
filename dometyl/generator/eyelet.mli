@@ -2,7 +2,10 @@ open! Scad_ml
 
 type hole =
   | Through
-  | Inset of float
+  | Inset of
+      { depth : float
+      ; punch : [ `Rel of float | `Abs of float ] option
+      }
 
 type sink =
   | Pan of float
@@ -19,7 +22,7 @@ type fastener =
       ; shaft_rad : float
       ; sink : sink
       ; height : float
-      ; clearance : float
+      ; clearance : float option
       }
 
 type placement =
@@ -40,6 +43,8 @@ type t =
   ; config : config
   }
 [@@deriving scad]
+
+val inset : ?punch:[ `Rel of float | `Abs of float ] -> float -> hole
 
 val screw_fastener
   :  ?head_rad:float

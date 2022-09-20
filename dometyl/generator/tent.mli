@@ -7,18 +7,8 @@ type bump_loc =
 val default_bumps : bump_loc list
 val find_bump_wall : Walls.t -> bump_loc -> Wall.t option
 
-val bumpon
-  :  ?fn:int
-  -> outer_rad:float
-  -> inner_rad:float
-  -> thickness:float
-  -> inset:float
-  -> Points.t
-  -> Scad.d3 * Scad.d3
-
 val make
   :  ?degrees:float
-  -> ?z_offset:float
   -> ?fastener:Eyelet.fastener
   -> ?foot_thickness:float
   -> ?foot_rad:float

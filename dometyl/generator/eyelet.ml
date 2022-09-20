@@ -2,7 +2,10 @@ open! Scad_ml
 
 type hole =
   | Through
-  | Inset of float
+  | Inset of
+      { depth : float
+      ; punch : [ `Rel of float | `Abs of float ] option
+      }
 
 type sink =
   | Pan of float
@@ -19,7 +22,7 @@ type fastener =
       ; shaft_rad : float
       ; sink : sink
       ; height : float
-      ; clearance : float
+      ; clearance : float option
       }
 
 type placement =
@@ -47,22 +50,28 @@ let mirror ax t = { t with scad = Scad.mirror ax t.scad; centre = V3.mirror ax t
 let rotate ?about r t =
   { t with scad = Scad.rotate ?about r t.scad; centre = V3.rotate ?about r t.centre }
 
+let inset ?punch depth = Inset { depth; punch }
+
 let screw_fastener
     ?(head_rad = 4.5)
     ?(shaft_rad = 2.)
     ?(sink = Counter)
     ?(height = 2.)
-    ?(clearance = 0.)
+    ?clearance
     ()
   =
   Screw { head_rad; shaft_rad; sink; height; clearance }
 
 let default_config = { outer_rad = 4.0; inner_rad = 2.0; thickness = 4.0; hole = Through }
 let m4_config = { outer_rad = 5.; inner_rad = 2.7; thickness = 4.0; hole = Through }
-let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.4; hole = Inset 0.6 }
+let bumpon_config = { outer_rad = 5.8; inner_rad = 5.; thickness = 2.4; hole = inset 0.6 }
 
 let magnet_6x3_config =
-  { outer_rad = 4.4; inner_rad = 3.15; thickness = 4.6; hole = Inset 3.2 }
+  { outer_rad = 4.4
+  ; inner_rad = 3.15
+  ; thickness = 4.6
+  ; hole = inset ~punch:(`Rel 0.5) 3.2
+  }
 
 let m4_countersunk_fastener = screw_fastener ()
 
@@ -82,16 +91,14 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   and r = V2.(hole_centre -@ (v2 normal.y (-.normal.x) *$ outer_rad)) in
   let outer = List.tl @@ Path2.arc_about_centre ~dir:`CW ~centre:hole_centre ~fn l r
   and inner = List.rev_map (V2.add hole_centre) @@ Path2.circle ~fn inner_rad in
-  let swoop_l =
-    let rad_offset = V2.(normalize (p1 -@ base_centre) *$ outer_rad) in
-    List.tl @@ Bezier2.(curve ~fn (make V2.[ p1; base_centre +@ rad_offset; l ]))
-  in
-  let swoop_r =
-    let rad_offset = V2.(normalize (p2 -@ base_centre) *$ outer_rad) in
-    List.tl @@ Bezier2.(curve ~fn (make V2.[ r; base_centre +@ rad_offset; p2 ]))
-  in
   let outline =
-    let fudge = V2.(normal *$ -0.01) in
+    let swoop_l =
+      let rad_offset = V2.(normalize (p1 -@ base_centre) *$ outer_rad) in
+      List.tl @@ Bezier2.(curve ~fn (make V2.[ p1; base_centre +@ rad_offset; l ]))
+    and swoop_r =
+      let rad_offset = V2.(normalize (p2 -@ base_centre) *$ outer_rad) in
+      List.tl @@ Bezier2.(curve ~fn (make V2.[ r; base_centre +@ rad_offset; p2 ]))
+    and fudge = V2.(normal *$ -0.01) in
     List.concat [ List.tl @@ List.rev_map (V2.add fudge) ps; swoop_l; outer; swoop_r ]
   in
   let scad, cut =
@@ -101,17 +108,31 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
         |> Poly2.to_scad
         |> Scad.extrude ~height:thickness
       , None )
-    | Inset depth ->
+    | Inset { depth = d; punch } ->
       let inset =
-        Scad.union
-          [ Scad.extrude ~height:(depth +. 0.01) (Scad.polygon inner)
-            |> Scad.ztrans (-0.01)
-          ; Scad.cylinder ~fn ~height:(thickness -. depth +. 0.02) (inner_rad /. 2.)
-            |> Scad.translate (V3.of_v2 ~z:(depth -. 0.01) hole_centre)
-          ]
+        let s = Scad.(ztrans (-0.01) @@ extrude ~height:(d +. 0.01) (polygon inner)) in
+        match punch with
+        | Some punch ->
+          let rad =
+            match punch with
+            | `Abs r -> r
+            | `Rel r -> inner_rad *. r
+          in
+          Scad.cylinder ~fn ~height:(thickness -. d +. 0.02) rad
+          |> Scad.translate (V3.of_v2 ~z:(d -. 0.01) hole_centre)
+          |> Scad.add s
+        | None -> s
       and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
       Scad.difference foot [ inset ], Some inset
   in
+  (* let () = *)
+  (*   Path2.show_points *)
+  (*     (fun i -> Scad.extrude ~height:0.1 (Scad.text ~size:0.05 (Int.to_string i))) *)
+  (*     outline *)
+  (*   |> Scad.ztrans (-2.) *)
+  (*   |> Scad.add scad *)
+  (*   |> Scad.to_file "bumpon.scad" *)
+  (* in *)
   { scad; cut; centre = V3.of_v2 hole_centre; config }
 
 let to_scad t = t.scad

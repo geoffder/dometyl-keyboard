@@ -135,28 +135,10 @@ let eyelets
     Connect.{ inline; outline; _ }
     { screw_l; screw_r; thickness; _ }
   =
-  let half_width =
-    Util.value_map_opt ~default:(eyelet_config.outer_rad +. 3.) (( *. ) 0.5) width
-  in
-  let len_inline = Path3.length ~closed:true inline
-  and cont_inline = Path3.to_continuous ~closed:true inline
-  and cont_outline = Path3.to_continuous ~closed:true outline in
-  let build loc =
-    let u = Path3.continuous_closest_point cont_inline loc in
-    let shift = half_width /. len_inline in
-    let lu =
-      let u = u -. shift in
-      if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
-    in
-    let n_steps = 16 in
-    let step = shift *. 2. /. (Float.of_int @@ (n_steps - 1)) in
-    let move = V2.add V3.(to_v2 @@ ((cont_outline u -@ cont_inline u) *$ bury)) in
-    let ps =
-      List.init n_steps (fun i ->
-          move @@ V2.of_v3 @@ cont_inline (lu +. (Float.of_int i *. step)) )
-    in
-    Eyelet.(to_scad @@ make ~placement:(Point (V2.of_v3 loc)) eyelet_config ps)
-    |> Scad.ztrans (V3.get_z screw_l +. thickness +. z_off)
+  let build p =
+    Connect.place_eyelet ?width ~bury ~eyelet_config ~inline ~outline p
+    |> Eyelet.to_scad
+    |> Scad.ztrans (p.z +. thickness +. z_off)
   in
   Scad.union [ build screw_l; build screw_r ]
 
