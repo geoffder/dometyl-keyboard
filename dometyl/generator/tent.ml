@@ -122,12 +122,64 @@ let make
   and inner = List.map place inline in
   let outer' = List.map (fun { x; y; z = _ } -> v3 x y 0.) outer
   and inner' = List.map (fun { x; y; z = _ } -> v3 x y 0.) inner in
+  (* let shell = *)
+  (*   Scad.sub *)
+  (*     Mesh.(to_scad @@ skin_between ~slices:15 outer' outer) *)
+  (*     Mesh.( *)
+  (*       to_scad *)
+  (*       @@ skin_between ~slices:1 (Path3.ztrans (-0.01) inner') (Path3.ztrans 0.01 inner)) *)
+  (* in *)
   let shell =
-    Scad.sub
-      Mesh.(to_scad @@ skin_between ~slices:15 outer' outer)
-      Mesh.(
-        to_scad
-        @@ skin_between ~slices:1 (Path3.ztrans (-0.01) inner') (Path3.ztrans 0.01 inner))
+    let w = 12.
+    and n = 25 in
+    let _w_outer = w /. Path3.length ~closed:true outer
+    and _w_outer' = w /. Path3.length ~closed:true outer'
+    and _w_inner = w /. Path3.length ~closed:true inner
+    and _w_inner' = w /. Path3.length ~closed:true inner' in
+    let step = 1. /. Float.of_int (n - 1) in
+    let cont_outer = Path3.to_continuous ~closed:true outer
+    and cont_outer' = Path3.to_continuous ~closed:true outer'
+    and cont_inner = Path3.to_continuous ~closed:true inner
+    and cont_inner' = Path3.to_continuous ~closed:true inner' in
+    let tilt = 0. in
+    let _t_outer = tilt /. Path3.length ~closed:true outer
+    and _t_outer' = tilt /. Path3.length ~closed:true outer'
+    and _t_inner = tilt /. Path3.length ~closed:true inner
+    and _t_inner' = tilt /. Path3.length ~closed:true inner' in
+    let f i =
+      (* let u = Float.min (1. -. w_outer) (step *. Float.of_int i) in *)
+      let u = step *. Float.of_int i in
+      let g k =
+        let tilt_u t = u +. (t /. 35. *. Float.of_int k) in
+        let step_u w t j = mod_float (tilt_u t +. (w /. 35. *. Float.of_int j)) 1. in
+        let bot =
+          List.concat
+            [ List.init 36 (fun j -> cont_outer' (step_u _w_outer' _t_outer' j))
+            ; List.rev
+              @@ List.init 36 (fun j -> cont_inner' (step_u _w_inner' _t_inner' j))
+            ]
+        and top =
+          List.concat
+            [ List.init 36 (fun j -> cont_outer (step_u _w_outer _t_outer j))
+            ; List.rev @@ List.init 36 (fun j -> cont_inner (step_u _w_inner _t_inner j))
+            ]
+        in
+        List.map2 (fun a b -> V3.lerp a b (1. /. 35. *. Float.of_int k)) bot top
+      in
+      (* Mesh.to_scad @@ Mesh.skin_between ~slices:2 bot top *)
+      (* Mesh.to_scad @@ Mesh.of_rows (List.init 36 g) *)
+      let prune (acc, last) row =
+        let min_z = (Path3.bbox last).min.z in
+        let valid = List.for_all (fun p -> p.z -. 0.1 > min_z) row in
+        if valid then row :: acc, row else acc, last
+      in
+      let rows = List.init 36 g in
+      fst @@ List.fold_left prune ([ List.hd rows ], List.hd rows) (List.tl rows)
+      |> List.rev
+      |> Mesh.of_rows
+      |> Mesh.to_scad
+    in
+    Scad.union (List.init n f)
   in
   let feet, final_cuts =
     let tilted = Case.rotate ~about rot case |> Case.ztrans foot_thickness in
@@ -136,7 +188,7 @@ let make
       | Some Wall.{ foot; _ } ->
         let b =
           Connect.place_eyelet
-            ~bury:0.3
+            ~bury:0.4
             ~eyelet_config:
               Eyelet.
                 { outer_rad = foot_rad
