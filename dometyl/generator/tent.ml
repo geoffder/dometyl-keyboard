@@ -133,54 +133,29 @@ let make
   let shell =
     let w = 10.
     and n = 30 in
-    let _w_outer = w /. Path3.length ~closed:true outer
-    and _w_outer' = w /. Path3.length ~closed:true outer'
-    and _w_inner = w /. Path3.length ~closed:true inner
-    and _w_inner' = w /. Path3.length ~closed:true inner' in
     let step = 1. /. Float.of_int n in
+    let tilt = 15. in
+    let w_fn = 16
+    and t_fn = 16 in
+    let sliver = 0.15 in
+    let len_outer = Path3.length ~closed:true outer
+    and len_outer' = Path3.length ~closed:true outer' in
+    let w_outer = w /. len_outer
+    and w_outer' = w /. len_outer' in
     let cont_outer = Path3.to_continuous ~closed:true outer
     and cont_outer' = Path3.to_continuous ~closed:true outer'
     and cont_inner = Path3.to_continuous ~closed:true inner
     and cont_inner' = Path3.to_continuous ~closed:true inner' in
-    let tilt = 15. in
-    let _t_outer = tilt /. Path3.length ~closed:true outer
-    and _t_outer' = tilt /. Path3.length ~closed:true outer'
-    and _t_inner = tilt /. Path3.length ~closed:true inner
-    and _t_inner' = tilt /. Path3.length ~closed:true inner' in
-    (* FIXME: major issue is crossovers due to the points on the outer and
-    inner paths not nicely lining up, and using the scaled w and and t values
-    for each does not seem to be enough. Maybe using the point on the outer,
-    then finding the closest point on the inner to that would actually be more
-       reliable.
-       - Maybe don't need to do point finding at everypoint, just at the ends,
-         then interpolate between as normal? *)
-    let w_fn = 16
-    and t_fn = 16 in
+    let t_outer = tilt /. len_outer
+    and t_outer' = tilt /. len_outer' in
     let f i =
-      (* let u = Float.min (1. -. w_outer) (step *. Float.of_int i) in *)
-      let u = (step *. Float.of_int i) +. 0.01 in
+      let u = step *. Float.of_int i in
       let u = if u < 0. then 1. +. u else u in
       let g k =
         let tilt_u t = u +. (t /. Float.of_int (t_fn - 1) *. Float.of_int k) in
         let step_u w t j =
           mod_float (tilt_u t +. (w /. Float.of_int (w_fn - 1) *. Float.of_int j)) 1.
         in
-        (* let closest_sample cont (u, p) = *)
-        (*   let ps = *)
-        (*     List.init 100 (fun i -> *)
-        (*         let u = u -. 0.1 +. (Float.of_int i *. 0.2 /. 99.) in *)
-        (*         let u = if u < 0. then 1. +. u else u in *)
-        (*         cont u ) *)
-        (*   in *)
-        (*   let p0 = List.hd ps in *)
-        (*   snd *)
-        (*   @@ List.fold_left *)
-        (*        (fun (d, closest) p' -> *)
-        (*          let d' = V3.distance p p' in *)
-        (*          if d' < d then d', p' else d, closest ) *)
-        (*        (V3.distance p0 p, p0) *)
-        (*        ps *)
-        (* in *)
         let closest_u cont (u, p) =
           let ps =
             List.init 100 (fun i ->
@@ -198,20 +173,11 @@ let make
                ps
         in
         let lerpn, bot =
-          (* let outer = *)
-          (*   List.init 36 (fun j -> cont_outer' (step_u _w_outer' _t_outer' j)) *)
-          (* in *)
           let outer =
             List.init w_fn (fun j ->
-                let su = step_u _w_outer' _t_outer' j in
+                let su = step_u w_outer' t_outer' j in
                 su, cont_outer' su )
           in
-          (* let u0 = *)
-          (*   Path3.continuous_closest_point ~n_steps:36 cont_inner' (Util.last outer) *)
-          (* in *)
-          (* let u' = *)
-          (*   Path3.continuous_closest_point ~n_steps:36 cont_inner' (List.hd outer) *)
-          (* in *)
           let u0 = closest_u cont_inner' (Util.last outer) in
           let u' = closest_u cont_inner' (List.hd outer) in
           let lerpn =
@@ -223,59 +189,17 @@ let make
               let s = diff /. Float.of_int (n - 1) in
               List.init n (fun i -> mod_float ((Float.of_int (n - i) *. s) +. u') 1.)
           in
-          ( lerpn
-          , List.concat
-              [ List.map snd outer
-              ; List.map cont_inner' (lerpn w_fn)
-                (* ; List.rev_map *)
-                (*     (fun p -> *)
-                (*       cont_inner' (Path3.continuous_closest_point ~n_steps:100 cont_inner' p) *)
-                (*       ) *)
-                (*     outer *)
-                (* ; List.rev_map (closest_sample cont_inner') outer *)
-              ] )
-          (* List.concat *)
-          (*   [ List.init 36 (fun j -> cont_outer' (step_u _w_outer' _t_outer' j)) *)
-          (*   ; List.rev *)
-          (*     @@ List.init 36 (fun j -> cont_inner' (step_u _w_inner' _t_inner' j)) *)
-          (*   ] *)
+          lerpn, List.concat [ List.map snd outer; List.map cont_inner' (lerpn w_fn) ]
         in
         let top =
-          (* let outer = List.init 36 (fun j -> cont_outer (step_u _w_outer _t_outer j)) in *)
-          let outer =
-            List.init w_fn (fun j ->
-                let su = step_u _w_outer _t_outer j in
-                su, cont_outer su )
-          in
-          (* let u0 = *)
-          (*   Path3.continuous_closest_point ~n_steps:36 cont_inner (Util.last outer) *)
-          (* in *)
-          (* let u' = *)
-          (*   Path3.continuous_closest_point ~n_steps:36 cont_inner (List.hd outer) *)
-          (* in *)
-          (* let u0 = closest_u cont_inner (Util.last outer) in *)
-          (* let u' = closest_u cont_inner (List.hd outer) in *)
-          List.concat [ List.map snd outer; List.map cont_inner (lerpn w_fn) ]
-          (* List.concat *)
-          (*   [ List.map snd outer *)
-          (*     (\* ; List.rev_map *\) *)
-          (*     (\*     (fun p -> *\) *)
-          (*     (\*       cont_inner (Path3.continuous_closest_point ~n_steps:100 cont_inner p) ) *\) *)
-          (*     (\*     outer *\) *)
-          (*   ; List.rev_map (closest_sample cont_inner) outer *)
-          (*   ] *)
-          (* List.concat *)
-          (*   [ List.init 36 (fun j -> cont_outer (step_u _w_outer _t_outer j)) *)
-          (*   ; List.rev @@ List.init 36 (fun j -> cont_inner (step_u _w_inner _t_inner j)) *)
-          (*   ] *)
+          let outer = List.init w_fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
+          List.concat [ outer; List.map cont_inner (lerpn w_fn) ]
         in
         List.map2
           (fun a b -> V3.lerp a b (1. /. Float.of_int (t_fn - 1) *. Float.of_int k))
           bot
           top
       in
-      (* Mesh.to_scad @@ Mesh.skin_between ~slices:2 bot top *)
-      (* Mesh.to_scad @@ Mesh.of_rows (List.init 36 g) *)
       let prune (acc, last) row =
         let min_z = (Path3.bbox last).min.z in
         let valid = List.for_all (fun p -> p.z > min_z) row in
@@ -287,7 +211,6 @@ let make
       |> Mesh.of_rows
       |> Mesh.to_scad
     in
-    let sliver = 0.15 in
     let bot =
       Scad.sub
         Mesh.(
