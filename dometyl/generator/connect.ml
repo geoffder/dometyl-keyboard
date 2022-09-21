@@ -685,14 +685,16 @@ let place_eyelet
   let len_inline = Path3.length ~closed:true inline
   and cont_inline = Path3.to_continuous ~closed:true inline
   and cont_outline = Path3.to_continuous ~closed:true outline in
-  let u = Path3.continuous_closest_point cont_inline loc in
+  let u = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_inline loc in
+  let in_pt = cont_inline u in
+  let u' = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_outline in_pt in
   let shift = half_width /. len_inline in
   let lu =
     let u = u -. shift in
     if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
   in
   let step = shift *. 2. /. Float.of_int fn in
-  let move = V2.add V3.(to_v2 @@ ((cont_outline u -@ cont_inline u) *$ bury)) in
+  let move = V2.add V3.(to_v2 @@ ((cont_outline u' -@ in_pt) *$ bury)) in
   let ps =
     List.init (fn + 1) (fun i ->
         move @@ V2.of_v3 @@ cont_inline (lu +. (Float.of_int i *. step)) )

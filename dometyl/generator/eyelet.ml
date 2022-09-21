@@ -79,12 +79,12 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   let p1 = List.hd ps
   and p2 = Util.last ps in
   let base_centre = (Path2.to_continuous ps) 0.5 in
-  let normal, hole_offset, _foot_offset =
+  let normal, hole_offset =
     match placement with
-    | Normal n -> n, V2.smul n outer_rad, V2.smul n (-0.1)
+    | Normal n -> n, V2.smul n (outer_rad +. 0.1)
     | Point p ->
       let diff = V2.(p -@ base_centre) in
-      V2.normalize diff, diff, V2.smul (V2.normalize diff) (-0.1)
+      V2.normalize diff, diff
   in
   let hole_centre = V2.(base_centre +@ hole_offset) in
   let l = V2.(hole_centre +@ (v2 normal.y (-.normal.x) *$ outer_rad))
@@ -94,10 +94,12 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   let outline =
     let swoop_l =
       let rad_offset = V2.(normalize (p1 -@ base_centre) *$ outer_rad) in
-      List.tl @@ Bezier2.(curve ~fn (make V2.[ p1; base_centre +@ rad_offset; l ]))
+      let c = V2.(base_centre +@ rad_offset +@ (hole_offset /$ 5.)) in
+      List.tl @@ Bezier2.(curve ~fn (make [ p1; c; l ]))
     and swoop_r =
       let rad_offset = V2.(normalize (p2 -@ base_centre) *$ outer_rad) in
-      List.tl @@ Bezier2.(curve ~fn (make V2.[ r; base_centre +@ rad_offset; p2 ]))
+      let c = V2.(base_centre +@ rad_offset +@ (hole_offset /$ 5.)) in
+      List.tl @@ Bezier2.(curve ~fn (make [ r; c; p2 ]))
     and fudge = V2.(normal *$ -0.01) in
     List.concat [ List.tl @@ List.rev_map (V2.add fudge) ps; swoop_l; outer; swoop_r ]
   in
@@ -125,14 +127,6 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
       and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
       Scad.difference foot [ inset ], Some inset
   in
-  (* let () = *)
-  (*   Path2.show_points *)
-  (*     (fun i -> Scad.extrude ~height:0.1 (Scad.text ~size:0.05 (Int.to_string i))) *)
-  (*     outline *)
-  (*   |> Scad.ztrans (-2.) *)
-  (*   |> Scad.add scad *)
-  (*   |> Scad.to_file "bumpon.scad" *)
-  (* in *)
   { scad; cut; centre = V3.of_v2 hole_centre; config }
 
 let to_scad t = t.scad
