@@ -17,9 +17,11 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
   and n = 30 in
   let step = 1. /. Float.of_int n in
   let tilt = 15. in
-  let w_fn = 16
-  and t_fn = 16 in
+  let w_fn = 24
+  and t_fn = 24 in
+  let tilt_ez = Easing.make (v2 0.42 0.) (v2 0.58 1.) in
   let sliver = 0.15 in
+  let phase_shift = 0.0 in
   let len_outer = Path3.length ~closed:true top_outer
   and len_outer' = Path3.length ~closed:true bot_outer in
   let w_outer = w /. len_outer
@@ -51,11 +53,28 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     let valid = List.for_all (fun p -> p.z > min_z) row in
     if valid then row :: acc, row else acc, last
   in
+  (* let corner = Some (Path3.Round.bez (`Cut 0.05)) in *)
+  (* let corner = Some (Path3.Round.chamf (`Cut 0.1)) in *)
+  let corner = None in
+  let corner_fn = Some 6 in
+  let rounder out_edge in_edge =
+    match corner with
+    | Some corner ->
+      let corners =
+        Some corner
+        :: Util.fold_init (w_fn - 2) (fun _ acc -> None :: acc) [ Some corner ]
+      in
+      let zip a b = List.map2 (fun a b -> a, b) a b in
+      List.append (zip out_edge corners) (zip in_edge corners)
+      |> Path3.Round.mix
+      |> Path3.roundover ?fn:corner_fn
+    | None -> List.append out_edge in_edge
+  in
   let pillar i =
-    let u = step *. Float.of_int i in
+    let u = (step *. Float.of_int i) +. phase_shift in
     let profile k =
       let step_u w t j =
-        let tilted = u +. (t /. Float.of_int (t_fn - 1) *. Float.of_int k) in
+        let tilted = u +. (t *. tilt_ez (Float.of_int k /. Float.of_int (t_fn - 1))) in
         mod_float (tilted +. (w /. Float.of_int (w_fn - 1) *. Float.of_int j)) 1.
       in
       let lerpn, bot =
@@ -75,11 +94,11 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
             let s = diff /. Float.of_int (n - 1) in
             List.init n (fun i -> mod_float ((Float.of_int (n - i) *. s) +. u') 1.)
         in
-        lerpn, List.concat [ List.map snd outer; List.map cont_inner' (lerpn w_fn) ]
+        lerpn, rounder (List.map snd outer) (List.map cont_inner' (lerpn w_fn))
       in
       let top =
         let outer = List.init w_fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
-        List.concat [ outer; List.map cont_inner (lerpn w_fn) ]
+        rounder outer (List.map cont_inner (lerpn w_fn))
       in
       List.map2
         (fun a b -> V3.lerp a b (1. /. Float.of_int (t_fn - 1) *. Float.of_int k))
@@ -92,34 +111,66 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     |> Mesh.of_rows
     |> Mesh.to_scad
   in
-  let bot =
-    let outer =
-      Mesh.skin_between
-        ~slices:1
-        bot_outer
-        (List.map2 (fun a b -> V3.lerp a b sliver) bot_outer top_outer)
-    and inner =
-      Mesh.skin_between
-        ~slices:1
-        (Path3.ztrans (-0.01) bot_inner)
-        (List.map2 (fun a b -> V3.lerp a b (sliver +. 0.01)) bot_inner top_inner)
-    in
-    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
-  and top =
-    let outer =
-      Mesh.skin_between
-        ~slices:1
-        (List.map2 (fun a b -> V3.lerp a b (1. -. sliver)) bot_outer top_outer)
-        top_outer
-    and inner =
-      Mesh.skin_between
-        ~slices:1
-        (List.map2 (fun a b -> V3.lerp a b (1. -. sliver -. 0.01)) bot_inner top_inner)
-        (Path3.ztrans 0.01 top_inner)
-    in
-    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+  let rel_sliver = false in
+  let slabs =
+    if rel_sliver
+    then (
+      let bot =
+        let outer =
+          Mesh.skin_between
+            ~slices:1
+            bot_outer
+            (List.map2 (fun a b -> V3.lerp a b sliver) bot_outer top_outer)
+        and inner =
+          Mesh.skin_between
+            ~slices:1
+            (Path3.ztrans (-0.01) bot_inner)
+            (List.map2 (fun a b -> V3.lerp a b (sliver +. 0.01)) bot_inner top_inner)
+        in
+        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+      and top =
+        let outer =
+          Mesh.skin_between
+            ~slices:1
+            (List.map2 (fun a b -> V3.lerp a b (1. -. sliver)) bot_outer top_outer)
+            top_outer
+        and inner =
+          Mesh.skin_between
+            ~slices:1
+            (List.map2
+               (fun a b -> V3.lerp a b (1. -. sliver -. 0.01))
+               bot_inner
+               top_inner )
+            (Path3.ztrans 0.01 top_inner)
+        in
+        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+      in
+      Scad.add bot top )
+    else (
+      let sliver = Float.max 1.5 (Path3.bbox top_outer).min.z in
+      let bot =
+        let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans sliver bot_outer)
+        and inner =
+          Mesh.skin_between
+            ~slices:1
+            (Path3.ztrans (-0.01) bot_inner)
+            (Path3.ztrans (sliver +. 0.01) bot_inner)
+        in
+        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+      and top =
+        let outer =
+          Mesh.skin_between ~slices:1 (Path3.ztrans (-.sliver) top_outer) top_outer
+        and inner =
+          Mesh.skin_between
+            ~slices:1
+            (Path3.ztrans (-.sliver -. 0.01) top_inner)
+            (Path3.ztrans 0.01 top_inner)
+        in
+        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+      in
+      Scad.add bot top )
   in
-  Scad.union (bot :: top :: List.init n pillar)
+  Scad.union (slabs :: List.init n pillar)
 
 (* TODO: More flexible placement of bumpons using inline, rather than wall positions. *)
 let make
