@@ -13,15 +13,23 @@ let solid_shell bot_outer bot_inner top_outer top_inner =
   Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
 
 let prison_shell bot_outer bot_inner top_outer top_inner =
-  let w = 10.
+  let w = 12.
   and n = 30 in
-  let step = 1. /. Float.of_int n in
   let tilt = 15. in
-  let w_fn = 24
-  and t_fn = 24 in
+  let fn = 24
+  and slices = 24 in
+  let pillar_step = 1. /. Float.of_int n
+  and slice_step = 1. /. Float.of_int (slices - 1)
+  and fn_step = 1. /. Float.of_int (fn - 1) in
   let tilt_ez = Easing.make (v2 0.42 0.) (v2 0.58 1.) in
   let sliver = 0.15 in
   let phase_shift = 0.0 in
+  (* let corner = Some (Path3.Round.bez (`Cut 0.1)) in *)
+  (* let corner = Some (Path3.Round.chamf (`Cut 0.1)) in *)
+  let corner = None in
+  let corner_fn = Some 6 in
+  let fillet_d = 0.2
+  and fillet_w = 0.25 in
   let len_outer = Path3.length ~closed:true top_outer
   and len_outer' = Path3.length ~closed:true bot_outer in
   let w_outer = w /. len_outer
@@ -32,59 +40,38 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
   and cont_inner' = Path3.to_continuous ~closed:true bot_inner in
   let t_outer = tilt /. len_outer
   and t_outer' = tilt /. len_outer' in
-  let closest_u cont (u, p) =
-    let ps =
-      List.init 100 (fun i ->
-          let u = u -. 0.05 +. (Float.of_int i *. 0.1 /. 99.) in
-          let u = if u < 0. then 1. +. u else u in
-          u, cont u )
-    in
-    let u0, p0 = List.hd ps in
-    snd
-    @@ List.fold_left
-         (fun (d, closest) (u', p') ->
-           let d' = V3.distance p p' in
-           if d' < d then d', u' else d, closest )
-         (V3.distance p0 p, u0)
-         ps
-  in
+  let fillet_ez = Easing.make (v2 fillet_d 1.) (v2 fillet_d 1.) in
   let prune (acc, last) row =
     let min_z = (Path3.bbox last).min.z in
     let valid = List.for_all (fun p -> p.z > min_z) row in
     if valid then row :: acc, row else acc, last
   in
-  (* let corner = Some (Path3.Round.bez (`Cut 0.05)) in *)
-  (* let corner = Some (Path3.Round.chamf (`Cut 0.1)) in *)
-  let corner = None in
-  let corner_fn = Some 6 in
   let rounder out_edge in_edge =
     match corner with
-    | Some corner ->
-      let corners =
-        Some corner
-        :: Util.fold_init (w_fn - 2) (fun _ acc -> None :: acc) [ Some corner ]
-      in
+    | Some c ->
+      let cs = Some c :: Util.fold_init (fn - 2) (fun _ acc -> None :: acc) [ Some c ] in
       let zip a b = List.map2 (fun a b -> a, b) a b in
-      List.append (zip out_edge corners) (zip in_edge corners)
+      List.append (zip out_edge cs) (zip in_edge cs)
       |> Path3.Round.mix
       |> Path3.roundover ?fn:corner_fn
     | None -> List.append out_edge in_edge
   in
   let pillar i =
-    let u = (step *. Float.of_int i) +. phase_shift in
+    let u = (pillar_step *. Float.of_int i) +. phase_shift in
     let profile k =
       let step_u w t j =
-        let tilted = u +. (t *. tilt_ez (Float.of_int k /. Float.of_int (t_fn - 1))) in
-        mod_float (tilted +. (w /. Float.of_int (w_fn - 1) *. Float.of_int j)) 1.
+        let ku = Float.of_int k *. slice_step in
+        let tilted = u +. (t *. tilt_ez ku) in
+        let fillet = fillet_w *. fillet_ez (if k > slices / 2 then 1. -. ku else ku) in
+        let start = (fillet /. 2. *. w) +. tilted in
+        let u = start +. (w *. (1. -. fillet) *. (Float.of_int j *. fn_step)) in
+        mod_float u 1. (* wrap around *)
       in
       let lerpn, bot =
-        let outer =
-          List.init w_fn (fun j ->
-              let su = step_u w_outer' t_outer' j in
-              su, cont_outer' su )
-        in
-        let u0 = closest_u cont_inner' (Util.last outer) in
-        let u' = closest_u cont_inner' (List.hd outer) in
+        let outer = List.init fn (fun j -> cont_outer' (step_u w_outer' t_outer' j)) in
+        let closest_u = Path3.continuous_closest_point ~closed:true cont_inner' in
+        let u0 = closest_u (Util.last outer) in
+        let u' = closest_u (List.hd outer) in
         let lerpn =
           if u0 > u'
           then Math.lerpn u0 u'
@@ -94,18 +81,15 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
             let s = diff /. Float.of_int (n - 1) in
             List.init n (fun i -> mod_float ((Float.of_int (n - i) *. s) +. u') 1.)
         in
-        lerpn, rounder (List.map snd outer) (List.map cont_inner' (lerpn w_fn))
+        lerpn, rounder outer (List.map cont_inner' (lerpn fn))
       in
       let top =
-        let outer = List.init w_fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
-        rounder outer (List.map cont_inner (lerpn w_fn))
+        let outer = List.init fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
+        rounder outer (List.map cont_inner (lerpn fn))
       in
-      List.map2
-        (fun a b -> V3.lerp a b (1. /. Float.of_int (t_fn - 1) *. Float.of_int k))
-        bot
-        top
+      List.map2 (fun a b -> V3.lerp a b (Float.of_int k *. slice_step)) bot top
     in
-    let rows = List.init t_fn profile in
+    let rows = List.init slices profile in
     fst @@ List.fold_left prune ([ List.hd rows ], List.hd rows) (List.tl rows)
     |> List.rev
     |> Mesh.of_rows
@@ -172,7 +156,6 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
   in
   Scad.union (slabs :: List.init n pillar)
 
-(* TODO: More flexible placement of bumpons using inline, rather than wall positions. *)
 let make
     ?(degrees = 20.)
     ?fastener
