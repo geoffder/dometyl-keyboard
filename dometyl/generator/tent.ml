@@ -87,7 +87,7 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
         let outer = List.init fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
         rounder outer (List.map cont_inner (lerpn fn))
       in
-      List.map2 (fun a b -> V3.lerp a b (Float.of_int k *. slice_step)) bot top
+      Path3.lerp bot top (Float.of_int k *. slice_step)
     in
     let rows = List.init slices profile in
     fst @@ List.fold_left prune ([ List.hd rows ], List.hd rows) (List.tl rows)
@@ -101,30 +101,24 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     then (
       let bot =
         let outer =
-          Mesh.skin_between
-            ~slices:1
-            bot_outer
-            (List.map2 (fun a b -> V3.lerp a b sliver) bot_outer top_outer)
+          Mesh.skin_between ~slices:1 bot_outer (Path3.lerp bot_outer top_outer sliver)
         and inner =
           Mesh.skin_between
             ~slices:1
             (Path3.ztrans (-0.01) bot_inner)
-            (List.map2 (fun a b -> V3.lerp a b (sliver +. 0.01)) bot_inner top_inner)
+            (Path3.lerp bot_inner top_inner (sliver +. 0.01))
         in
         Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
       and top =
         let outer =
           Mesh.skin_between
             ~slices:1
-            (List.map2 (fun a b -> V3.lerp a b (1. -. sliver)) bot_outer top_outer)
+            (Path3.lerp bot_outer top_outer (1. -. sliver))
             top_outer
         and inner =
           Mesh.skin_between
             ~slices:1
-            (List.map2
-               (fun a b -> V3.lerp a b (1. -. sliver -. 0.01))
-               bot_inner
-               top_inner )
+            (Path3.lerp bot_inner top_inner (1. -. sliver -. 0.01))
             (Path3.ztrans 0.01 top_inner)
         in
         Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
