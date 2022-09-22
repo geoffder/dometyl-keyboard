@@ -20,12 +20,12 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
   and slices = 24 in
   let pillar_step = 1. /. Float.of_int n
   and slice_step = 1. /. Float.of_int (slices - 1)
-  and fn_step = 1. /. Float.of_int (fn - 1) in
+  and fn_step = 1. /. Float.of_int (fn - 1)
+  and max_res = 0.1 in
   let tilt_ez = Easing.make (v2 0.42 0.) (v2 0.58 1.) in
-  let sliver = 0.15 in
   let phase_shift = 0.0 in
-  (* let corner = Some (Path3.Round.bez (`Cut 0.1)) in *)
-  (* let corner = Some (Path3.Round.chamf (`Cut 0.1)) in *)
+  (* let corner = Some (Path3.Round.bez (`Joint 0.2)) in *)
+  (* let corner = Some (Path3.Round.chamf (`Joint 0.1)) in *)
   let corner = None in
   let corner_fn = Some 6 in
   let fillet_d = 0.2
@@ -45,8 +45,13 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     let min_z = (Path3.bbox last).min.z in
     let valid = List.for_all (fun p -> p.z > min_z) row in
     if valid then row :: acc, row else acc, last
-  in
-  let rounder out_edge in_edge =
+  and rounder out_edge in_edge =
+    let dedup p =
+      Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:max_res) p
+      |> Path3.subdivide ~freq:(`N (fn, `ByLen))
+    in
+    let out_edge = dedup out_edge
+    and in_edge = dedup in_edge in
     match corner with
     | Some c ->
       let cs = Some c :: Util.fold_init (fn - 2) (fun _ acc -> None :: acc) [ Some c ] in
@@ -95,58 +100,28 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     |> Mesh.of_rows
     |> Mesh.to_scad
   in
-  let rel_sliver = false in
   let slabs =
-    if rel_sliver
-    then (
-      let bot =
-        let outer =
-          Mesh.skin_between ~slices:1 bot_outer (Path3.lerp bot_outer top_outer sliver)
-        and inner =
-          Mesh.skin_between
-            ~slices:1
-            (Path3.ztrans (-0.01) bot_inner)
-            (Path3.lerp bot_inner top_inner (sliver +. 0.01))
-        in
-        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
-      and top =
-        let outer =
-          Mesh.skin_between
-            ~slices:1
-            (Path3.lerp bot_outer top_outer (1. -. sliver))
-            top_outer
-        and inner =
-          Mesh.skin_between
-            ~slices:1
-            (Path3.lerp bot_inner top_inner (1. -. sliver -. 0.01))
-            (Path3.ztrans 0.01 top_inner)
-        in
-        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+    let z = (Path3.bbox top_outer).min.z in
+    let bot =
+      let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans z bot_outer)
+      and inner =
+        Mesh.skin_between
+          ~slices:1
+          (Path3.ztrans (-0.01) bot_inner)
+          (Path3.ztrans (z +. 0.01) bot_inner)
       in
-      Scad.add bot top )
-    else (
-      let sliver = Float.max 1.5 (Path3.bbox top_outer).min.z in
-      let bot =
-        let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans sliver bot_outer)
-        and inner =
-          Mesh.skin_between
-            ~slices:1
-            (Path3.ztrans (-0.01) bot_inner)
-            (Path3.ztrans (sliver +. 0.01) bot_inner)
-        in
-        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
-      and top =
-        let outer =
-          Mesh.skin_between ~slices:1 (Path3.ztrans (-.sliver) top_outer) top_outer
-        and inner =
-          Mesh.skin_between
-            ~slices:1
-            (Path3.ztrans (-.sliver -. 0.01) top_inner)
-            (Path3.ztrans 0.01 top_inner)
-        in
-        Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+      Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+    and top =
+      let outer = Mesh.skin_between ~slices:1 (Path3.ztrans (-.z) top_outer) top_outer
+      and inner =
+        Mesh.skin_between
+          ~slices:1
+          (Path3.ztrans (-.z -. 0.01) top_inner)
+          (Path3.ztrans 0.01 top_inner)
       in
-      Scad.add bot top )
+      Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+    in
+    Scad.add bot top
   in
   Scad.union (slabs :: List.init n pillar)
 
@@ -188,7 +163,12 @@ let make
     | Some fastener -> fastener
   and rot = v3 0. (Math.rad_of_deg degrees *. rot_sign) 0.
   and about = v3 bb_pinky 0. 0. in
-  let place s = Scad.rotate ~about rot s |> Scad.ztrans foot_thickness in
+  (* FIXME: place uses foot_thickness, assuming it will be higher than screw
+    eyelet thickness. Eyelet thickness of course doesn't translate directly to
+    z, since they will be tented, so need to take the max of foot thickness and
+    the adjusted fastener eyelet z, and use that for placing everything. Need
+    to reorganize accordingly to achieve this. *)
+  let place s = Scad.ztrans foot_thickness @@ Scad.rotate ~about rot s in
   let hole_cut, hole_height, clearances =
     let magnetize rad h thickness =
       let hole =
