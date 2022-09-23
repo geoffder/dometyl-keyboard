@@ -131,12 +131,12 @@ let eyelets
     ?width
     ?(bury = 0.1)
     ?(z_off = 1.)
-    ?(eyelet_config = Eyelet.m4_config)
+    ?(config = Eyelet.m4_config)
     Connect.{ inline; outline; _ }
     { screw_l; screw_r; thickness; _ }
   =
   let build p =
-    Connect.place_eyelet ?width ~bury ~eyelet_config ~inline ~outline p
+    Eyelet.place ?width ~bury ~config ~inline ~outline p
     |> Eyelet.to_scad
     |> Scad.ztrans (p.z +. thickness +. z_off)
   in
@@ -158,6 +158,6 @@ let cutter
   Ports.
     { plus =
         Option.some
-        @@ eyelets ?width:eye_width ?z_off:eye_z_off ?eyelet_config connections t'
+        @@ eyelets ?width:eye_width ?z_off:eye_z_off ?config:eyelet_config connections t'
     ; minus = Option.some @@ to_scad t'
     }

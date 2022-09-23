@@ -113,15 +113,4 @@ val closed
   -> Walls.t
   -> t
 
-val place_eyelet
-  :  ?fn:int
-  -> ?width:float
-  -> ?bury:float
-  -> ?eyelet_config:Eyelet.config
-  -> ?relocate:bool
-  -> inline:Path3.t
-  -> outline:Path3.t
-  -> v3
-  -> Eyelet.t
-
 val to_scad : t -> Scad.d3

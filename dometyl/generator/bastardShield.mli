@@ -26,7 +26,7 @@ val eyelets
   :  ?width:float
   -> ?bury:float
   -> ?z_off:float
-  -> ?eyelet_config:Eyelet.config
+  -> ?config:Eyelet.config
   -> Connect.t
   -> t
   -> Scad.d3

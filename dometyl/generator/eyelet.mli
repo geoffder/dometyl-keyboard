@@ -61,5 +61,17 @@ val bumpon_config : config
 val magnet_6x3_config : config
 val m4_countersunk_fastener : fastener
 val make : ?fn:int -> placement:placement -> config -> Path2.t -> t
+
+val place
+  :  ?fn:int
+  -> ?width:float
+  -> ?bury:float
+  -> ?config:config
+  -> ?relocate:bool
+  -> inline:Path3.t
+  -> outline:Path3.t
+  -> v3
+  -> t
+
 val to_scad : t -> Scad.d3
 val apply : t -> Scad.d3 -> Scad.d3
