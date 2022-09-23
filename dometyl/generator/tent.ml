@@ -1,5 +1,52 @@
 open! Scad_ml
 
+type style =
+  | Solid
+  | Prison of
+      { n_pillars : int option
+      ; width : float option
+      ; tilt : float option
+      ; tilt_ez : (v2 * v2) option
+      ; fn : int option
+      ; slices : int option
+      ; max_res : float option
+      ; phase_shift : float option
+      ; corner : Path3.Round.corner option
+      ; corner_fn : int option
+      ; fillet_d : [ `Abs of float | `Rel of float ] option
+      ; fillet_w : float option
+      }
+
+let prison
+    ?n_pillars
+    ?width
+    ?tilt
+    ?tilt_ez
+    ?fn
+    ?slices
+    ?phase_shift
+    ?fillet_d
+    ?fillet_w
+    ?corner
+    ?corner_fn
+    ?max_res
+    ()
+  =
+  Prison
+    { n_pillars
+    ; width
+    ; tilt
+    ; tilt_ez
+    ; fn
+    ; slices
+    ; max_res
+    ; phase_shift
+    ; corner
+    ; corner_fn
+    ; fillet_d
+    ; fillet_w
+    }
+
 let default_bumps = [ 0.; 0.15; 0.3; 0.4; 0.5; 0.77; 0.9 ]
 
 let solid_shell bot_outer bot_inner top_outer top_inner =
@@ -12,35 +59,46 @@ let solid_shell bot_outer bot_inner top_outer top_inner =
   in
   Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
 
-let prison_shell bot_outer bot_inner top_outer top_inner =
-  let w = 12.
-  and n = 30 in
-  let tilt = 15. in
-  let fn = 24
-  and slices = 24 in
-  let pillar_step = 1. /. Float.of_int n
+let prison_shell
+    ?(n_pillars = 30)
+    ?(width = 12.)
+    ?(tilt = 15.)
+    ?(tilt_ez = v2 0.42 0., v2 0.58 1.)
+    ?(fn = 24)
+    ?(slices = 24)
+    ?(phase_shift = 0.)
+    ?(fillet_d = `Rel 0.2)
+    ?(fillet_w = 0.25)
+    ?corner
+    ?corner_fn
+    ?(max_res = 0.1)
+    bot_outer
+    bot_inner
+    top_outer
+    top_inner
+  =
+  let pillar_step = 1. /. Float.of_int n_pillars
   and slice_step = 1. /. Float.of_int (slices - 1)
-  and fn_step = 1. /. Float.of_int (fn - 1)
-  and max_res = 0.1 in
-  let tilt_ez = Easing.make (v2 0.42 0.) (v2 0.58 1.) in
-  let phase_shift = 0.0 in
-  (* let corner = Some (Path3.Round.bez (`Joint 0.2)) in *)
-  (* let corner = Some (Path3.Round.chamf (`Joint 0.1)) in *)
-  let corner = None in
-  let corner_fn = Some 6 in
-  let fillet_d = 0.2
-  and fillet_w = 0.25 in
+  and fn_step = 1. /. Float.of_int (fn - 1) in
+  let tilt_ez = Easing.make (fst tilt_ez) (snd tilt_ez) in
   let len_outer = Path3.length ~closed:true top_outer
   and len_outer' = Path3.length ~closed:true bot_outer in
-  let w_outer = w /. len_outer
-  and w_outer' = w /. len_outer' in
+  let w_outer = width /. len_outer
+  and w_outer' = width /. len_outer' in
   let cont_outer = Path3.to_continuous ~closed:true top_outer
   and cont_outer' = Path3.to_continuous ~closed:true bot_outer
   and cont_inner = Path3.to_continuous ~closed:true top_inner
   and cont_inner' = Path3.to_continuous ~closed:true bot_inner in
   let t_outer = tilt /. len_outer
   and t_outer' = tilt /. len_outer' in
-  let fillet_ez = Easing.make (v2 fillet_d 1.) (v2 fillet_d 1.) in
+  let fillet_ez =
+    match fillet_d with
+    | `Rel d -> Fun.const (Easing.make (v2 d 1.) (v2 d 1.))
+    | `Abs d ->
+      fun z ->
+        let d = Float.min (d /. z) 1. in
+        Easing.make (v2 d 1.) (v2 d 1.)
+  in
   let prune (acc, last) row =
     let min_z = (Path3.bbox last).min.z in
     let valid = List.for_all (fun p -> p.z > min_z) row in
@@ -63,6 +121,7 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
   in
   let pillar i =
     let u = (pillar_step *. Float.of_int i) +. phase_shift in
+    let fillet_ez = fillet_ez (cont_outer u).z in
     let profile k =
       let step_u w t j =
         let ku = Float.of_int k *. slice_step in
@@ -100,30 +159,57 @@ let prison_shell bot_outer bot_inner top_outer top_inner =
     |> Mesh.of_rows
     |> Mesh.to_scad
   in
-  let slabs =
-    let z = (Path3.bbox top_outer).min.z in
-    let bot =
-      let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans z bot_outer)
-      and inner =
-        Mesh.skin_between
-          ~slices:1
-          (Path3.ztrans (-0.01) bot_inner)
-          (Path3.ztrans (z +. 0.01) bot_inner)
-      in
-      Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
-    and top =
-      let outer = Mesh.skin_between ~slices:1 (Path3.ztrans (-.z) top_outer) top_outer
-      and inner =
-        Mesh.skin_between
-          ~slices:1
-          (Path3.ztrans (-.z -. 0.01) top_inner)
-          (Path3.ztrans 0.01 top_inner)
-      in
-      Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+  let z = (Path3.bbox top_outer).min.z in
+  let bot =
+    let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans z bot_outer)
+    and inner =
+      Mesh.skin_between
+        ~slices:1
+        (Path3.ztrans (-0.01) bot_inner)
+        (Path3.ztrans (z +. 0.01) bot_inner)
     in
-    Scad.add bot top
+    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+  and top =
+    let outer = Mesh.skin_between ~slices:1 (Path3.ztrans (-.z) top_outer) top_outer
+    and inner =
+      Mesh.skin_between
+        ~slices:1
+        (Path3.ztrans (-.z -. 0.01) top_inner)
+        (Path3.ztrans 0.01 top_inner)
+    in
+    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
   in
-  Scad.union (slabs :: List.init n pillar)
+  Scad.union (bot :: top :: List.init n_pillars pillar)
+
+let shell_of_style = function
+  | Solid -> solid_shell
+  | Prison
+      { n_pillars
+      ; width
+      ; tilt
+      ; tilt_ez
+      ; fn
+      ; slices
+      ; max_res
+      ; phase_shift
+      ; corner
+      ; corner_fn
+      ; fillet_d
+      ; fillet_w
+      } ->
+    prison_shell
+      ?n_pillars
+      ?width
+      ?tilt
+      ?tilt_ez
+      ?fn
+      ?slices
+      ?max_res
+      ?phase_shift
+      ?corner
+      ?corner_fn
+      ?fillet_d
+      ?fillet_w
 
 let make
     ?(degrees = 20.)
@@ -133,6 +219,7 @@ let make
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
+    ?(style = prison ())
     (case : Case.t)
   =
   let bb_pinky, rot_sign =
@@ -163,12 +250,6 @@ let make
     | Some fastener -> fastener
   and rot = v3 0. (Math.rad_of_deg degrees *. rot_sign) 0.
   and about = v3 bb_pinky 0. 0. in
-  (* FIXME: place uses foot_thickness, assuming it will be higher than screw
-    eyelet thickness. Eyelet thickness of course doesn't translate directly to
-    z, since they will be tented, so need to take the max of foot thickness and
-    the adjusted fastener eyelet z, and use that for placing everything. Need
-    to reorganize accordingly to achieve this. *)
-  let place s = Scad.ztrans foot_thickness @@ Scad.rotate ~about rot s in
   let hole_cut, hole_height, clearances =
     let magnetize rad h thickness =
       let hole =
@@ -198,7 +279,7 @@ let make
         match clearance with
         | Some height ->
           let cyl = Scad.ztrans (-.height) @@ Scad.extrude ~height head_disc in
-          List.map (fun Eyelet.{ centre; _ } -> place @@ Scad.translate centre cyl) screws
+          List.map (fun Eyelet.{ centre; _ } -> Scad.translate centre cyl) screws
         | None -> []
       in
       hole, height, clearances
@@ -212,6 +293,10 @@ let make
       magnetize inner_rad h thickness
     | Magnet { rad; thickness } -> magnetize rad thickness (thickness +. 1.4)
   in
+  (* raise top above the feet or the tilted eyelets (avoid clipping) *)
+  let rise = Float.max foot_thickness (V3.rotate rot (v3 0. 0. hole_height)).z in
+  let place_scad s = Scad.ztrans rise @@ Scad.rotate ~about rot s
+  and place_v3 p = V3.ztrans rise @@ V3.rotate ~about rot (V3.of_v2 p) in
   let eyelets =
     List.map
       (fun Eyelet.{ centre; config = { inner_rad; outer_rad; hole; _ }; scad; _ } ->
@@ -226,26 +311,20 @@ let make
         |> Scad.ztrans (-.hole_height) )
       screws
     |> Scad.union
-    |> place
+    |> place_scad
   in
-  let place p = V3.ztrans foot_thickness @@ V3.rotate ~about rot (V3.of_v2 p) in
-  let outer = List.map place outline
-  and inner = List.map place inline in
+  let outer = List.map place_v3 outline
+  and inner = List.map place_v3 inline in
   let outer' = List.map (fun { x; y; z = _ } -> v3 x y 0.) outer
   and inner' = List.map (fun { x; y; z = _ } -> v3 x y 0.) inner in
-  let prison = true in
-  let shell =
-    if prison
-    then prison_shell outer' inner' outer inner
-    else solid_shell outer' inner' outer inner
-  in
+  let shell = shell_of_style style outer' inner' outer inner in
   let feet, final_cuts =
     let cont_inner' = Path3.to_continuous ~closed:true inner' in
     let f (bumps, insets) loc =
       let b =
-        Connect.place_eyelet
+        Eyelet.place
           ~bury:0.4
-          ~eyelet_config:
+          ~config:
             Eyelet.
               { outer_rad = foot_rad
               ; inner_rad = bumpon_rad
@@ -259,6 +338,6 @@ let make
       in
       b.scad :: bumps, Option.get b.cut :: insets
     in
-    List.fold_left f ([], clearances) bump_locs
+    List.fold_left f ([], List.map place_scad clearances) bump_locs
   in
   Scad.difference (Scad.union (shell :: eyelets :: feet)) final_cuts
