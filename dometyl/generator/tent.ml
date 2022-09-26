@@ -8,8 +8,7 @@ type style =
       ; tilt : float option
       ; tilt_ez : (v2 * v2) option
       ; fn : int option
-      ; slices : int option
-      ; max_res : float option
+      ; slices : Wall.Steps.t option
       ; phase_shift : float option
       ; corner : Path3.Round.corner option
       ; corner_fn : int option
@@ -29,7 +28,6 @@ let prison
     ?fillet_w
     ?corner
     ?corner_fn
-    ?max_res
     ()
   =
   Prison
@@ -39,7 +37,6 @@ let prison
     ; tilt_ez
     ; fn
     ; slices
-    ; max_res
     ; phase_shift
     ; corner
     ; corner_fn
@@ -64,21 +61,20 @@ let prison_shell
     ?(width = 12.)
     ?(tilt = 15.)
     ?(tilt_ez = v2 0.42 0., v2 0.58 1.)
-    ?(fn = 24)
-    ?(slices = 24)
+    ?(fn = 18)
+    ?(slices = `PerZ 1.)
     ?(phase_shift = 0.)
     ?(fillet_d = `Rel 0.2)
     ?(fillet_w = 0.25)
     ?corner
     ?corner_fn
-    ?(max_res = 0.1)
     bot_outer
     bot_inner
     top_outer
     top_inner
   =
+  let slices = Wall.Steps.to_int slices in
   let pillar_step = 1. /. Float.of_int n_pillars
-  and slice_step = 1. /. Float.of_int (slices - 1)
   and fn_step = 1. /. Float.of_int (fn - 1) in
   let tilt_ez = Easing.make (fst tilt_ez) (snd tilt_ez) in
   let len_outer = Path3.length ~closed:true top_outer
@@ -104,29 +100,24 @@ let prison_shell
     let valid = List.for_all (fun p -> p.z > min_z) row in
     if valid then row :: acc, row else acc, last
   and rounder out_edge in_edge =
-    let dedup p =
-      Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:max_res) p
-      |> Path3.subdivide ~freq:(`N (fn, `ByLen))
-    in
-    let out_edge = dedup out_edge
-    and in_edge = dedup in_edge in
     match corner with
     | Some c ->
       let cs = Some c :: Util.fold_init (fn - 2) (fun _ acc -> None :: acc) [ Some c ] in
-      let zip a b = List.map2 (fun a b -> a, b) a b in
-      List.append (zip out_edge cs) (zip in_edge cs)
+      List.append (List.combine out_edge cs) (List.combine in_edge cs)
       |> Path3.Round.mix
-      |> Path3.roundover ?fn:corner_fn
+      |> Path3.roundover ?fn:corner_fn ~overrun:`Fix
     | None -> List.append out_edge in_edge
   in
   let pillar i =
     let u = (pillar_step *. Float.of_int i) +. phase_shift in
-    let fillet_ez = fillet_ez (cont_outer u).z in
+    let z = (cont_outer u).z in
+    let slices = slices z in
+    let slice_step = 1. /. Float.of_int (slices - 1) in
     let profile k =
       let step_u w t j =
         let ku = Float.of_int k *. slice_step in
         let tilted = u +. (t *. tilt_ez ku) in
-        let fillet = fillet_w *. fillet_ez (if k > slices / 2 then 1. -. ku else ku) in
+        let fillet = fillet_w *. fillet_ez z (if k > slices / 2 then 1. -. ku else ku) in
         let start = (fillet /. 2. *. w) +. tilted in
         let u = start +. (w *. (1. -. fillet) *. (Float.of_int j *. fn_step)) in
         mod_float u 1. (* wrap around *)
@@ -151,12 +142,16 @@ let prison_shell
         let outer = List.init fn (fun j -> cont_outer (step_u w_outer t_outer j)) in
         rounder outer (List.map cont_inner (lerpn fn))
       in
-      Path3.lerp bot top (Float.of_int k *. slice_step)
+      let subdiv =
+        let n = Int.max (List.length bot) (List.length top) in
+        Path3.subdivide ~closed:true ~freq:(`N (n, `ByLen))
+      in
+      Path3.lerp (subdiv bot) (subdiv top) (Float.of_int k *. slice_step)
     in
     let rows = List.init slices profile in
     fst @@ List.fold_left prune ([ List.hd rows ], List.hd rows) (List.tl rows)
     |> List.rev
-    |> Mesh.of_rows
+    |> Mesh.skin ~slices:(`Flat 0)
     |> Mesh.to_scad
   in
   let z = (Path3.bbox top_outer).min.z in
@@ -190,7 +185,6 @@ let shell_of_style = function
       ; tilt_ez
       ; fn
       ; slices
-      ; max_res
       ; phase_shift
       ; corner
       ; corner_fn
@@ -204,7 +198,6 @@ let shell_of_style = function
       ?tilt_ez
       ?fn
       ?slices
-      ?max_res
       ?phase_shift
       ?corner
       ?corner_fn

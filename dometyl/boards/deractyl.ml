@@ -135,7 +135,6 @@ let wall_builder plate =
 
 let plate_welder = Plate.column_joins
 
-(* let base_connector = Connect.closed ~spline_d:0.1 ~max_edge_res:1. *)
 let base_connector =
   Connect.skeleton
     ~height:11.
@@ -144,7 +143,6 @@ let base_connector =
     ~close_thumb:false
     ~north_joins:(fun i -> i < 2)
     ~south_joins:(Fun.const false)
-    ~max_edge_res:0.85
 
 let holder_x = 0.
 let holder_y = -2.5

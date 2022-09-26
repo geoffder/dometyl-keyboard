@@ -86,7 +86,8 @@ let make
   in
   let front =
     match corner with
-    | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
+    | Some corner ->
+      Path3.(roundover ?fn ~overrun:`Fix @@ Round.flat ~corner ~closed:true sq)
     | None -> sq
   in
   let hole =
@@ -136,7 +137,8 @@ let make
       in
       let path =
         match corner with
-        | Some corner -> Path3.(roundover ?fn @@ Round.flat ~corner ~closed:true sq)
+        | Some corner ->
+          Path3.(roundover ?fn ~overrun:`Fix @@ Round.flat ~corner ~closed:true sq)
         | None -> sq
       in
       let top_edge, bot_edge = edges path

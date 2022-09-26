@@ -8,8 +8,7 @@ type style =
       ; tilt : float option
       ; tilt_ez : (v2 * v2) option
       ; fn : int option
-      ; slices : int option
-      ; max_res : float option
+      ; slices : Wall.Steps.t option
       ; phase_shift : float option
       ; corner : Path3.Round.corner option
       ; corner_fn : int option
@@ -23,13 +22,12 @@ val prison
   -> ?tilt:float
   -> ?tilt_ez:v2 * v2
   -> ?fn:int
-  -> ?slices:int
+  -> ?slices:Wall.Steps.t
   -> ?phase_shift:float
   -> ?fillet_d:[ `Abs of float | `Rel of float ]
   -> ?fillet_w:float
   -> ?corner:Path3.Round.corner
   -> ?corner_fn:int
-  -> ?max_res:float
   -> unit
   -> style
 

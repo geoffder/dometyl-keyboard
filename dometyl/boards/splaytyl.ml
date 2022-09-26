@@ -82,11 +82,11 @@ let base_connector =
     ~height:13.
     ~index_height:13.
     ~thumb_height:13.
+    ~corner:(Path3.Round.bez (`Joint 2.))
     ~corner_fn:6
     ~close_thumb:false
     ~north_joins:(fun i -> i < 2)
     ~south_joins:(Fun.const false)
-    ~max_edge_res:0.75
 
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]

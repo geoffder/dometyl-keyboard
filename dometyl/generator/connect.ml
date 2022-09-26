@@ -29,10 +29,9 @@ let outward_sign (w1 : Wall.t) (w2 : Wall.t) =
    by bot_edge and top_edge. Edges must have the same length. *)
 let rounder ?fn ~corner bot_edge top_edge =
   let corners = Some corner :: List.init (List.length bot_edge - 1) (Fun.const None) in
-  let zip a b = List.map2 (fun a b -> a, b) a b in
-  List.rev_append (zip bot_edge corners) (zip top_edge corners)
+  List.(rev_append (combine bot_edge corners) (combine top_edge corners))
   |> Path3.Round.mix
-  |> Path3.roundover ?fn
+  |> Path3.roundover ?fn ~overrun:`Fix
 
 let fillet ~d ~h rows =
   let rel_dists, total_dist =
@@ -74,7 +73,7 @@ let spline_base
     ?(fillet_h = `Rel 0.3)
     ?(corner = Path3.Round.bez (`Joint 1.))
     ?(corner_fn = 6)
-    ?(max_edge_res = 0.85)
+    ?(max_edge_res = 0.5)
     ?(end_shrink = 0.025)
     ?(tight_threshold = 6.)
     ?(tight_d = 0.05)
@@ -113,7 +112,7 @@ let spline_base
       let eq a b = V2.approx ~eps:max_edge_res (proj a) (proj b) in
       Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq
     in
-    plane, dedup bot, dedup top
+    plane, Path3.prune_collinear @@ dedup bot, Path3.prune_collinear @@ dedup top
   in
   let plane_l, bot_l, top_l = end_edges true
   and plane_r, bot_r, top_r = end_edges false in
@@ -145,6 +144,9 @@ let spline_base
   let round = rounder ~fn:corner_fn ~corner in
   let a' = round bot_l' top_l'
   and b' = round bot_r' top_r' in
+  let row_len = Int.max (List.length a') (List.length b') in
+  let a' = Path3.subdivide ~closed:true ~freq:(`N (row_len, `ByLen)) a'
+  and b' = Path3.subdivide ~closed:true ~freq:(`N (row_len, `ByLen)) b' in
   let base_points = function
     | inner :: pts -> inner, Util.last pts
     | [] -> failwith "unreachable"
@@ -186,6 +188,8 @@ let spline_base
       let slices, r = List.fold_left (fun (zs, _) r -> 0 :: zs, r) ([ 5 ], []) rows in
       `Mix (5 :: List.tl slices), r
     and round_edges (_, bot, top) =
+      let bot = Path3.prune_collinear bot
+      and top = Path3.prune_collinear top in
       let n = Int.(max edge_len (max (List.length bot) (List.length top))) in
       let subdiv = Path3.subdivide ~freq:(`N (n, `ByLen)) in
       round (subdiv bot) (subdiv top)
