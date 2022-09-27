@@ -312,7 +312,6 @@ let make
   and inner' = List.map (fun { x; y; z = _ } -> v3 x y 0.) inner in
   let shell = shell_of_style style outer' inner' outer inner in
   let feet, final_cuts =
-    let cont_inner' = Path3.to_continuous ~closed:true inner' in
     let f (bumps, insets) loc =
       let b =
         Eyelet.place
@@ -324,10 +323,9 @@ let make
               ; thickness = foot_thickness
               ; hole = inset bumpon_inset
               }
-          ~relocate:true
           ~inline:inner'
           ~outline:outer'
-          (cont_inner' loc)
+          (`U loc)
       in
       b.scad :: bumps, Option.get b.cut :: insets
     in

@@ -67,10 +67,9 @@ val place
   -> ?width:float
   -> ?bury:float
   -> ?config:config
-  -> ?relocate:bool
   -> inline:Path3.t
   -> outline:Path3.t
-  -> v3
+  -> [ `Loc of v3 | `Reloc of v3 | `U of float ]
   -> t
 
 val to_scad : t -> Scad.d3

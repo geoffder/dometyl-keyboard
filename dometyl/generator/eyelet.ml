@@ -35,11 +35,6 @@ type placement =
     outline/inline, which can then be given to place. I think things will then
     be sufficiently detangled to allow adaptation to a separate plate condition
     without too much further reorganization. *)
-(* type loc = *)
-(*   | Thumb of Util.idx * Util.idx *)
-(*   | Body of Util.idx * Util.idx *)
-(*   | Point of v2 *)
-(*   | U of float *)
 
 type config =
   { outer_rad : float
@@ -141,23 +136,20 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   in
   { scad; cut; centre = V3.of_v2 hole_centre; config }
 
-let place
-    ?(fn = 16)
-    ?width
-    ?(bury = 0.1)
-    ?(config = m4_config)
-    ?(relocate = false)
-    ~inline
-    ~outline
-    loc
-  =
+let place ?(fn = 16) ?width ?(bury = 0.1) ?(config = m4_config) ~inline ~outline loc =
   let half_width =
     Util.value_map_opt ~default:(config.outer_rad +. 3.) (( *. ) 0.5) width
   in
   let len_inline = Path3.length ~closed:true inline
   and cont_inline = Path3.to_continuous ~closed:true inline
   and cont_outline = Path3.to_continuous ~closed:true outline in
-  let u = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_inline loc in
+  let loc, u, relocate =
+    let closest = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_inline in
+    match loc with
+    | `Loc loc -> loc, closest loc, false
+    | `Reloc loc -> loc, closest loc, true
+    | `U u -> cont_inline u, u, true
+  in
   let in_pt = cont_inline u in
   let u' = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_outline in_pt in
   let shift = half_width /. len_inline in

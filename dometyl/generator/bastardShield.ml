@@ -136,7 +136,7 @@ let eyelets
     { screw_l; screw_r; thickness; _ }
   =
   let build p =
-    Eyelet.place ?width ~bury ~config ~inline ~outline p
+    Eyelet.place ?width ~bury ~config ~inline ~outline (`Loc p)
     |> Eyelet.to_scad
     |> Scad.ztrans (p.z +. thickness +. z_off)
   in
