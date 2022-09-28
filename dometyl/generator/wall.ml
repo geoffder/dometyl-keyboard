@@ -246,13 +246,13 @@ let make
       let placement =
         let n = V3.neg xy in
         match config with
-        | { hole = Through; _ } -> Normal (V2.of_v3 n)
+        | { hole = Through; _ } -> Normal n
         | { hole = Inset _; outer_rad; _ } ->
           let offset = outer_rad +. V3.(norm (sub foot.top_left foot.bot_left) /. 4.) in
-          Point V3.(to_v2 (mid foot.top_left foot.top_right +@ (n *$ offset)))
+          Point V3.(mid foot.top_left foot.top_right +@ (n *$ offset))
       in
-      let l = V2.(lerp (of_v3 foot.bot_left) (of_v3 foot.top_left) 0.25)
-      and r = V2.(lerp (of_v3 foot.bot_right) (of_v3 foot.top_right) 0.25) in
+      let l = V3.lerp foot.bot_left foot.top_left 0.25
+      and r = V3.lerp foot.bot_right foot.top_right 0.25 in
       Some (make ~placement config [ l; r ])
     | None -> None
   in

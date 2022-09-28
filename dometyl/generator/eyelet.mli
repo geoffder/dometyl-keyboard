@@ -25,9 +25,13 @@ type fastener =
       ; clearance : float option
       }
 
+type wall_loc =
+  | Thumb of [ `N | `E | `S | `W ] * Util.idx
+  | Body of [ `N | `E | `S | `W ] * Util.idx
+
 type placement =
-  | Normal of V2.t
-  | Point of V2.t
+  | Normal of V3.t
+  | Point of V3.t
 
 type config =
   { outer_rad : float
@@ -60,7 +64,7 @@ val m4_config : config
 val bumpon_config : config
 val magnet_6x3_config : config
 val m4_countersunk_fastener : fastener
-val make : ?fn:int -> placement:placement -> config -> Path2.t -> t
+val make : ?fn:int -> placement:placement -> config -> Path3.t -> t
 
 val place
   :  ?fn:int

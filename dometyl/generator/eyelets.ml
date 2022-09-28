@@ -1,10 +1,14 @@
-open Scad_ml
+(* open Scad_ml *)
 
-type loc =
-  | Thumb of Util.idx * Util.idx
-  | Body of Util.idx * Util.idx
-  | Point of v2
-  | U of float
+(* type loc = *)
+(*   | Thumb of [ `N | `E | `S | `W ] * Util.idx *)
+(*   | Body of [ `N | `E | `S | `W ] * Util.idx *)
+(*   | Point of v3 *)
+(*   | U of float *)
+
+type wall_loc =
+  | Thumb of [ `N | `E | `S | `W ] * Util.idx
+  | Body of [ `N | `E | `S | `W ] * Util.idx
 
 type t = (Eyelet.t list[@scad.d3]) [@@deriving scad]
 
@@ -14,5 +18,13 @@ type t = (Eyelet.t list[@scad.d3]) [@@deriving scad]
     makes use of optional walls / connect inputs (ignore corresponding elements
     if they are missing)
    - U and Point could be handed along to Eyelet.place
-   - Thumb and Body must instead refer to wall locations (need NESW identifier,
-    not just indices for th key) *)
+
+   UPDATE:
+   - With the adjustments to Eyelet.make and Eyelet.place, I think that the
+    additional functionality needed is low enough that I should just include
+    this stuff in the Eyelet module.
+   - Point and U would be passed along to place anyway, which handles free
+    placement of eyelets relative to an inline/outline
+   - so all that is really needed is a function that takes a Walls.t and a
+    wall_loc list to translate into points for place
+*)

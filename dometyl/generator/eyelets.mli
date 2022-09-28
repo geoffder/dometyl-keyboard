@@ -1,10 +1,14 @@
-open Scad_ml
+(* open Scad_ml *)
 
-type loc =
-  | Thumb of Util.idx * Util.idx
-  | Body of Util.idx * Util.idx
-  | Point of v2
-  | U of float
+(* type loc = *)
+(*   | Thumb of [ `N | `E | `S | `W ] * Util.idx *)
+(*   | Body of [ `N | `E | `S | `W ] * Util.idx *)
+(*   | Point of v3 *)
+(*   | U of float *)
+
+type wall_loc =
+  | Thumb of [ `N | `E | `S | `W ] * Util.idx
+  | Body of [ `N | `E | `S | `W ] * Util.idx
 
 type t = (Eyelet.t list[@scad.d3]) [@@deriving scad]
 

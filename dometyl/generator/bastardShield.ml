@@ -120,7 +120,7 @@ let place
   =
   let left_foot = (IMap.find 0 north).foot
   and right_foot = (IMap.find 1 north).foot in
-  let x = V3.get_x left_foot.bot_left +. x_off
+  let x = left_foot.bot_left.x +. x_off
   and y =
     let inner (ps : Points.t) = V3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
     y_off +. ((inner left_foot +. inner right_foot) /. 2.)
@@ -129,14 +129,14 @@ let place
 
 let eyelets
     ?width
-    ?(bury = 0.1)
+    ?(bury = 0.3)
     ?(z_off = 1.)
     ?(config = Eyelet.m4_config)
     Connect.{ inline; outline; _ }
     { screw_l; screw_r; thickness; _ }
   =
   let build p =
-    Eyelet.place ?width ~bury ~config ~inline ~outline (`Loc p)
+    Eyelet.place ?width ~bury ~config ~inline ~outline (`Loc { p with z = 0. })
     |> Eyelet.to_scad
     |> Scad.ztrans (p.z +. thickness +. z_off)
   in
