@@ -50,30 +50,26 @@ let plate_builder =
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 let wall_builder plate =
-  (* let eyelet_config = Eyelet.magnet_6x3_config in *)
-  let eyelet_config = Eyelet.m4_config in
   Walls.
     { body =
         auto_body
           ~d1:(`Abs 14.)
           ~d2:10.
-          ~n_steps:(`PerZ 1.)
+          ~n_steps:(`PerZ 0.5)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~eyelet_config
           plate
     ; thumb =
         auto_thumb
           ~d1:(`Abs 14.)
           ~d2:8.
-          ~n_steps:(`PerZ 1.)
-          ~north_lookup:(fun _ -> No)
-          ~south_lookup:(fun i -> if i = 1 then No else Yes)
-          ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye)
+          ~n_steps:(`PerZ 0.5)
+          ~north_lookup:(fun _ -> false)
+          ~south_lookup:(fun i -> i <> 1)
+          ~east_lookup:(fun _ -> false)
+          ~west_lookup:(fun _ -> true)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~eyelet_config
           plate
     }
 
@@ -83,7 +79,7 @@ let base_connector =
     ~index_height:13.
     ~thumb_height:13.
     ~corner:(Path3.Round.bez (`Joint 2.))
-    ~corner_fn:6
+    ~corner_fn:16
     ~close_thumb:false
     ~north_joins:(fun i -> i < 2)
     ~south_joins:(Fun.const false)
@@ -94,8 +90,11 @@ let plate_welder plate =
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:0. (make ()))
 
 let build ?right_hand ?hotswap () =
+  (* let eyelet_config = Eyelet.magnet_6x3_config in *)
+  let eyelet_config = Eyelet.m4_config in
   Case.make
     ?right_hand
+    ~eyelet_config
     ~plate_builder
     ~plate_welder
     ~wall_builder
@@ -105,7 +104,7 @@ let build ?right_hand ?hotswap () =
        ?hotswap
        ~clearance:2.
        ~corner:(Path3.Round.bez (`Cut 0.5))
-       ~fn:6
+       ~fn:16
        () )
 (* (Mx.make_hole ?hotswap ~clearance:2. ~corner:(Path3.Round.chamf (`Cut 0.5)) ()) *)
 

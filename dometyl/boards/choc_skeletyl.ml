@@ -47,7 +47,6 @@ let plate_builder =
     ~caps:Caps.MBK.uniform
 
 let plate_welder = Plate.skeleton_bridges
-let eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 }
 
 let wall_builder plate =
   Walls.
@@ -61,7 +60,6 @@ let wall_builder plate =
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
-          ~eyelet_config
           plate
     ; thumb =
         auto_thumb
@@ -70,13 +68,12 @@ let wall_builder plate =
           ~n_steps:(`Flat 20)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~south_lookup:(fun i -> if i = 0 then Eye else if i = 1 then No else Yes)
-          ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> No)
+          ~south_lookup:(fun i -> i <> 1)
+          ~east_lookup:(fun _ -> false)
+          ~west_lookup:(fun _ -> false)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
-          ~eyelet_config
           plate
     }
 
@@ -97,9 +94,10 @@ let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~z_off:1.5 (make ()))
 let build ?right_hand ?hotswap () =
   let keyhole =
     Choc.make_hole ~clearance:0. ~corner:(Path3.Round.chamf (`Cut 0.5)) ?hotswap ()
-  in
+  and eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 } in
   Case.make
     ?right_hand
+    ~eyelet_config
     ~plate_builder
     ~plate_welder
     ~wall_builder

@@ -54,32 +54,27 @@ let plate_builder =
     ~thumb_caps:Caps.MT3.thumb_1u
 
 let wall_builder plate =
-  (* NOTE: It is strongly advised to use screws with heatset inserts rather than
-     magnets when doing a hall-effect rubber dome build to avoid interference. *)
-  let eyelet_config = Eyelet.m4_config in
   Walls.
     { body =
         auto_body
-          ~west_lookup:(fun i -> if i = 0 then Eye else Yes)
-          ~east_lookup:(fun _ -> Yes )
+          ~west_lookup:(fun _ -> true)
+          ~east_lookup:(fun _ -> true )
             (* ~d1:2. *)
             (* ~d2:5. *)
           ~n_steps:(`Flat 3)
           ~north_clearance:2.5
           ~south_clearance:2.5
           ~side_clearance:1.5
-          ~eyelet_config
           plate
     ; thumb =
         auto_thumb
-          ~south_lookup:(fun _ -> Yes)
-          ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye)
+          ~south_lookup:(fun _ -> true)
+          ~east_lookup:(fun _ -> false)
+          ~west_lookup:(fun _ -> true)
           ~n_steps:(`Flat 3)
           ~north_clearance:3.
           ~south_clearance:3.
           ~side_clearance:3.
-          ~eyelet_config
           plate
     }
 
@@ -88,10 +83,14 @@ let plate_welder = Plate.column_joins
 let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
 
 let build ?right_hand ?(empty = false) () =
+  (* NOTE: It is strongly advised to use screws with heatset inserts rather than
+   magnets when doing a hall-effect rubber dome build to avoid interference. *)
+  let eyelet_config = Eyelet.m4_config in
   (* use empty for quicker preview *)
   let hole = if empty then Niz.make_empty_hole () else Niz.make_hole () in
   Case.make
     ?right_hand
+    ~eyelet_config
     ~plate_builder
     ~plate_welder
     ~wall_builder

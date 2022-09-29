@@ -14,6 +14,7 @@ type t =
   ; plate : Plate.t
   ; walls : Walls.t
   ; connections : Connect.t
+  ; eyelets : Eyelet.t list
   }
 [@@deriving scad]
 
@@ -43,6 +44,9 @@ clips/cutouts such as those for hotswap holders in the right orientation).
   parameter. *)
 val make
   :  ?right_hand:bool
+  -> ?eyelet_config:Eyelet.config
+  -> ?wall_eyelets:Eyelet.wall_loc list
+  -> ?free_eyelets:[ `Loc of v3 | `Reloc of v3 | `U of float ] list
   -> plate_builder:(Key.t -> Plate.t)
   -> plate_welder:(Plate.t -> Scad.d3)
   -> wall_builder:(Plate.t -> Walls.t)

@@ -6,11 +6,15 @@ type t =
   ; plate : Plate.t
   ; walls : Walls.t
   ; connections : Connect.t
+  ; eyelets : Eyelet.t list
   }
 [@@deriving scad]
 
 let make
     ?(right_hand = true)
+    ?(eyelet_config = Eyelet.m4_config)
+    ?(wall_eyelets = Eyelet.default_wall_locs)
+    ?(free_eyelets = [])
     ~plate_builder
     ~plate_welder
     ~wall_builder
@@ -23,20 +27,31 @@ let make
   in
   let walls = wall_builder plate in
   let connections = base_connector walls in
+  let eyelets =
+    let locs = List.append free_eyelets (Eyelet.wall_locations ~walls wall_eyelets) in
+    List.map
+      (Eyelet.place
+         ~config:eyelet_config
+         ~inline:connections.Connect.inline
+         ~outline:connections.outline )
+      locs
+  and scad =
+    Scad.sub
+      (Scad.union
+         [ Plate.to_scad plate
+         ; plate_welder plate
+         ; Walls.to_scad walls
+         ; Connect.to_scad connections
+         ] )
+      (Plate.collect_cutouts plate)
+    |> Ports.apply (ports_cutter ~walls ~connections)
+  in
   let t =
-    { scad =
-        Scad.sub
-          (Scad.union
-             [ Plate.to_scad plate
-             ; plate_welder plate
-             ; Walls.to_scad walls
-             ; Connect.to_scad connections
-             ] )
-          (Plate.collect_cutouts plate)
-        |> Ports.apply (ports_cutter ~walls ~connections)
+    { scad = List.fold_left (fun s eye -> Eyelet.apply eye s) scad eyelets
     ; plate
     ; walls
     ; connections
+    ; eyelets
     }
   in
   if right_hand then t else mirror (v3 1. 0. 0.) t

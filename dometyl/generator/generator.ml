@@ -24,3 +24,4 @@ module Sigs = Sigs
 module Hand = Hand
 module Key = Key
 module IMap = IMap
+module Idx = Idx

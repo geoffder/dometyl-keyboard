@@ -111,8 +111,8 @@ let wall_builder plate =
           ~n_steps:(`PerZ 1.5)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~east_lookup:(fun i -> if i = 2 then No else No)
-          ~west_lookup:(fun i -> if i = 0 || i = 2 then Yes else No)
+          ~east_lookup:(fun _ -> false)
+          ~west_lookup:(fun i -> i = 0 || i = 2)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
@@ -124,9 +124,9 @@ let wall_builder plate =
           ~n_steps:(`PerZ 1.5)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~east_lookup:(fun _ -> No)
-          ~north_lookup:(fun _ -> No)
-          ~south_lookup:(fun i -> if i = 0 then Eye else if i = 2 then Yes else No)
+          ~east_lookup:(fun _ -> false)
+          ~north_lookup:(fun _ -> false)
+          ~south_lookup:(fun i -> i = 0 || i = 2)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.

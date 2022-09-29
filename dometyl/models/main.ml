@@ -12,6 +12,7 @@ let splaytyl_right = Splaytyl.build ()
 
 (* let splaytyl_left = Splaytyl.build ~right_hand:false () *)
 let skeletyl_right = Skeletyl.build ()
+let choc_skeletyl_right = Choc_skeletyl.build ()
 let closed_right = Closed.build ()
 let deractyl_right = Deractyl.build ()
 
@@ -28,13 +29,13 @@ let () =
     "closed_bottom_plate_right.scad"
     (Bottom.make ~bump_locs:Closed.bump_locs_right closed_right);
   Scad.to_file "skeletyl_bottom_plate_right.scad" (Skeletyl.bottom skeletyl_right);
-  (* Write.thing *)
-  (*   "splaytyl_right_with_plate" *)
-  (*   ( Case.to_scad ~show_caps:false splaytyl_right *)
-  (*   |> Scad.add (Scad.ztrans (-8.) (Bottom.make splaytyl_right)) ); *)
   Scad.to_file
-    "tent_right.scad"
-    Tent.(make ~style:(prison ~corner:(Path3.Round.bez (`Joint 1.)) ()) splaytyl_right)
+    "choc_skeletyl_right.scad"
+    (Case.to_scad ~show_caps:false @@ choc_skeletyl_right)
+(* Write.thing *)
+(*   "splaytyl_right_with_plate" *)
+(*   ( Case.to_scad ~show_caps:false splaytyl_right *)
+(*   |> Scad.add (Scad.ztrans (-8.) (Bottom.make splaytyl_right)) ); *)
 (* Tent.(make splaytyl_right) *)
 
 let k =

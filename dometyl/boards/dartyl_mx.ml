@@ -3,9 +3,6 @@
 open! Scad_ml
 open Generator
 
-let bumpon =
-  { Eyelet.bumpon_config with outer_rad = (2. /. 2.) +. 1.; inner_rad = 2. /. 2. }
-
 let wall_builder plate =
   Walls.
     { body =
@@ -14,20 +11,18 @@ let wall_builder plate =
           ~north_clearance:2.19
           ~south_clearance:2.19
           ~side_clearance:2.19
-          ~west_lookup:(fun i -> if i = 0 then Yes else No)
-          ~north_lookup:(fun _ -> Yes)
-          ~south_lookup:(fun i -> if i = 0 then No else Yes)
-          ~eyelet_config:bumpon
+          ~west_lookup:(fun i -> i = 0)
+          ~north_lookup:(fun _ -> true)
+          ~south_lookup:(fun i -> i <> 0)
           plate
     ; thumb =
         auto_thumb
-          ~north_lookup:(fun _ -> No)
-          ~south_lookup:(fun _ -> Yes)
+          ~north_lookup:(fun _ -> false)
+          ~south_lookup:(fun _ -> true)
           ~north_clearance:0.5
           ~south_clearance:0.5
           ~side_clearance:0.5 (* ~d1:3. *)
           ~d2:4.75
-          ~eyelet_config:bumpon
           ~n_steps:(`Flat 15)
           plate
     }
@@ -88,6 +83,9 @@ let ports_cutter =
     ~rail_w:1.5
     ()
 
+let bumpon =
+  { Eyelet.bumpon_config with outer_rad = (2. /. 2.) +. 1.; inner_rad = 2. /. 2. }
+
 let build ?hotswap () =
   let keyhole = Mx.make_hole ~clearance:1.5 ~thickness:4.88 ?hotswap () in
   let plate_builder =
@@ -103,6 +101,7 @@ let build ?hotswap () =
       ~thumb_angle:Float.(v3 0. (-0.3) (pi /. 17.))
   in
   Case.make
+    ~eyelet_config:bumpon
     ~plate_welder
     ~wall_builder
     ~base_connector

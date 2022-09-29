@@ -1,12 +1,5 @@
 open! Scad_ml
 
-(** Used for lookups, indicating whether to place a wall at a particular position on the
-    plate, and if so, whether there should be an eyelet attached. *)
-type presence =
-  | No
-  | Yes
-  | Eye
-
 module Side : sig
   (** Maps from index/position to {!Wall.t}, representing a side of the body or thumb of a
       plate. *)
@@ -59,16 +52,15 @@ module Sides : sig
       Construct a {!t} from a collection of parameters to be applied consistently across
       the generated {!Wall.t}s.
 
-      - [d1], [d2], [n_steps], [min_step_dist],[scale], [scale_ez], [end_z], and
-        [eyelet_config] are as described in the documentation of {!Wall.make}
+      - [d1], [d2], [n_steps], [min_step_dist],[scale], [scale_ez], and [end_z]
+        are as described in the documentation of {!Wall.make}
       - [index_scale] can be used to override [scale] for the first two columns of
         the body.
       - [{north,south,side}_clearance] provide clearance to {!Wall.make} for the
         corresponding sections (defaults = [0.]).
       - [thumb] flags whether [columns] represents a thumb plate (default is false)
       - [{north,south,west,east}_lookup] parameters are functions from index to
-        {!presence}, indicating whether there is a wall present at a position or not (and
-        if there should be an eyelet attached to its base) *)
+        [bool], indicating whether there is a wall present at a position or not. *)
   val auto
     :  ?d1:[ `Abs of float | `Rel of float ]
     -> ?d2:float
@@ -81,18 +73,16 @@ module Sides : sig
     -> ?scale_ez:V2.t * V2.t
     -> ?end_z:float
     -> ?index_scale:V2.t
-    -> ?north_lookup:(int -> presence)
-    -> ?south_lookup:(int -> presence)
-    -> ?west_lookup:(int -> presence)
-    -> ?east_lookup:(int -> presence)
-    -> ?eyelet_config:Eyelet.config
+    -> ?north_lookup:(int -> bool)
+    -> ?south_lookup:(int -> bool)
+    -> ?west_lookup:(int -> bool)
+    -> ?east_lookup:(int -> bool)
     -> ?thumb:bool
     -> Columns.t
     -> t
 
   val get : t -> [ `N | `E | `S | `W ] -> Side.t
   val to_scad : t -> Scad.d3
-  val collect_screws : ?init:Eyelet.t list -> t -> Eyelet.t list
 end
 
 (** Use {!Sides.auto} to generate a {!Sides.t} from the body of the provided {!Plate.t}. *)
@@ -108,11 +98,10 @@ val auto_body
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float
   -> ?index_scale:V2.t
-  -> ?north_lookup:(int -> presence)
-  -> ?south_lookup:(int -> presence)
-  -> ?west_lookup:(int -> presence)
-  -> ?east_lookup:(int -> presence)
-  -> ?eyelet_config:Eyelet.config
+  -> ?north_lookup:(int -> bool)
+  -> ?south_lookup:(int -> bool)
+  -> ?west_lookup:(int -> bool)
+  -> ?east_lookup:(int -> bool)
   -> Plate.t
   -> Sides.t
 
@@ -128,11 +117,10 @@ val auto_thumb
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float
-  -> ?north_lookup:(int -> presence)
-  -> ?south_lookup:(int -> presence)
-  -> ?west_lookup:(int -> presence)
-  -> ?east_lookup:(int -> presence)
-  -> ?eyelet_config:Eyelet.config
+  -> ?north_lookup:(int -> bool)
+  -> ?south_lookup:(int -> bool)
+  -> ?west_lookup:(int -> bool)
+  -> ?east_lookup:(int -> bool)
   -> Plate.t
   -> Sides.t
 
@@ -165,4 +153,3 @@ val manual
   -> t
 
 val to_scad : t -> Scad.d3
-val collect_screws : t -> Eyelet.t list

@@ -53,7 +53,6 @@ type config =
   ; min_step_dist : float option
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
-  ; eyelet_config : Eyelet.config option
   ; end_z : float option
   }
 
@@ -65,7 +64,6 @@ let default =
   ; min_step_dist = None
   ; scale = None
   ; scale_ez = None
-  ; eyelet_config = None
   ; end_z = None
   }
 
@@ -78,7 +76,6 @@ type t =
   ; foot : Points.t
   ; drawer : Drawer.t
   ; bounds_drawer : Drawer.t
-  ; screw : Eyelet.t option
   }
 [@@deriving scad]
 
@@ -110,7 +107,6 @@ let make
     ?scale
     ?scale_ez
     ?(end_z = 0.1)
-    ?eyelet_config
     side
     (key : Key.t)
   =
@@ -239,25 +235,7 @@ let make
            (if V3.approx ~eps:0.1 last flat then [ flat ] else [ last; flat ])
            (List.tl trans)
   in
-  let screw =
-    match eyelet_config with
-    | Some config ->
-      let open Eyelet in
-      let placement =
-        let n = V3.neg xy in
-        match config with
-        (* | { hole = Through; _ } -> Normal n *)
-        (* | { hole = Inset _; outer_rad; _ } -> *)
-        (*   let offset = outer_rad +. V3.(norm (sub foot.top_left foot.bot_left) /. 4.) in *)
-        (*   Point V3.(mid foot.top_left foot.top_right +@ (n *$ offset)) *)
-        | _ -> Normal n
-      in
-      let l = V3.lerp foot.bot_left foot.top_left 0.25
-      and r = V3.lerp foot.bot_right foot.top_right 0.25 in
-      Some (make ~placement config [ l; r ])
-    | None -> None
-  in
-  { scad = Util.value_map_opt ~default:scad (fun s -> Eyelet.apply s scad) screw
+  { scad
   ; key
   ; side
   ; start = start_face.points
@@ -265,13 +243,10 @@ let make
   ; foot
   ; drawer = drawer ~bounds:false
   ; bounds_drawer = drawer ~bounds:true
-  ; screw
   }
 
-let of_config
-    { d1; d2; clearance; n_steps; min_step_dist; scale; scale_ez; eyelet_config; end_z }
-  =
-  make ?d1 ?d2 ?clearance ?n_steps ?min_step_dist ?eyelet_config ?scale ?scale_ez ?end_z
+let of_config { d1; d2; clearance; n_steps; min_step_dist; scale; scale_ez; end_z } =
+  make ?d1 ?d2 ?clearance ?n_steps ?min_step_dist ?scale ?scale_ez ?end_z
 
 let start_direction { start = { top_left; top_right; _ }; _ } =
   V3.normalize V3.(top_left -@ top_right)

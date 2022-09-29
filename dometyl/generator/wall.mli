@@ -47,7 +47,6 @@ type config =
   ; min_step_dist : float option
   ; scale : V2.t option
   ; scale_ez : (V2.t * V2.t) option
-  ; eyelet_config : Eyelet.config option
   ; end_z : float option
   }
 
@@ -68,8 +67,6 @@ type t =
   ; bounds_drawer : Drawer.t
         (** Same as drawer, but operating within the unrounded bounding corners
             of the face instead. *)
-  ; screw : Eyelet.t option
-        (** Scad, coordinates, and config of screw offshoot if included. *)
   }
 [@@deriving scad]
 
@@ -107,9 +104,8 @@ val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
     - [scale] specifies width ([x]), and thickness ([y]) scaling to apply along
       the sweep of the projected wall (linearly, or easing according to [scale_ez])
     - [end_z] specifies the height above the xy plane the bezier sweep portion
-      of the wall should end (from there dropping straight down to lie flat on the plane)
-    - If provided, [eyelet_config] describes the screw/bumpon eyelet that should be added
-      to the bottom of the generated wall. *)
+      of the wall should end (from there dropping straight down to lie flat on
+      the plane) *)
 val make
   :  ?clearance:float
   -> ?n_steps:[< `Flat of int | `PerZ of float > `Flat ]
@@ -119,7 +115,6 @@ val make
   -> ?scale:V2.t
   -> ?scale_ez:V2.t * V2.t
   -> ?end_z:float
-  -> ?eyelet_config:Eyelet.config
   -> [ `East | `North | `South | `West ]
   -> Key.t
   -> t

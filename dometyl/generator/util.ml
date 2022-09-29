@@ -1,10 +1,5 @@
 open! Scad_ml
-open Syntax
-
-type idx =
-  | First
-  | Last
-  | Idx of int
+open! Syntax
 
 let last = function
   | [] -> invalid_arg "No last element in empty list."
@@ -72,11 +67,6 @@ let fill_points ?(init = []) ~n a b =
       else b :: acc
     in
     loop (a :: init) 1 )
-
-let idx_to_find = function
-  | First -> IMap.min_binding_opt >> Option.map snd
-  | Last -> IMap.max_binding_opt >> Option.map snd
-  | Idx i -> IMap.find_opt i
 
 (* TODO: should probably add transform/row pruning and validation functions to
    scad_ml, this simple check is actually quite effective for avoiding mesh

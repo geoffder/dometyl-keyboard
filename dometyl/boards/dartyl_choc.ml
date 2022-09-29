@@ -11,14 +11,14 @@ let wall_builder plate =
           ~north_clearance:2.19
           ~south_clearance:2.19
           ~side_clearance:2.19
-          ~west_lookup:(fun i -> if i = 0 then Yes else No)
-          ~north_lookup:(fun _ -> Yes)
-          ~south_lookup:(fun i -> if i = 0 then No else Yes)
+          ~west_lookup:(fun i -> i = 0)
+          ~north_lookup:(fun _ -> true)
+          ~south_lookup:(fun i -> i <> 0)
           plate
     ; thumb =
         auto_thumb
-          ~north_lookup:(fun _ -> No)
-          ~south_lookup:(fun _ -> Yes)
+          ~north_lookup:(fun _ -> false)
+          ~south_lookup:(fun _ -> true)
           ~north_clearance:0.5
           ~south_clearance:0.5
           ~side_clearance:0.5 (* ~d1:3. *)

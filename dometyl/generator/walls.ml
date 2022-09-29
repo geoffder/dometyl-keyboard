@@ -1,11 +1,6 @@
 open! Scad_ml
 open! Syntax
 
-type presence =
-  | No
-  | Yes
-  | Eye
-
 module Side = struct
   type t = (Wall.t IMap.t[@scad.d3]) [@@deriving scad]
   type config = int -> Wall.config option
@@ -78,22 +73,16 @@ module Sides = struct
       ?scale_ez
       ?end_z
       ?index_scale
-      ?(north_lookup = fun i -> if i = 2 || i = 4 then Eye else Yes)
-      ?(south_lookup =
-        function
-        | i when i = 3 -> Eye
-        | i when i > 1 -> Yes
-        | _ -> No)
-      ?(west_lookup = fun i -> if i = 0 then Eye else No)
-      ?(east_lookup = fun _ -> No)
-      ?(eyelet_config = Eyelet.m4_config)
+      ?(north_lookup = Fun.const true)
+      ?(south_lookup = fun i -> i > 1)
+      ?(west_lookup = fun i -> i = 0)
+      ?(east_lookup = Fun.const false)
       ?(thumb = false)
       (columns : Columns.t)
     =
     let present m i conf = function
-      | Yes -> IMap.add i conf m
-      | Eye -> IMap.add i Wall.{ conf with eyelet_config = Some eyelet_config } m
-      | No -> m
+      | true -> IMap.add i conf m
+      | false -> m
     and conf =
       Wall.
         { d1
@@ -103,7 +92,6 @@ module Sides = struct
         ; min_step_dist
         ; scale = s
         ; scale_ez
-        ; eyelet_config = None
         ; end_z
         }
     and init = IMap.empty in
@@ -165,10 +153,6 @@ module Sides = struct
   let to_scad t =
     let f _key data l = Wall.to_scad data :: l in
     Scad.union3 (fold f [] t)
-
-  let collect_screws ?(init = []) (t : t) =
-    let f _key data l = Util.value_map_opt ~default:l (fun s -> s :: l) data.Wall.screw in
-    fold f init t
 end
 
 let auto_body
@@ -187,7 +171,6 @@ let auto_body
     ?south_lookup
     ?west_lookup
     ?east_lookup
-    ?eyelet_config
     Plate.{ body; _ }
   =
   Sides.auto
@@ -206,7 +189,6 @@ let auto_body
     ?south_lookup
     ?west_lookup
     ?east_lookup
-    ?eyelet_config
     body
 
 let auto_thumb
@@ -220,11 +202,10 @@ let auto_thumb
     ?scale
     ?scale_ez
     ?end_z
-    ?(north_lookup = fun i -> if i = 0 then Yes else No)
-    ?(south_lookup = fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
-    ?(west_lookup = fun i -> if i = 0 then Yes else No)
-    ?(east_lookup = fun _ -> No)
-    ?eyelet_config
+    ?(north_lookup = fun i -> i = 0)
+    ?(south_lookup = fun i -> i = 0 || i = 2)
+    ?(west_lookup = fun i -> i = 0)
+    ?(east_lookup = fun _ -> false)
     Plate.{ thumb; _ }
   =
   Sides.auto
@@ -242,7 +223,6 @@ let auto_thumb
     ~south_lookup
     ~west_lookup
     ~east_lookup
-    ?eyelet_config
     ~thumb:true
     thumb
 
@@ -282,6 +262,3 @@ let manual
   }
 
 let to_scad { body; thumb } = Scad.union [ Sides.to_scad body; Sides.to_scad thumb ]
-
-let collect_screws { body; thumb } =
-  Sides.collect_screws ~init:(Sides.collect_screws thumb) body

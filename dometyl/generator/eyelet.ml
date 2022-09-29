@@ -1,4 +1,5 @@
-open! Scad_ml
+open Scad_ml
+open Syntax
 
 type hole =
   | Through
@@ -26,8 +27,8 @@ type fastener =
       }
 
 type wall_loc =
-  | Thumb of [ `N | `E | `S | `W ] * Util.idx
-  | Body of [ `N | `E | `S | `W ] * Util.idx
+  | Body of [ `N | `E | `S | `W ] * Idx.t
+  | Thumb of [ `N | `E | `S | `W ] * Idx.t
 
 type placement =
   | Normal of V3.t
@@ -142,9 +143,9 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   in
   { scad; cut; centre = hole_centre; config }
 
-let place ?(fn = 16) ?width ?(bury = 0.1) ?(config = m4_config) ~inline ~outline loc =
+let place ?(fn = 16) ?width ?(bury = 0.4) ?(config = m4_config) ~inline ~outline loc =
   let half_width =
-    Util.value_map_opt ~default:(config.outer_rad +. 3.) (( *. ) 0.5) width
+    Util.value_map_opt ~default:(config.outer_rad +. 1.25) (( *. ) 0.5) width
   in
   let len_inline = Path3.length ~closed:true inline
   and cont_inline = Path3.to_continuous ~closed:true inline
@@ -164,28 +165,39 @@ let place ?(fn = 16) ?width ?(bury = 0.1) ?(config = m4_config) ~inline ~outline
     if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
   in
   let step = shift *. 2. /. Float.of_int fn in
-  let move = V3.(add ((cont_outline u' -@ in_pt) *$ bury)) in
+  let n = V3.(cont_outline u' -@ in_pt) in
+  let move = V3.(add (n *$ bury)) in
   let ps =
     List.init (fn + 1) (fun i -> move @@ cont_inline (lu +. (Float.of_int i *. step)))
-  in
-  let plane = Path3.to_plane ps in
-  let placement =
-    let a = V3.project plane @@ List.hd ps
-    and b = V3.project plane @@ Util.last ps in
+  and placement =
     if relocate
-    then Normal V2.(lift plane @@ normalize @@ ortho @@ sub a b)
+    then Point V3.((normalize (neg n) *$ (config.outer_rad +. 0.1)) +@ in_pt)
     else Point loc
   in
   make ~placement config ps
 
-(* let locate ~walls locs = *)
-(*   let find = function *)
-(*     | Thumb (s, i) -> Util.idx_to_find i Walls.(Sides.get walls.thumb s) *)
-(*     | Body (s, i) -> Util.idx_to_find i Walls.(Sides.get walls.body s) *)
-(*   in *)
-(*   let f w = *)
-(*   w.Wall.foot in *)
-(*   List.map f locs *)
+let default_wall_locs =
+  Idx.
+    [ Body (`W, First)
+    ; Body (`N, Idx 2)
+    ; Body (`N, Last)
+    ; Body (`S, Idx 3)
+    ; Thumb (`W, Last)
+    ]
+
+let wall_locations ~walls locs =
+  let f loc =
+    let+ w =
+      match loc with
+      | Thumb (s, i) -> Idx.to_find i Walls.(Sides.get walls.thumb s)
+      | Body (s, i) -> Idx.to_find i Walls.(Sides.get walls.body s)
+    in
+    `Reloc
+      V3.(
+        mid w.foot.bot_left w.foot.bot_right
+        +@ (normalize (w.foot.bot_left -@ w.foot.top_left) *$ 1.))
+  in
+  List.filter_map f locs
 
 let to_scad t = t.scad
 

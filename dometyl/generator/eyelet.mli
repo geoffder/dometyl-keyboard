@@ -26,8 +26,8 @@ type fastener =
       }
 
 type wall_loc =
-  | Thumb of [ `N | `E | `S | `W ] * Util.idx
-  | Body of [ `N | `E | `S | `W ] * Util.idx
+  | Body of [ `N | `E | `S | `W ] * Idx.t
+  | Thumb of [ `N | `E | `S | `W ] * Idx.t
 
 type placement =
   | Normal of V3.t
@@ -76,5 +76,7 @@ val place
   -> [ `Loc of v3 | `Reloc of v3 | `U of float ]
   -> t
 
+val default_wall_locs : wall_loc list
+val wall_locations : walls:Walls.t -> wall_loc list -> [> `Reloc of v3 ] list
 val to_scad : t -> Scad.d3
 val apply : t -> Scad.d3 -> Scad.d3

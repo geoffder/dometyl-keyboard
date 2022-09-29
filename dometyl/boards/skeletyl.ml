@@ -66,9 +66,9 @@ let wall_builder plate =
           ~n_steps:(`Flat 20)
           ~scale:(v2 0.8 0.9)
           ~scale_ez:(v2 0.42 1., v2 1. 1.)
-          ~south_lookup:(fun i -> if i = 0 then Eye else if i = 1 then No else Yes)
-          ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> No)
+          ~south_lookup:(fun i -> i <> 1)
+          ~east_lookup:(fun _ -> false)
+          ~west_lookup:(fun _ -> false)
           ~north_clearance:0.
           ~south_clearance:0.
           ~side_clearance:0.
@@ -99,6 +99,8 @@ let build ?right_hand ?hotswap () =
   in
   Case.make
     ?right_hand
+    ~wall_eyelets:Eyelet.(Thumb (`S, Idx.Idx 0) :: default_wall_locs)
+      (* ~wall_eyelets:[] *)
     ~plate_builder
     ~plate_welder
     ~wall_builder

@@ -230,10 +230,10 @@ let make
        < V3.(norm (pinky_home -@ v3 bb_left 0. 0.))
     then bb_right, 1.
     else bb_left, -1.
-  and screws = Walls.collect_screws case.Case.walls in
+  in
   let outline = Connect.outline_2d case.connections
   and inline = Connect.inline_2d case.connections in
-  let eyelet_config = (List.hd screws).config in
+  let eyelet_config = (List.hd case.eyelets).config in
   let fastener =
     match fastener with
     | None ->
@@ -272,7 +272,7 @@ let make
         match clearance with
         | Some height ->
           let cyl = Scad.ztrans (-.height) @@ Scad.extrude ~height head_disc in
-          List.map (fun Eyelet.{ centre; _ } -> Scad.translate centre cyl) screws
+          List.map (fun Eyelet.{ centre; _ } -> Scad.translate centre cyl) case.eyelets
         | None -> []
       in
       hole, height, clearances
@@ -302,7 +302,7 @@ let make
         |> Scad.extrude ~height:hole_height
         |> Fun.flip Scad.sub (Scad.translate centre hole_cut)
         |> Scad.ztrans (-.hole_height) )
-      screws
+      case.eyelets
     |> Scad.union
     |> place_scad
   in

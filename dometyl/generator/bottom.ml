@@ -2,8 +2,8 @@ open! Scad_ml
 open Syntax
 
 type bump_loc =
-  | Thumb of Util.idx * Util.idx * v2 option
-  | Body of Util.idx * Util.idx * v2 option
+  | Thumb of Idx.t * Idx.t * v2 option
+  | Body of Idx.t * Idx.t * v2 option
   | Point of v2
 
 let thumb ?loc col row = Thumb (col, row, loc)
@@ -21,12 +21,12 @@ let locate (key : Key.t) = function
 
 let locate_bump (plate : Plate.t) = function
   | Thumb (c, k, loc) ->
-    let* col = Util.idx_to_find c plate.thumb in
-    let+ key = Util.idx_to_find k col.keys in
+    let* col = Idx.to_find c plate.thumb in
+    let+ key = Idx.to_find k col.keys in
     locate key loc
   | Body (c, k, loc) ->
-    let* col = Util.idx_to_find c plate.body in
-    let+ key = Util.idx_to_find k col.keys in
+    let* col = Idx.to_find c plate.body in
+    let+ key = Idx.to_find k col.keys in
     locate key loc
   | Point p -> Some p
 
@@ -47,8 +47,11 @@ let make
     ?(bump_locs = default_bumps)
     case
   =
-  let screws = Walls.collect_screws case.Case.walls in
-  let screw_config = (List.hd screws).config in
+  let screw_config =
+    match case.Case.eyelets with
+    | [] -> Eyelet.m4_config (* dummy *)
+    | eye :: _ -> eye.config
+  in
   let thickness, screw_hole =
     let fastener =
       match fastener with
@@ -106,4 +109,4 @@ let make
   in
   Scad.difference
     plate
-    (insets :: List.map (fun l -> Scad.translate l.Eyelet.centre screw_hole) screws)
+    (insets :: List.map (fun l -> Scad.translate l.Eyelet.centre screw_hole) case.eyelets)
