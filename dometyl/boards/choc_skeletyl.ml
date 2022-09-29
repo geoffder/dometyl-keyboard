@@ -25,8 +25,13 @@ let body_lookups =
   and rows _ = 3 in
   Plate.Lookups.body ~offset ~curve ~splay ~swing ~rows ()
 
+(* TODO: Overlapping keyholes leads to failure with the new non-hull way of
+    joining the column keys. Should detect if the points of one face lie on the
+    wrong side of the others plane, and use Path3.hull instead (to be
+    implemented next). *)
 let thumb_lookups =
-  let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 13.8)) ()) in
+  (* let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 13.8)) ()) in *)
+  let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 12.)) ()) in
   Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
@@ -48,34 +53,51 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~n_steps:(`Flat 3)
-          ~north_lookup:(fun i -> if i mod 2 = 0 then Eye else Yes)
-          ~north_clearance:1.5
-          ~south_clearance:1.5
-          ~side_clearance:1.5
+          ~d1:(`Abs 11.)
+          ~d2:9.
+          ~n_steps:(`PerZ 1.5)
+          ~scale:(v2 0.8 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           ~eyelet_config
           plate
     ; thumb =
         auto_thumb
-          ~south_lookup:(fun i -> if i = 0 then Yes else if i = 2 then Eye else No)
+          ~d1:(`Abs 11.)
+          ~d2:6.
+          ~n_steps:(`Flat 20)
+          ~scale:(v2 0.8 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
+          ~south_lookup:(fun i -> if i = 0 then Eye else if i = 1 then No else Yes)
           ~east_lookup:(fun _ -> No)
-          ~west_lookup:(fun _ -> Eye)
-          ~north_clearance:0.5
-          ~south_clearance:0.5
-          ~side_clearance:0.5 (* ~d1:4. *)
-          ~d2:4.75
-          ~n_steps:(`PerZ 5.)
+          ~west_lookup:(fun _ -> No)
+          ~north_clearance:0.
+          ~south_clearance:0.
+          ~side_clearance:0.
           ~eyelet_config
           plate
     }
 
 let base_connector =
-  Connect.skeleton ~height:5. ~index_height:14. ~thumb_height:9. ~close_thumb:false
+  Connect.skeleton
+    ~fn:64
+    ~height:7.
+    ~index_height:14.
+    ~spline_d:1.5
+    ~thumb_height:9.
+    ~close_thumb:false
+    ~corner:(Path3.Round.chamf (`Cut 0.5))
+    ~north_joins:(Fun.const true)
+    ~south_joins:(fun i -> i = 3)
 
-let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~y_off:(-1.5) ~z_off:4. (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~z_off:1.5 (make ()))
 
 let build ?right_hand ?hotswap () =
-  let keyhole = Choc.make_hole ~clearance:0. ?hotswap () in
+  let keyhole =
+    Choc.make_hole ~clearance:0. ~corner:(Path3.Round.chamf (`Cut 0.5)) ?hotswap ()
+  in
   Case.make
     ?right_hand
     ~plate_builder

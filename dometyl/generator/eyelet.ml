@@ -178,6 +178,15 @@ let place ?(fn = 16) ?width ?(bury = 0.1) ?(config = m4_config) ~inline ~outline
   in
   make ~placement config ps
 
+(* let locate ~walls locs = *)
+(*   let find = function *)
+(*     | Thumb (s, i) -> Util.idx_to_find i Walls.(Sides.get walls.thumb s) *)
+(*     | Body (s, i) -> Util.idx_to_find i Walls.(Sides.get walls.body s) *)
+(*   in *)
+(*   let f w = *)
+(*   w.Wall.foot in *)
+(*   List.map f locs *)
+
 let to_scad t = t.scad
 
 let apply t scad =
