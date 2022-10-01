@@ -30,8 +30,7 @@ let body_lookups =
     wrong side of the others plane, and use Path3.hull instead (to be
     implemented next). *)
 let thumb_lookups =
-  (* let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 13.8)) ()) in *)
-  let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 12.)) ()) in
+  let curve _ = Curvature.(curve ~fan:(fan ~radius:85. (Float.pi /. 13.8)) ()) in
   Plate.Lookups.thumb ~curve ()
 
 let plate_builder =
