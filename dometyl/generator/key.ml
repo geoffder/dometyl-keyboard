@@ -5,6 +5,7 @@ module Face = struct
     { path : Path3.t
     ; points : Points.t
     ; bounds : Points.t
+    ; normal : V3.t [@scad.unit]
     }
   [@@deriving scad]
 
@@ -57,8 +58,7 @@ type t =
   }
 [@@deriving scad]
 
-let orthogonal t side =
-  V3.(normalize ((Faces.face t.faces side).points.centre -@ t.origin))
+let orthogonal t side = (Faces.face t.faces side).normal
 
 let normal t =
   let Points.{ top_left; bot_left; _ } = (Faces.face t.faces `North).points in
@@ -123,8 +123,8 @@ let make
           ; bot_right = bot_edge.b
           ; centre = v3 0. (outer_h /. -2.) 0.
           }
-      in
-      Face.{ path = front; points; bounds = Points.of_ccw_path sq }
+      and normal = v3 0. (-1.) 0. in
+      Face.{ path = front; points; bounds = Points.of_ccw_path sq; normal }
     in
     let north = Face.zrot Float.pi south in
     let east =
@@ -159,8 +159,8 @@ let make
           ; bot_right = south.points.bot_left
           ; centre
           }
-      in
-      Face.{ path; points; bounds }
+      and normal = v3 1. 0. 0. in
+      Face.{ path; points; bounds; normal }
     in
     let west = Face.zrot Float.pi east in
     Faces.{ north; south; east; west }

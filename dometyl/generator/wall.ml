@@ -83,11 +83,10 @@ type t =
    it's orthoganal is pointing in z, that makes the short edge (between the
    bottom and top long edge), as vertical as possible. The pivoted face, and its
    new orthogonal are returned. *)
-let swing_face key_origin face =
+let swing_face face =
   let dir = Key.Face.direction face in
-  let ortho = V3.(normalize (face.points.centre -@ key_origin)) in
   let about, z_sign =
-    if V3.get_z ortho > 0.
+    if V3.get_z face.normal > 0.
     then V3.mid face.points.bot_left face.points.bot_right, 1.
     else V3.mid face.points.top_left face.points.top_right, -1.
   in
@@ -96,7 +95,7 @@ let swing_face key_origin face =
     let up = V3.(normalize (face.points.top_left -@ face.points.bot_left)) in
     Quaternion.make dir @@ (V2.angle (proj up) (proj @@ v3 0. 0. 1.) *. z_sign)
   in
-  Key.Face.quaternion ~about q face, V3.quaternion q ortho
+  Key.Face.quaternion ~about q face
 
 let make
     ?(clearance = 0.)
@@ -111,7 +110,8 @@ let make
     (key : Key.t)
   =
   let start_face = Key.Faces.face key.faces side in
-  let pivoted_face, ortho = swing_face key.origin start_face in
+  let pivoted_face = swing_face start_face in
+  let ortho = pivoted_face.normal in
   let cleared_face = Key.Face.translate (V3.map (( *. ) clearance) ortho) pivoted_face in
   let xy = V3.(normalize (mul ortho (v3 1. 1. 0.)))
   and dir = Points.direction cleared_face.points

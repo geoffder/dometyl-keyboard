@@ -308,9 +308,8 @@ let join_walls
         ( try
             let side l r =
               let f = Path3.to_continuous [ l; r ] in
-              let u = Path3.continuous_closest_point ~n_steps:90 f pt
-              and normal = V3.(normalize @@ (face.bounds.centre -@ w.key.origin)) in
-              V3.(f u -@ (normal *$ 0.1))
+              let u = Path3.continuous_closest_point ~n_steps:90 f pt in
+              V3.(f u -@ (face.normal *$ 0.1))
               (* fudge in to avoid coincident face *)
             in
             let side_bot = side face.bounds.bot_left face.bounds.bot_right

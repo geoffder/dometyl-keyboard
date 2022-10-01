@@ -70,13 +70,12 @@ type t =
   }
 [@@deriving scad]
 
-(** [swing_face key_orgin face]
+(** [swing_face face]
 
     Find a rotation around [face]s bottom or top axis, depending on which way
-    it is pointing in z (determined with [key_origin]), that brings [face] to a more
-    vertical orientation, returning a pivoted {!Key.Face.t} and it's new orthogonal
-    {!V3.t}. *)
-val swing_face : V3.t -> Key.Face.t -> Key.Face.t * V3.t
+    it is pointing in z (determined by [face.normal]), that brings [face] to a more
+    vertical orientation, returning a pivoted {!Key.Face.t}. *)
+val swing_face : Key.Face.t -> Key.Face.t
 
 (** [make side keyhole]
 

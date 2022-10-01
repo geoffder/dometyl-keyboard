@@ -12,8 +12,8 @@ let point p = Point p
 
 let locate (key : Key.t) = function
   | Some (loc : v2) ->
-    let xaxis = V3.(normalize @@ (key.faces.east.bounds.centre -@ key.origin))
-    and yaxis = V3.(normalize @@ (key.faces.north.bounds.centre -@ key.origin)) in
+    let xaxis = key.faces.east.normal
+    and yaxis = key.faces.north.normal in
     let xshift = V3.(xaxis *$ (key.config.outer_w *. (loc.x -. 0.5)))
     and yshift = V3.(yaxis *$ (key.config.outer_h *. (loc.y -. 0.5))) in
     V3.(to_v2 @@ (key.origin +@ xshift +@ yshift))

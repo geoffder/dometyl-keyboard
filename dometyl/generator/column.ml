@@ -55,10 +55,10 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
     match join_ax with
     | `NS ->
       (* fudge faces in for union *)
-      let s = V3.(normalize (fs.north.points.centre -@ key.origin) *$ 0.01) in
+      let s = V3.(fs.north.normal *$ 0.01) in
       get `North >> Key.Face.translate (V3.neg s), get `South >> Key.Face.translate s
     | `EW ->
-      let s = V3.(normalize (fs.east.points.centre -@ key.origin) *$ 0.01) in
+      let s = V3.(fs.east.normal *$ 0.01) in
       get `East >> Key.Face.translate (V3.neg s), get `West >> Key.Face.translate s
   in
   let join_keys (a : Key.t) (b : Key.t) =
