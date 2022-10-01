@@ -224,7 +224,7 @@ let spline_base
 let join_walls
     ?(max_angle = 1.4)
     ?(slices = 12)
-    ?(gap_fill = `MinArea 30.)
+    ?(gap_fill = true)
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
@@ -282,8 +282,8 @@ let join_walls
   and ((_, b'_top) as b') = edges w2.drawer b_frac'
   and ((b_bot, b_top) as b) = edges w2.bounds_drawer b_frac in
   let tri =
-    match gap_fill with
-    | `MinArea min_area when sharp > max_angle ->
+    if gap_fill && sharp > max_angle
+    then (
       let bot, top, bot', top', far_top' =
         let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.001)
         and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.001) in
@@ -303,7 +303,7 @@ let join_walls
       let plane = Path3.to_plane (Points.to_ccw_path face.bounds) in
       (* find the best points along the perpendicular edges to use as the third
             point of the gap filling triangle *)
-      ( match Plane.line_intersection plane V3.{ a = far_top'; b = top' } with
+      match Plane.line_intersection plane V3.{ a = far_top'; b = top' } with
       | `Point (pt, _) ->
         ( try
             let side l r =
@@ -317,20 +317,13 @@ let join_walls
             and side_top = side face.bounds.top_left face.bounds.top_right in
             let top_row = [ top; side_top; top' ]
             and bot_row = [ bot; side_bot; bot' ] in
-            let top_area = Path3.area top_row in
-            if top_area > min_area
-            then (
-              let is_ccw = V3.clockwise_sign top side_top top' < 0. in
-              let top_row = if is_ccw then top_row else List.rev top_row
-              and bot_row = if is_ccw then bot_row else List.rev bot_row in
-              Some (Mesh.to_scad @@ Mesh.skin_between ~slices:10 bot_row top_row) )
-            else None (* small gap, don't bother to fill *)
+            Some (Mesh.to_scad @@ Mesh.hull (List.rev_append bot_row top_row))
           with
         | Failure _ ->
           print_endline "NOTE: Full wall join gap filling failed.";
           None )
       | _ -> None (* inner edge line does not hit outer perpendicular face *) )
-    | _ -> None (* no shift perfomed, so no gap to fill *)
+    else None (* no shift perfomed, so no gap to fill *)
   in
   let a', a, b, b' = profs a' a b b' in
   let scad =
@@ -343,7 +336,7 @@ type config =
   | FullJoin of
       { slices : int option
       ; max_angle : float option
-      ; gap_fill : [ `MinArea of float | `No ] option
+      ; gap_fill : bool option
       }
   | Spline of
       { height : float option

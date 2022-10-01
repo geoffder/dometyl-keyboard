@@ -26,12 +26,7 @@ val outline_2d : t -> Path2.t
     Retrieve the inline points of [t] and project them to 2d vectors. *)
 val inline_2d : t -> Path2.t
 
-val full_join
-  :  ?slices:int
-  -> ?max_angle:float
-  -> ?gap_fill:[ `MinArea of float | `No ]
-  -> unit
-  -> config
+val full_join : ?slices:int -> ?max_angle:float -> ?gap_fill:bool -> unit -> config
 
 val spline
   :  ?height:float
@@ -82,7 +77,7 @@ val skeleton
   -> ?tight_spline_d:float
   -> ?join_slices:int
   -> ?max_join_angle:float
-  -> ?gap_fill:[ `MinArea of float | `No ]
+  -> ?gap_fill:bool
   -> ?east_link:config
   -> ?west_link:config
   -> ?north_joins:(int -> bool)
@@ -107,7 +102,7 @@ val closed
   -> ?tight_spline_d:float
   -> ?join_slices:int
   -> ?max_join_angle:float
-  -> ?gap_fill:[ `MinArea of float | `No ]
+  -> ?gap_fill:bool
   -> ?west_link:config
   -> ?east_link:config
   -> Walls.t
