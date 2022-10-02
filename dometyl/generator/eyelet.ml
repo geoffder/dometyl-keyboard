@@ -118,28 +118,37 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
     List.concat [ wall_ps; swoop_l; outer; swoop_r ]
   in
   let scad, cut =
-    match hole with
-    | Through ->
-      ( Poly2.make ~holes:[ inner ] outline
-        |> Poly2.to_scad
-        |> Scad.extrude ~height:thickness
-      , None )
-    | Inset { depth = d; punch } ->
-      let inset =
-        let s = Scad.(ztrans (-0.01) @@ extrude ~height:(d +. 0.01) (polygon inner)) in
-        match punch with
-        | Some punch ->
-          let rad =
-            match punch with
-            | `Abs r -> r
-            | `Rel r -> inner_rad *. r
-          in
-          Scad.cylinder ~fn ~height:(thickness -. d +. 0.02) rad
-          |> Scad.translate (V3.of_v2 ~z:(d -. 0.01) hole_centre')
-          |> Scad.add s
-        | None -> s
-      and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
-      Scad.affine lift @@ Scad.difference foot [ inset ], Some (Scad.affine lift inset)
+    try
+      match hole with
+      | Through ->
+        ( Poly2.make ~holes:[ inner ] outline
+          |> Poly2.to_scad
+          |> Scad.extrude ~height:thickness
+        , None )
+      | Inset { depth = d; punch } ->
+        let inset =
+          Poly2.validation (Poly2.make ~holes:[ inner ] outline);
+          let s = Scad.(ztrans (-0.01) @@ extrude ~height:(d +. 0.01) (polygon inner)) in
+          match punch with
+          | Some punch ->
+            let rad =
+              match punch with
+              | `Abs r -> r
+              | `Rel r -> inner_rad *. r
+            in
+            Scad.cylinder ~fn ~height:(thickness -. d +. 0.02) rad
+            |> Scad.translate (V3.of_v2 ~z:(d -. 0.01) hole_centre')
+            |> Scad.add s
+          | None -> s
+        and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
+        Scad.affine lift @@ Scad.difference foot [ inset ], Some (Scad.affine lift inset)
+    with
+    | Poly2.(SelfIntersection _ | CrossIntersection _) ->
+      failwith
+      @@ Printf.sprintf
+           "Outline of eyelet at %s contains intersections. Consider decreasing the \
+            width of the foot points or burying them deeper."
+           (V3.to_string hole_centre)
   in
   { scad; cut; centre = hole_centre; config }
 
