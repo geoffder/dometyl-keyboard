@@ -25,3 +25,4 @@ module Hand = Hand
 module Key = Key
 module IMap = IMap
 module Idx = Idx
+module Util = Util
