@@ -4,6 +4,7 @@ open! Syntax
 type t =
   { scad : Scad.d3
   ; plate : Plate.t
+  ; plate_glue : Scad.d3
   ; walls : Walls.t
   ; connections : Connect.t
   ; eyelets : Eyelet.t list
@@ -25,7 +26,8 @@ let make
   let plate =
     plate_builder (if right_hand then keyhole else Key.mirror_internals keyhole)
   in
-  let walls = wall_builder plate in
+  let plate_glue = plate_welder plate
+  and walls = wall_builder plate in
   let connections = base_connector walls in
   let eyelets =
     let locs = List.append free_eyelets (Eyelet.wall_locations ~walls wall_eyelets) in
@@ -39,7 +41,7 @@ let make
     Scad.sub
       (Scad.union
          [ Plate.to_scad plate
-         ; plate_welder plate
+         ; plate_glue
          ; Walls.to_scad walls
          ; Connect.to_scad connections
          ] )
@@ -49,12 +51,15 @@ let make
   let t =
     { scad = List.fold_left (fun s eye -> Eyelet.apply eye s) scad eyelets
     ; plate
+    ; plate_glue
     ; walls
     ; connections
     ; eyelets
     }
   in
   if right_hand then t else mirror (v3 1. 0. 0.) t
+
+let plate_scad t = Scad.add (Plate.to_scad t.plate) t.plate_glue
 
 let to_scad ?(show_caps = false) ?(show_cutouts = false) t =
   let caps = if show_caps then Some (Plate.collect_caps t.plate) else None

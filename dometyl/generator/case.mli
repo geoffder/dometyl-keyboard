@@ -12,6 +12,7 @@ open! Scad_ml
 type t =
   { scad : Scad.d3
   ; plate : Plate.t
+  ; plate_glue : Scad.d3
   ; walls : Walls.t
   ; connections : Connect.t
   ; eyelets : Eyelet.t list
@@ -55,7 +56,13 @@ val make
   -> Key.t
   -> t
 
-(** [to_scad ?show_caps ?show_cutouts]
+(** [plate_scad t]
+
+    A union of the model of the plate (body and thumb columns) along with the
+    glue produced by the [plate_welder] function when the case [t] was created. *)
+val plate_scad : t -> Scad.d3
+
+(** [to_scad ?show_caps ?show_cutouts t]
 
     Extract the contained {!Scad.d3}, optionally tacking on keycaps and case
     cutouts (such as representations of hotswap sockets, that are used to
