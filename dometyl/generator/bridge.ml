@@ -12,10 +12,16 @@ let slide ?(d1 = 0.5) ?(d2 = 1.0) ~ortho scad =
    docs. The out needs d1 and d2 to allow shift outward before hulling up for key
    clearance. Since the in_d is inside the key, only one is relevant. If it is too
    large, it will interfere with needed switch clearance (like amoeba, hotswap). *)
+
+(* TODO:
+   - try to replace in_d/out_d params with angle sharpness check to auto
+    slide points.
+   - consider transition to using Mesh.hull from Scad.hull, though would
+    require changes to also be made to Column, which handles the Join.t type. *)
 let keys
     ?(start = `East)
     ?(dest = `West)
-    ?(in_d = 0.25)
+    ?(in_d = 0.2)
     ?out_d1
     ?out_d2
     (k1 : Key.t)
@@ -26,7 +32,7 @@ let keys
       let ortho = Key.orthogonal outey out_side in
       let scad =
         let p = (Key.Faces.face outey.faces out_side).path in
-        Mesh.skin_between ~slices:0 p (Path3.translate (V3.smul ortho 0.01) p)
+        Mesh.skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.01)) p)
         |> Mesh.to_scad
       in
       slide ?d1:out_d1 ?d2:out_d2 ~ortho scad
@@ -36,7 +42,7 @@ let keys
       let scad =
         let p = (Key.Faces.face inney.faces in_side).path in
         Mesh.(
-          to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.1)) p))
+          to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.01)) p))
       in
       slide ~d1:0. ~d2:(Float.neg in_d) ~ortho scad
     in
@@ -49,7 +55,7 @@ let keys
 
 let cols
     ?(ax = `EW)
-    ?(in_d = 0.25)
+    ?(in_d = 0.2)
     ?out_d1
     ?out_d2
     ?(skip = [])
