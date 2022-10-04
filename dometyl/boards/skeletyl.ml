@@ -96,11 +96,12 @@ let build ?right_hand ?hotswap () =
       ~clearance:2.75
       ~corner:(Path3.Round.chamf (`Cut 0.5))
       ()
+  and eyelets =
+    Case.eyelets ~wall_locs:Eyelet.(Thumb (`S, Idx.Idx 0) :: default_wall_locs) ()
   in
   Case.make
     ?right_hand
-    ~wall_eyelets:Eyelet.(Thumb (`S, Idx.Idx 0) :: default_wall_locs)
-      (* ~wall_eyelets:[] *)
+    ~eyelets
     ~plate_builder
     ~plate_welder
     ~wall_builder

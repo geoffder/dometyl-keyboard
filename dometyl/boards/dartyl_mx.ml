@@ -101,7 +101,7 @@ let build ?hotswap () =
       ~thumb_angle:Float.(v3 0. (-0.3) (pi /. 17.))
   in
   Case.make
-    ~eyelet_config:bumpon
+    ~eyelets:(Case.eyelets ~config:bumpon ())
     ~plate_welder
     ~wall_builder
     ~base_connector

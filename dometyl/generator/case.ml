@@ -1,6 +1,24 @@
 open! Scad_ml
 open! Syntax
 
+type eyelets =
+  { config : Eyelet.config option
+  ; width : float option
+  ; bury : float option
+  ; wall_locs : Eyelet.wall_loc list
+  ; free_locs : [ `Loc of v3 | `Reloc of v3 | `U of float ] list
+  }
+
+let eyelets
+    ?config
+    ?width
+    ?bury
+    ?(wall_locs = Eyelet.default_wall_locs)
+    ?(free_locs = [])
+    ()
+  =
+  { config; width; bury; wall_locs; free_locs }
+
 type t =
   { scad : Scad.d3
   ; plate : Plate.t
@@ -13,9 +31,7 @@ type t =
 
 let make
     ?(right_hand = true)
-    ?(eyelet_config = Eyelet.m4_config)
-    ?(wall_eyelets = Eyelet.default_wall_locs)
-    ?(free_eyelets = [])
+    ?(eyelets = eyelets ())
     ~plate_builder
     ~plate_welder
     ~wall_builder
@@ -30,13 +46,14 @@ let make
   and walls = wall_builder plate in
   let connections = base_connector walls in
   let eyelets =
-    let locs = List.append free_eyelets (Eyelet.wall_locations ~walls wall_eyelets) in
     List.map
       (Eyelet.place
-         ~config:eyelet_config
+         ?config:eyelets.config
+         ?width:eyelets.width
+         ?bury:eyelets.bury
          ~inline:connections.Connect.inline
          ~outline:connections.outline )
-      locs
+      (List.append eyelets.free_locs (Eyelet.wall_locations ~walls eyelets.wall_locs))
   and scad =
     Scad.sub
       (Scad.union

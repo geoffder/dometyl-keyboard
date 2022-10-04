@@ -85,12 +85,12 @@ let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
 let build ?right_hand ?(empty = false) () =
   (* NOTE: It is strongly advised to use screws with heatset inserts rather than
    magnets when doing a hall-effect rubber dome build to avoid interference. *)
-  let eyelet_config = Eyelet.m4_config in
+  let eyelets = Case.eyelets ~config:Eyelet.m4_config () in
   (* use empty for quicker preview *)
   let hole = if empty then Niz.make_empty_hole () else Niz.make_hole () in
   Case.make
     ?right_hand
-    ~eyelet_config
+    ~eyelets
     ~plate_builder
     ~plate_welder
     ~wall_builder

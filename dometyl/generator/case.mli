@@ -6,6 +6,9 @@
 
 open! Scad_ml
 
+(** Eyelet configuration / placement *)
+type eyelets
+
 (** The top-level type of this library. The {!Scad.d3} scad held within this type
     should generally represent the finished case, made up of the three major building
     blocks: {!Plate.t}, {!Walls.t}, and {!Connect.t}. *)
@@ -18,6 +21,22 @@ type t =
   ; eyelets : Eyelet.t list
   }
 [@@deriving scad]
+
+(** [eyelets ?config ?width ?bury ?wall_locs ?free_locs ()]
+
+    Create an eyelets specification. Defaults are left to the functions that
+    actually place/construct thee eyelets (e.g. {!Eyelet.place} and
+    {!Eyelet.make}).
+    - default eyelet config is {!Eyelet.m4_config}
+    - default placements are determined with {!Eyelet.default_wall_locs} *)
+val eyelets
+  :  ?config:Eyelet.config
+  -> ?width:float
+  -> ?bury:float
+  -> ?wall_locs:Eyelet.wall_loc list
+  -> ?free_locs:[ `Loc of v3 | `Reloc of v3 | `U of float ] list
+  -> unit
+  -> eyelets
 
 (** [make ?right_hand ~plate_builder ~plate_welder ~wall_builder ~base_connector
       ~ports_cutter keyhole]
@@ -45,9 +64,7 @@ clips/cutouts such as those for hotswap holders in the right orientation).
   parameter. *)
 val make
   :  ?right_hand:bool
-  -> ?eyelet_config:Eyelet.config
-  -> ?wall_eyelets:Eyelet.wall_loc list
-  -> ?free_eyelets:[ `Loc of v3 | `Reloc of v3 | `U of float ] list
+  -> ?eyelets:eyelets
   -> plate_builder:(Key.t -> Plate.t)
   -> plate_welder:(Plate.t -> Scad.d3)
   -> wall_builder:(Plate.t -> Walls.t)

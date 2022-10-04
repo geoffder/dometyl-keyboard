@@ -79,7 +79,7 @@ let ports_cutter = BastardShield.(cutter ~x_off:0.5 ~y_off:(-1.2) (make ()))
 let build ?right_hand ?hotswap () =
   Case.make
     ?right_hand
-    ~eyelet_config:Eyelet.magnet_6x3_config
+    ~eyelets:(Case.eyelets ~config:Eyelet.magnet_6x3_config ())
     ~plate_builder
     ~plate_welder
     ~wall_builder

@@ -90,11 +90,11 @@ let plate_welder plate =
 let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:0. (make ()))
 
 let build ?right_hand ?hotswap () =
-  (* let eyelet_config = Eyelet.magnet_6x3_config in *)
-  let eyelet_config = Eyelet.m4_config in
+  (* let eyelets = Case.eyelets ~config:Eyelet.magnet_6x3_config () in *)
+  let eyelets = Case.eyelets ~config:Eyelet.m4_config () in
   Case.make
     ?right_hand
-    ~eyelet_config
+    ~eyelets
     ~plate_builder
     ~plate_welder
     ~wall_builder

@@ -96,7 +96,7 @@ let build ?right_hand ?hotswap () =
   and eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 } in
   Case.make
     ?right_hand
-    ~eyelet_config
+    ~eyelets:(Case.eyelets ~config:eyelet_config ())
     ~plate_builder
     ~plate_welder
     ~wall_builder
