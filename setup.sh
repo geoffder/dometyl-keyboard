@@ -18,11 +18,19 @@ fi
 # install project dependencies
 $opam_exec install ./dometyl.opam --deps-only --with-doc
 
+# vendor scad_ml fork
+git clone https://github.com/geoffder/scad-ml
+
+# not strictly necessary, but user may want to be able to use scad_ml elsewhere
+cd scad-ml
+$opam_exec install ./scad_ml.opam
+cd ..
+
 # install opam dev depenencies
 $opam_exec install \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
+# build dometyl
 dune build
 
-# return to dometyl and build
 cd "$base_dir"
