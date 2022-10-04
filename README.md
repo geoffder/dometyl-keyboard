@@ -2,7 +2,7 @@
 
 ![Splaytyl Build](things/boards/splaytyl/images/splaytyl_both.jpeg)
 
-## Another Dactyl inspired keyboard, supporting MX, Choc, and rubber domes.
+## Another Dactyl inspired keyboard. Supporting MX, Choc, and rubber domes.
 This is a library for generating paramaterized split-hand, concave, columnar,
 ergonomic keyboards in the spirit of the
 [Dactyl](https://github.com/adereth/dactyl-keyboard), but written from the
