@@ -48,8 +48,7 @@ of course also want [OpenSCAD](https://openscad.org/) to preview/render/export
 the generated models (see [OpenSCAD configuration](#openscad-configuration) for tips).
 
 As you are reading the readme of the #revamp fork at the moment, make sure that
-you are in the correct branch before proceeding:
-`git switch revamp`.
+you are in the correct branch before proceeding (`git switch revamp`).
 
 After installing `opam`, and confirming that you are in this branch, you can run
 the [setup.sh](setup.sh) script for convenience, or follow the instructions
