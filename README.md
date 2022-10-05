@@ -67,10 +67,13 @@ choice).
 From inside [dometyl](dometyl):
 * `opam install . --deps-only --with-doc`
 * `git clone https://github.com/geoffder/scad-ml`
+* `git clone https://github.com/geoffder/ppx_deriving_scad`
 * `dune build`
-Optionally, `opam install ./scad_ml.opam` can be ran inside the `scad-ml`
-repository to install it in the current opam compiler switch, otherwise `dune`
-will take care of building it on its own.
+Optionally, if you'd like to be able to use the scad libraries in other
+contexts, you can run `opam install ./scad_ml.opam` inside the `scad-ml`
+repository (and similar for `ppx_deriving_scad`) to install it (/them) in the
+current opam compiler switch, otherwise `dune` will take care of building
+everything on its own.
 
 **Highly recommended for dev experience:**
 * `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
