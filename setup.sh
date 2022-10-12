@@ -27,5 +27,5 @@ git clone https://github.com/OCADml/ppx_deriving_cad
 $opam_exec install \
     merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc
 
-# build dometyl (and remain in project)
+# build dometyl
 dune build
