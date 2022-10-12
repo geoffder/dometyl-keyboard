@@ -1,4 +1,5 @@
-open! Scad_ml
+open! OCADml
+open! OSCADml
 
 module Join : sig
   (** A hull between {!Key.t}s of a column, and thin scads for each of the outer faces
@@ -9,7 +10,7 @@ module Join : sig
       { west : Scad.d3
       ; east : Scad.d3
       }
-    [@@deriving scad]
+    [@@deriving cad]
 
     val map : f:(Scad.d3 -> Scad.d3) -> t -> t
     val face : t -> [< `East | `West ] -> Scad.d3
@@ -19,7 +20,7 @@ module Join : sig
     { scad : Scad.d3
     ; faces : Faces.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 end
 
 type config =
@@ -34,7 +35,7 @@ type t =
   ; keys : Key.t IMap.t
   ; joins : Join.t IMap.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (** [make ?join_ax ~n_keys ~curve ~caps key]
 

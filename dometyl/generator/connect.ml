@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 open! Syntax
 
 type t =
@@ -6,7 +7,7 @@ type t =
   ; outline : Path3.t
   ; inline : Path3.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let clockwise_union ts =
   let collect ~init line = List.fold_left (fun ps p -> p :: ps) init line in
@@ -216,7 +217,7 @@ let spline_base
       let rel = d /. V3.distance w2.foot.top_left w2.foot.top_right in
       round_edges @@ end_edges ~shrink:end_shrink ~frac:(Float.min 0.99 rel) false
     in
-    Mesh.to_scad @@ Mesh.skin ~slices (List.append (start :: rows) [ finish ])
+    Scad.of_mesh @@ Mesh.skin ~slices (List.append (start :: rows) [ finish ])
   and inline = List.map (fun (_, m) -> V3.affine m in_start') transforms
   and outline = List.map (fun (_, m) -> V3.affine m out_start') transforms in
   { scad; inline; outline }
@@ -316,7 +317,7 @@ let join_walls
             and side_top = side face.bounds.top_left face.bounds.top_right in
             let top_row = [ top; side_top; top' ]
             and bot_row = [ bot; side_bot; bot' ] in
-            Some (Mesh.to_scad @@ Mesh.hull (List.rev_append bot_row top_row))
+            Some (Scad.of_mesh @@ Mesh.hull (List.rev_append bot_row top_row))
           with
         | Failure _ ->
           print_endline "NOTE: Full wall join gap filling failed.";
@@ -326,7 +327,7 @@ let join_walls
   in
   let a', a, b, b' = profs a' a b b' in
   let scad =
-    let s = Mesh.to_scad @@ Mesh.skin ~slices:(`Mix [ 2; slices; 2 ]) [ a'; a; b; b' ] in
+    let s = Scad.of_mesh @@ Mesh.skin ~slices:(`Mix [ 2; slices; 2 ]) [ a'; a; b; b' ] in
     Util.value_map_opt ~default:s (Scad.add s) tri
   in
   Util.{ scad; outline = [ last a_top; last b_top ]; inline = [ last a_bot; last b_bot ] }

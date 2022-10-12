@@ -1,4 +1,5 @@
-open Scad_ml
+open OCADml
+open OSCADml
 open Syntax
 
 module Lookups = struct
@@ -77,12 +78,12 @@ type config =
   }
 
 type t =
-  { config : config [@scad.ignore]
+  { config : config [@cad.ignore]
   ; scad : Scad.d3
   ; body : Columns.t
   ; thumb : Columns.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let make
     ?(n_body_cols = 5)

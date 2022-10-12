@@ -1,6 +1,7 @@
 (** Switch plate generation. *)
 
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (** Provides per-column lookup functions to be used by {!val:make} for placement of
     {!Key.t}s to form {!Column.t}s, and for arrangment and orientation of the
@@ -83,7 +84,7 @@ type t =
   ; body : Columns.t
   ; thumb : Columns.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (** [make ?n_rows ?centre_row ?n_cols ?centre_col ?spacing ?tent
     ?rotate_thumb_clips ?thumb_offset ?thumb_angle ?body_lookups ?thumb_lookups

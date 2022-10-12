@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 type style =
   | Solid
@@ -54,7 +55,7 @@ let solid_shell bot_outer bot_inner top_outer top_inner =
       (Path3.ztrans (-0.01) bot_inner)
       (Path3.ztrans 0.01 top_inner)
   in
-  Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+  Scad.(sub (of_mesh outer) (of_mesh inner))
 
 let prison_shell
     ?(n_pillars = 30)
@@ -152,7 +153,7 @@ let prison_shell
     fst @@ List.fold_left prune ([ List.hd rows ], List.hd rows) (List.tl rows)
     |> List.rev
     |> Mesh.skin ~slices:(`Flat 0)
-    |> Mesh.to_scad
+    |> Scad.of_mesh
   in
   let z = (Path3.bbox top_outer).min.z in
   let bot =
@@ -163,7 +164,7 @@ let prison_shell
         (Path3.ztrans (-0.01) bot_inner)
         (Path3.ztrans (z +. 0.01) bot_inner)
     in
-    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+    Scad.(sub (of_mesh outer) (of_mesh inner))
   and top =
     let outer = Mesh.skin_between ~slices:1 (Path3.ztrans (-.z) top_outer) top_outer
     and inner =
@@ -172,7 +173,7 @@ let prison_shell
         (Path3.ztrans (-.z -. 0.01) top_inner)
         (Path3.ztrans 0.01 top_inner)
     in
-    Scad.sub (Mesh.to_scad outer) (Mesh.to_scad inner)
+    Scad.(sub (of_mesh outer) (of_mesh inner))
   in
   Scad.union (bot :: top :: List.init n_pillars pillar)
 

@@ -1,4 +1,5 @@
-open Scad_ml
+open OCADml
+open OSCADml
 open Syntax
 
 module Join = struct
@@ -7,7 +8,7 @@ module Join = struct
       { west : Scad.d3
       ; east : Scad.d3
       }
-    [@@deriving scad]
+    [@@deriving cad]
 
     let map ~f t = { west = f t.west; east = f t.east }
 
@@ -20,7 +21,7 @@ module Join = struct
     { scad : Scad.d3
     ; faces : Faces.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 end
 
 type config =
@@ -30,12 +31,12 @@ type config =
   }
 
 type t =
-  { config : config [@scad.ignore]
+  { config : config [@cad.ignore]
   ; scad : Scad.d3
   ; keys : Key.t IMap.t
   ; joins : Join.t IMap.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
   let place_key keys i =
@@ -62,7 +63,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       get `East >> Key.Face.translate (V3.neg s), get `West >> Key.Face.translate s
   in
   let join_keys (a : Key.t) (b : Key.t) =
-    Mesh.to_scad @@ Mesh.hull (List.rev_append (get_start a).path (get_dest b).path)
+    Scad.of_mesh @@ Mesh.hull (List.rev_append (get_start a).path (get_dest b).path)
   in
   let keys = List.fold_left place_key IMap.empty (List.init n_keys Fun.id) in
   let joins =
@@ -89,7 +90,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
               ; face2.points.top_right +@ (dir2 *$ 0.01)
               ]
             ]
-          |> Mesh.to_scad
+          |> Scad.of_mesh
         and east =
           Mesh.of_rows
             [ [ face1.points.top_right
@@ -103,7 +104,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
               ; face2.points.top_left +@ (dir2 *$ -0.01)
               ]
             ]
-          |> Mesh.to_scad
+          |> Scad.of_mesh
         in
         IMap.add key Join.{ scad; faces = { west; east } } m
     in

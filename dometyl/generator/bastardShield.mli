@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 type t =
   { scad : Scad.d3
@@ -6,7 +7,7 @@ type t =
   ; screw_l : V3.t
   ; screw_r : V3.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 val print_pcb : ?right_hand:bool -> float -> Scad.d3
 val pcb : float -> Scad.d3

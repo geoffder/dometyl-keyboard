@@ -1,4 +1,4 @@
-open! Scad_ml
+open OSCADml
 
 type cutter = ?z:float -> float -> Scad.d3
 

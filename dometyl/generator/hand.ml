@@ -1,14 +1,15 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 module Bone = struct
   type t =
     { scad : Scad.d3
     ; base : V3.t
     ; tip : V3.t
-    ; joint : V3.t [@scad.unit]
-    ; normal : V3.t [@scad.unit]
+    ; joint : V3.t [@cad.unit]
+    ; normal : V3.t [@cad.unit]
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let bend a t =
     let q = Quaternion.make t.joint a in
@@ -45,11 +46,11 @@ end
 
 module Finger = struct
   type t =
-    { prox : Bone.t [@scad.d3]
+    { prox : Bone.t [@cad.d3]
     ; mid : Bone.t
     ; dist : Bone.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   type config =
     { offset : V3.t option
@@ -94,12 +95,12 @@ end
 
 module Fingers = struct
   type t =
-    { index : Finger.t [@scad.d3]
+    { index : Finger.t [@cad.d3]
     ; middle : Finger.t
     ; ring : Finger.t
     ; pinky : Finger.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let map f t =
     { index = f t.index; middle = f t.middle; ring = f t.ring; pinky = f t.pinky }
@@ -133,7 +134,7 @@ module Thumb = struct
     { bones : Finger.t
     ; duct : V3.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let make ?splay ?offset ?(radii = 9., 8., 7.) lengths =
     let bones = Finger.make ?splay ?offset ~radii lengths in
@@ -176,13 +177,13 @@ type t =
   { fingers : Fingers.t
   ; thumb : Thumb.t
   ; carpals : Scad.d3
-  ; knuckle_rad : float [@scad.ignore]
+  ; knuckle_rad : float [@cad.ignore]
   ; origin : V3.t
-  ; wrist : V3.t [@scad.unit]
-  ; heading : V3.t [@scad.unit]
-  ; normal : V3.t [@scad.unit]
+  ; wrist : V3.t [@cad.unit]
+  ; heading : V3.t [@cad.unit]
+  ; normal : V3.t [@cad.unit]
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let flex_fingers ?mult a t = { t with fingers = Fingers.flex ?mult a t.fingers }
 let extend_fingers ?mult a t = { t with fingers = Fingers.extend ?mult a t.fingers }

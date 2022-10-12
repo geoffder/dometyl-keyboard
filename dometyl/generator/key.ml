@@ -1,13 +1,14 @@
-open Scad_ml
+open! OCADml
+open! OSCADml
 
 module Face = struct
   type t =
     { path : Path3.t
     ; points : Points.t
     ; bounds : Points.t
-    ; normal : V3.t [@scad.unit]
+    ; normal : V3.t [@cad.unit]
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let direction { points = { top_left; top_right; _ }; _ } =
     V3.normalize V3.(top_left -@ top_right)
@@ -15,12 +16,12 @@ end
 
 module Faces = struct
   type t =
-    { north : Face.t [@scad.d3]
+    { north : Face.t [@cad.d3]
     ; south : Face.t
     ; east : Face.t
     ; west : Face.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let map f t = { north = f t.north; south = f t.south; east = f t.east; west = f t.west }
 
@@ -49,14 +50,14 @@ type config =
   }
 
 type t =
-  { config : config [@scad.ignore]
+  { config : config [@cad.ignore]
   ; scad : Scad.d3
   ; origin : V3.t
   ; faces : Faces.t
   ; cap : Scad.d3 option
   ; cutout : Scad.d3 option
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let orthogonal t side = (Faces.face t.faces side).normal
 
@@ -91,7 +92,7 @@ let make
     | None -> sq
   in
   let hole =
-    let outer = Mesh.to_scad @@ Mesh.of_rows [ front; Path3.ytrans outer_h front ]
+    let outer = Scad.of_mesh @@ Mesh.of_rows [ front; Path3.ytrans outer_h front ]
     and inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
     clip @@ Scad.sub outer inner
   in

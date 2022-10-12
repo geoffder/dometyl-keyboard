@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 type t =
   { top_left : V3.t
@@ -7,7 +8,7 @@ type t =
   ; bot_right : V3.t
   ; centre : V3.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 type pos =
   [ `BL

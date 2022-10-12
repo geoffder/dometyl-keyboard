@@ -1,4 +1,5 @@
-open Scad_ml
+open! OCADml
+open! OSCADml
 
 type t = Scad.d3
 
@@ -33,7 +34,7 @@ let keys
       let scad =
         let p = (Key.Faces.face outey.faces out_side).path in
         Mesh.skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.01)) p)
-        |> Mesh.to_scad
+        |> Scad.of_mesh
       in
       slide ?d1:out_d1 ?d2:out_d2 ~ortho scad
     in
@@ -41,8 +42,8 @@ let keys
       let ortho = Key.orthogonal inney in_side in
       let scad =
         let p = (Key.Faces.face inney.faces in_side).path in
-        Mesh.(
-          to_scad @@ skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.01)) p))
+        Mesh.(skin_between ~slices:0 p (Path3.translate (V3.smul ortho (-0.01)) p))
+        |> Scad.of_mesh
       in
       slide ~d1:0. ~d2:(Float.neg in_d) ~ortho scad
     in

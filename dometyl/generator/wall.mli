@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (** Configuration type for number of steps used to draw the bezier curves that form the
     walls. *)
@@ -34,7 +35,7 @@ module Drawer : sig
     | `XY of float * float
     ]
 
-  type t = loc -> Path3.t [@@deriving scad]
+  type t = loc -> Path3.t [@@deriving cad]
 
   val map : (Path3.t -> Path3.t) -> t -> t
 end
@@ -56,7 +57,7 @@ val default : config
 type t =
   { scad : Scad.d3 (** Aggregate scad, including screw outshoot if included *)
   ; key : Key.t
-  ; side : [ `North | `East | `South | `West ] [@scad.ignore]
+  ; side : [ `North | `East | `South | `West ] [@cad.ignore]
   ; start : Points.t (** Corner points of the {!Key.Face.t} this wall emerged from *)
   ; cleared : Points.t
         (** Corner points of the swung (vertical) and cleared [start] face *)
@@ -68,7 +69,7 @@ type t =
         (** Same as drawer, but operating within the unrounded bounding corners
             of the face instead. *)
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (** [swing_face face]
 

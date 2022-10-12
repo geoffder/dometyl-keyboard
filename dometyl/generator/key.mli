@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 module Face : sig
   (** An outer face of a keyhole. *)
@@ -11,7 +12,7 @@ module Face : sig
     ; bounds : Points.t (** Original unrounded corner points. *)
     ; normal : V3.t (** Normal vector *)
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   val direction : t -> V3.t
 end
@@ -19,12 +20,12 @@ end
 module Faces : sig
   (** The four outer faces of a keyhole. *)
   type t =
-    { north : Face.t [@scad.d3]
+    { north : Face.t [@cad.d3]
     ; south : Face.t
     ; east : Face.t
     ; west : Face.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   val map : (Face.t -> Face.t) -> t -> t
   val fold : ('k -> Face.t -> 'k) -> 'k -> t -> 'k
@@ -45,14 +46,14 @@ type config =
   }
 
 type t =
-  { config : config [@scad.ignore]
+  { config : config [@cad.ignore]
   ; scad : Scad.d3
   ; origin : V3.t
   ; faces : Faces.t
   ; cap : Scad.d3 option
   ; cutout : Scad.d3 option
   }
-[@@deriving scad]
+[@@deriving cad]
 
 val rotate_about_origin : V3.t -> t -> t
 val quaternion_about_origin : float -> t -> t

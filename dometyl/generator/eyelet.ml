@@ -1,4 +1,5 @@
-open Scad_ml
+open! OCADml
+open! OSCADml
 open Syntax
 
 type hole =
@@ -45,9 +46,9 @@ type t =
   { scad : Scad.d3
   ; cut : Scad.d3 option
   ; centre : V3.t
-  ; config : config [@scad.ignore]
+  ; config : config [@cad.ignore]
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let translate p t = { t with scad = Scad.translate p t.scad; centre = V3.add p t.centre }
 let mirror ax t = { t with scad = Scad.mirror ax t.scad; centre = V3.mirror ax t.centre }
@@ -122,7 +123,7 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
       match hole with
       | Through ->
         ( Poly2.make ~holes:[ inner ] outline
-          |> Poly2.to_scad
+          |> Scad.of_poly2
           |> Scad.extrude ~height:thickness
         , None )
       | Inset { depth = d; punch } ->

@@ -1,12 +1,13 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 type t =
   { scad : Scad.d3
-  ; thickness : float [@scad.ignore]
+  ; thickness : float [@cad.ignore]
   ; screw_l : V3.t
   ; screw_r : V3.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let screws t =
   let cyl =

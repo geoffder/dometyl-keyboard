@@ -1,4 +1,5 @@
-open Scad_ml
+open OCADml
+open OSCADml
 open Syntax
 
 module Steps = struct
@@ -35,6 +36,9 @@ module Drawer = struct
   let ytrans y t loc = Path3.ytrans y (t loc)
   let ztrans z t loc = Path3.ztrans z (t loc)
   let scale s t loc = Path3.scale s (t loc)
+  let xscale x t loc = Path3.xscale x (t loc)
+  let yscale y t loc = Path3.yscale y (t loc)
+  let zscale z t loc = Path3.zscale z (t loc)
   let mirror ax t loc = Path3.mirror ax (t loc)
   let rotate ?about r t loc = Path3.rotate ?about r (t loc)
   let xrot ?about r t loc = Path3.xrot ?about r (t loc)
@@ -70,14 +74,14 @@ let default =
 type t =
   { scad : Scad.d3
   ; key : Key.t
-  ; side : [ `North | `East | `South | `West ] [@scad.ignore]
+  ; side : [ `North | `East | `South | `West ] [@cad.ignore]
   ; start : Points.t
   ; cleared : Points.t
   ; foot : Points.t
   ; drawer : Drawer.t
   ; bounds_drawer : Drawer.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (* Compute a rotation around the face's bottom or top edge, depending on which way
    it's orthoganal is pointing in z, that makes the short edge (between the
@@ -188,7 +192,7 @@ let make
       Mesh.slice_profiles ~slices:(`Flat 5) [ s; flat ]
     in
     Mesh.of_rows ~style:`MinEdge (List.concat [ clearing; List.tl rows; List.tl final ])
-    |> Mesh.to_scad
+    |> Scad.of_mesh
   and foot =
     let i, m = Util.last transforms in
     let f p =

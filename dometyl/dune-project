@@ -22,8 +22,4 @@
   "DSL to generate OpenSCAD models of concave split ergonomic keyboards.")
  (depends
   (ocaml
-   (>= 4.08.0))
-  (scad_ml
-   (<= 1.1.0))
-  (ppx_deriving_scad
-   (= 1.0.0))))
+   (>= 4.08.0))))

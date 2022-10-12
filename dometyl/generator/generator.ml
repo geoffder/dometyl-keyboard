@@ -1,4 +1,3 @@
-open! Scad_ml
 module Case = Case
 module Bottom = Bottom
 module Tent = Tent
@@ -20,7 +19,6 @@ module Niz = Niz
 module Caps = Caps
 module Sensor = Sensor
 module Syntax = Syntax
-module Sigs = Sigs
 module Hand = Hand
 module Key = Key
 module IMap = IMap

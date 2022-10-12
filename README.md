@@ -57,8 +57,9 @@ under the [opam dependencies](#opam-dependencies) sub-section.
 ### opam dependencies
 All dependencies are available from the opam package manager including the build
 system [dune](https://github.com/ocaml/dune), and of course
-[Scad_ml](https://github.com/namachan10777/scad-ml) and
-[ppx_deriving_scad](https://github.com/geoffder/ppx_deriving_scad) for the
+[OCADml](https://github.com/OCADml/OCADml),
+[OSCADml](https://github.com/OCADml/OSCADml)
+and [ppx_deriving_scad](https://github.com/OCADml/ppx_deriving_cad) for the
 modelling. I'd also recommend that you pick up the listed dev tools (which
 you'll want to get the corresponding packages/plugins for in your editor of
 choice).
@@ -66,14 +67,15 @@ choice).
 **Required:**
 From inside [dometyl](dometyl):
 * `opam install . --deps-only --with-doc`
-* `git clone https://github.com/geoffder/scad-ml`
-* `git clone https://github.com/geoffder/ppx_deriving_scad`
+* `git clone https://github.com/OCADml/OCADml`
+* `git clone https://github.com/OCADml/OSCADml`
+* `git clone https://github.com/OCADml/ppx_deriving_cad`
 * `dune build`
 Optionally, if you'd like to be able to use the scad libraries in other
-contexts, you can run `opam install ./scad_ml.opam` inside the `scad-ml`
-repository (and similar for `ppx_deriving_scad`) to install it (/them) in the
-current opam compiler switch, otherwise `dune` will take care of building
-everything on its own.
+contexts, you can run `opam install ./OCADml.opam` inside the `OCADml`
+repository (and similar for `OCADml` and `ppx_deriving_cad`) to install it
+(/them) in the current opam compiler switch, otherwise `dune` will take care of
+building everything on its own.
 
 **Highly recommended for dev experience:**
 * `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
@@ -116,7 +118,7 @@ installed on your system) to asynchronously export *all* of the `scad` files in
 [models](dometyl/models/stls) directory at once.
 
 **Note:**
-- Enabling `fast-csg` and the like is not currently supported by the `Scad_ml`
+- Enabling `fast-csg` and the like is not currently supported by the `OSCADml`
   CLI helpers.
 - STL export can take quite a while (which is why this can be helpful) and
  consume a lot of resources, so one should be mindful of what one is signing up

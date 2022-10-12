@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 open! Generator
 open! Boards
 
@@ -124,7 +125,7 @@ let () =
     |> Path3.deduplicate_consecutive ~closed:true ~eq:(V3.approx ~eps:2.)
   in
   let () =
-    Path3.show_points (fun _ -> Scad.(color Color.Red @@ sphere 1.)) points
+    Debug.show_path3 (fun _ -> Scad.(color Color.Red @@ sphere 1.)) points
     |> Scad.to_file "perimeter_points.scad"
   in
   let path =
@@ -134,7 +135,7 @@ let () =
   in
   let perim_sweep =
     Mesh.path_extrude ~caps:`Looped ~euler:true ~path (Poly2.square (v2 1. 1.))
-    |> Mesh.to_scad
+    |> Scad.of_mesh
   in
   let () = Scad.to_file "perimeter_sweep.scad" perim_sweep in
   let shape = Poly2.(square (v2 4. 1.)) in
@@ -151,6 +152,6 @@ let () =
     (* List.(rev @@ tl @@ fold_left2 f [] path transforms) *)
   in
   Mesh.sweep ~caps:`Looped ~transforms shape
-  |> Mesh.to_scad (* |> Scad.add (Scad.color Color.Red perim_sweep) *)
+  |> Scad.of_mesh (* |> Scad.add (Scad.color Color.Red perim_sweep) *)
   |> Scad.add splaytyl_right.plate.scad
   |> Scad.to_file "perimeter_wall.scad"

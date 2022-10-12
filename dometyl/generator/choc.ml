@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (* https://grabcad.com/library/kailh-1350-socket-2 *)
 let kailh_socket =

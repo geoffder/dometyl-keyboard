@@ -1,9 +1,10 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 module Side : sig
   (** Maps from index/position to {!Wall.t}, representing a side of the body or thumb of a
       plate. *)
-  type t = (Wall.t IMap.t[@scad.d3]) [@@deriving scad]
+  type t = (Wall.t IMap.t[@cad.d3]) [@@deriving cad]
 
   (** A function taking a index/position along a side of the body or thumb of a plate, and
       returning some {!Wall.config} if there should be a {!Wall.t} made at that location,
@@ -14,12 +15,12 @@ end
 module Sides : sig
   (** Four cardinal {!Side.t}s for a body/thumb. *)
   type t =
-    { west : Side.t [@scad.d3]
+    { west : Side.t [@cad.d3]
     ; north : Side.t
     ; east : Side.t
     ; south : Side.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   (** [manual_body ~west ~north ~east ~south columns]
 
@@ -125,10 +126,10 @@ val auto_thumb
   -> Sides.t
 
 type t =
-  { body : Sides.t [@scad.d3]
+  { body : Sides.t [@cad.d3]
   ; thumb : Sides.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (** [make ~body ~thumb]
 

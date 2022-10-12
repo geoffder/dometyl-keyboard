@@ -4,7 +4,8 @@
 - The {!Walls.t} from columns/thumb cluster to the ground
 - The connections between the separate walls provided by {!module:Connect} *)
 
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (** Eyelet configuration / placement *)
 type eyelets
@@ -20,7 +21,7 @@ type t =
   ; connections : Connect.t
   ; eyelets : Eyelet.t list
   }
-[@@deriving scad]
+[@@deriving cad]
 
 (** [eyelets ?config ?width ?bury ?wall_locs ?free_locs ()]
 

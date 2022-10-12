@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (** Shape(s) connecting walls together, and the points along the outside and inside of the
     foot. *)
@@ -7,7 +8,7 @@ type t =
   ; outline : Path3.t
   ; inline : Path3.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 type config
 

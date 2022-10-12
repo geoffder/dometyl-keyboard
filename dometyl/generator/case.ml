@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 open! Syntax
 
 type eyelets =
@@ -27,7 +28,7 @@ type t =
   ; connections : Connect.t
   ; eyelets : Eyelet.t list
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let make
     ?(right_hand = true)

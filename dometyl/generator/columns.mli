@@ -1,6 +1,7 @@
-open Scad_ml
+open! OCADml
+open! OSCADml
 
-type t = (Column.t IMap.t[@scad.d3]) [@@deriving scad]
+type t = (Column.t IMap.t[@cad.d3]) [@@deriving cad]
 
 val key : t -> int -> int -> Key.t option
 val key_exn : t -> int -> int -> Key.t

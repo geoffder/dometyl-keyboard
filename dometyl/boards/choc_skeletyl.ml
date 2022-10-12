@@ -1,7 +1,8 @@
 (** A lower profile skeletyl, with curvatures adjusted for chocs, and bumpon eyelets built
     in to the case. *)
 
-open! Scad_ml
+open OCADml
+open OSCADml
 open Generator
 
 let body_lookups =

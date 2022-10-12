@@ -18,9 +18,10 @@ fi
 # install project dependencies
 $opam_exec install ./dometyl.opam --deps-only --with-doc
 
-# vendor scad_ml and ppx_deriving_scad
-git clone https://github.com/geoffder/scad-ml
-git clone https://github.com/geoffder/ppx_deriving_scad
+# vendor the OCADml libraries
+git clone https://github.com/OCADml/OCADml
+git clone https://github.com/OCADml/OSCADml
+git clone https://github.com/OCADml/ppx_deriving_cad
 
 # install opam dev depenencies
 $opam_exec install \

@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 (* TODO: This is an awful hack, also it lacks windows compatibility. Once it is
     possible to install directories of files

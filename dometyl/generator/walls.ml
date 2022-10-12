@@ -1,19 +1,20 @@
-open! Scad_ml
+open! OCADml
+open! OSCADml
 open! Syntax
 
 module Side = struct
-  type t = (Wall.t IMap.t[@scad.d3]) [@@deriving scad]
+  type t = (Wall.t IMap.t[@cad.d3]) [@@deriving cad]
   type config = int -> Wall.config option
 end
 
 module Sides = struct
   type t =
-    { west : Side.t [@scad.d3]
+    { west : Side.t [@cad.d3]
     ; north : Side.t
     ; east : Side.t
     ; south : Side.t
     }
-  [@@deriving scad]
+  [@@deriving cad]
 
   let manual_body ~west ~north ~east ~south (columns : Columns.t) =
     { west =
@@ -227,10 +228,10 @@ let auto_thumb
     thumb
 
 type t =
-  { body : Sides.t [@scad.d3]
+  { body : Sides.t [@cad.d3]
   ; thumb : Sides.t
   }
-[@@deriving scad]
+[@@deriving cad]
 
 let make ~body ~thumb = { body; thumb }
 

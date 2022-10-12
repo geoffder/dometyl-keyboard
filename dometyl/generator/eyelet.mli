@@ -1,4 +1,5 @@
-open! Scad_ml
+open OCADml
+open OSCADml
 
 type hole =
   | Through
@@ -46,7 +47,7 @@ type t =
   ; centre : V3.t
   ; config : config
   }
-[@@deriving scad]
+[@@deriving cad]
 
 val inset : ?punch:[ `Rel of float | `Abs of float ] -> float -> hole
 

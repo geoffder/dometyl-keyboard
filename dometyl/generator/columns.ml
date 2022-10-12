@@ -1,6 +1,7 @@
-open Scad_ml
+open! OCADml
+open! OSCADml
 
-type t = (Column.t IMap.t[@scad.d3]) [@@deriving scad]
+type t = (Column.t IMap.t[@cad.d3]) [@@deriving cad]
 
 let key t col key =
   Option.bind (IMap.find_opt col t) (fun c -> IMap.find_opt key c.Column.keys)
