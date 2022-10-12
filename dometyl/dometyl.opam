@@ -11,9 +11,6 @@ bug-reports: "https://github.com/geoffder/dometyl-keyboard/issues"
 depends: [
   "dune" {>= "3.3"}
   "ocaml" {>= "4.08.0"}
-  "OCADml" {<= "0.1.0"}
-  "OSCADml" {<= "0.1.0"}
-  "ppx_deriving_cad" {= "0.1.0"}
   "odoc" {with-doc}
 ]
 build: [
