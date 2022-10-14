@@ -32,12 +32,10 @@ let () =
   Scad.to_file "skeletyl_bottom_plate_right.scad" (Skeletyl.bottom skeletyl_right);
   Scad.to_file
     "choc_skeletyl_right.scad"
-    (Case.to_scad ~show_caps:false @@ choc_skeletyl_right)
-(* Write.thing *)
-(*   "splaytyl_right_with_plate" *)
-(*   ( Case.to_scad ~show_caps:false splaytyl_right *)
-(*   |> Scad.add (Scad.ztrans (-8.) (Bottom.make splaytyl_right)) ); *)
-(* Tent.(make splaytyl_right) *)
+    (Case.to_scad ~show_caps:false @@ choc_skeletyl_right);
+  Scad.to_file
+    "splaytyl_right_tent.scad"
+    (Tent.make ~style:(Tent.prison ()) splaytyl_right)
 
 let k =
   Key.(
