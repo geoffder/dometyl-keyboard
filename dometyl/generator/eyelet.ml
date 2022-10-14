@@ -81,10 +81,18 @@ let magnet_6x3_config =
 
 let m4_countersunk_fastener = screw_fastener ()
 
-let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as config) ps =
+let make
+    ?(fn = 32)
+    ?(fillet = 0.15)
+    ~placement
+    ({ outer_rad; inner_rad; thickness; hole } as config)
+    ps
+  =
+  let cont_ps = Path3.to_continuous ps in
   let p1 = List.hd ps
-  and p2 = Util.last ps in
-  let base_centre = (Path3.to_continuous ps) 0.5 in
+  and p2 = cont_ps 1.0
+  and fillet = Float.(min 1. (max 0. fillet)) in
+  let base_centre = cont_ps 0.5 in
   let normal, hole_offset =
     match placement with
     | Normal n -> n, V3.smul n (outer_rad +. 0.1)
@@ -97,7 +105,6 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   let proj = Plane.project plane
   and lift = Plane.to_affine ~op:`Lift plane in
   let hole_centre' = proj hole_centre
-  and base_centre' = proj base_centre
   and p1' = proj p1
   and p2' = proj p2
   and hole_offset' = proj hole_offset in
@@ -107,12 +114,10 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   and inner = List.rev_map (V2.add hole_centre') @@ Path2.circle ~fn inner_rad in
   let outline =
     let swoop_l =
-      let rad_offset = V2.(normalize (p1' -@ base_centre') *$ outer_rad) in
-      let c = V2.(base_centre' +@ rad_offset +@ (hole_offset' /$ 5.)) in
+      let c = V2.(of_v3 (cont_ps fillet) +@ (hole_offset' /$ 5.)) in
       List.tl @@ Bezier2.(curve ~fn (make [ p1'; c; l ]))
     and swoop_r =
-      let rad_offset = V2.(normalize (p2' -@ base_centre') *$ outer_rad) in
-      let c = V2.(base_centre' +@ rad_offset +@ (hole_offset' /$ 5.)) in
+      let c = V2.(of_v3 (cont_ps (1. -. fillet)) +@ (hole_offset' /$ 5.)) in
       List.tl @@ Bezier2.(curve ~fn (make [ r; c; p2' ]))
     and fudge = V2.(proj normal *$ -0.01) in
     let wall_ps = List.tl @@ List.rev_map (fun p -> V2.add fudge (proj p)) ps in
@@ -128,7 +133,7 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
         , None )
       | Inset { depth = d; punch } ->
         let inset =
-          Poly2.validation (Poly2.make ~holes:[ inner ] outline);
+          ignore (Poly2.make ~holes:[ inner ] outline);
           let s = Scad.(ztrans (-0.01) @@ extrude ~height:(d +. 0.01) (polygon inner)) in
           match punch with
           | Some punch ->
@@ -153,9 +158,18 @@ let make ?(fn = 32) ~placement ({ outer_rad; inner_rad; thickness; hole } as con
   in
   { scad; cut; centre = hole_centre; config }
 
-let place ?(fn = 16) ?width ?(bury = 0.4) ?(config = m4_config) ~inline ~outline loc =
+let place
+    ?(fn = 16)
+    ?fillet
+    ?width
+    ?(bury = 0.5)
+    ?(config = m4_config)
+    ~inline
+    ~outline
+    loc
+  =
   let half_width =
-    Util.value_map_opt ~default:(config.outer_rad +. 1.25) (( *. ) 0.5) width
+    Util.value_map_opt ~default:(config.outer_rad +. 2.) (( *. ) 0.5) width
   in
   let len_inline = Path3.length ~closed:true inline
   and cont_inline = Path3.to_continuous ~closed:true inline
@@ -170,21 +184,19 @@ let place ?(fn = 16) ?width ?(bury = 0.4) ?(config = m4_config) ~inline ~outline
   let in_pt = cont_inline u in
   let u' = Path3.continuous_closest_point ~closed:true ~n_steps:100 cont_outline in_pt in
   let shift = half_width /. len_inline in
-  let lu =
-    let u = u -. shift in
-    if u < 0. then 1. +. u else if u > 1. then u -. 1. else u
-  in
+  let wrap u = if u < 0. then 1. +. u else if u > 1. then u -. 1. else u in
   let step = shift *. 2. /. Float.of_int fn in
   let n = V3.(cont_outline u' -@ in_pt) in
   let move = V3.(add (n *$ bury)) in
   let ps =
-    List.init (fn + 1) (fun i -> move @@ cont_inline (lu +. (Float.of_int i *. step)))
+    List.init (fn + 1) (fun i ->
+        move @@ cont_inline @@ wrap @@ (u -. shift +. (Float.of_int i *. step)) )
   and placement =
     if relocate
     then Point V3.((normalize (neg n) *$ (config.outer_rad +. 0.1)) +@ in_pt)
     else Point loc
   in
-  make ~placement config ps
+  make ?fillet ~placement config ps
 
 let default_wall_locs =
   Idx.
