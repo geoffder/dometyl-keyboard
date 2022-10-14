@@ -6,7 +6,7 @@ type style =
   | Prison of
       { n_pillars : int option
       ; width : float option
-      ; tilt : float option
+      ; tilt : [ `Dist of float | `Ang of float ] option
       ; tilt_ez : (v2 * v2) option
       ; fn : int option
       ; slices : Wall.Steps.t option
@@ -60,7 +60,7 @@ let solid_shell bot_outer bot_inner top_outer top_inner =
 let prison_shell
     ?(n_pillars = 30)
     ?(width = 12.)
-    ?(tilt = 15.)
+    ?(tilt = `Ang (Float.pi /. 8.))
     ?(tilt_ez = v2 0.42 0., v2 0.58 1.)
     ?(fn = 18)
     ?(slices = `PerZ 1.)
@@ -86,8 +86,13 @@ let prison_shell
   and cont_outer' = Path3.to_continuous ~closed:true bot_outer
   and cont_inner = Path3.to_continuous ~closed:true top_inner
   and cont_inner' = Path3.to_continuous ~closed:true bot_inner in
-  let t_outer = tilt /. len_outer
-  and t_outer' = tilt /. len_outer' in
+  let tilt =
+    match tilt with
+    | `Dist d -> Fun.const d
+    | `Ang a -> fun z -> z *. Float.tan a
+  in
+  let t_outer z = tilt z /. len_outer
+  and t_outer' z = tilt z /. len_outer' in
   let fillet_ez =
     match fillet_d with
     | `Rel d -> Fun.const (Easing.make (v2 d 1.) (v2 d 1.))
@@ -112,7 +117,9 @@ let prison_shell
   let pillar i =
     let u = (pillar_step *. Float.of_int i) +. phase_shift in
     let z = (cont_outer u).z in
-    let slices = slices z in
+    let slices = slices z
+    and t_outer = t_outer z
+    and t_outer' = t_outer' z in
     let slice_step = 1. /. Float.of_int (slices - 1) in
     let profile k =
       let step_u w t j =
@@ -210,6 +217,8 @@ let make
     ?fastener
     ?(foot_thickness = 2.4)
     ?(foot_rad = 6.)
+    ?foot_bury
+    ?foot_width
     ?(bumpon_rad = 5.5)
     ?(bumpon_inset = 0.8)
     ?(bump_locs = default_bumps)
@@ -316,7 +325,8 @@ let make
     let f (bumps, insets) loc =
       let b =
         Eyelet.place
-          ~bury:0.4
+          ?bury:foot_bury
+          ?width:foot_width
           ~config:
             Eyelet.
               { outer_rad = foot_rad

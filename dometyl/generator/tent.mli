@@ -6,7 +6,7 @@ type style =
   | Prison of
       { n_pillars : int option
       ; width : float option
-      ; tilt : float option
+      ; tilt : [ `Dist of float | `Ang of float ] option
       ; tilt_ez : (v2 * v2) option
       ; fn : int option
       ; slices : Wall.Steps.t option
@@ -20,7 +20,7 @@ type style =
 val prison
   :  ?n_pillars:int
   -> ?width:float
-  -> ?tilt:float
+  -> ?tilt:[ `Dist of float | `Ang of float ]
   -> ?tilt_ez:v2 * v2
   -> ?fn:int
   -> ?slices:Wall.Steps.t
@@ -39,6 +39,8 @@ val make
   -> ?fastener:Eyelet.fastener
   -> ?foot_thickness:float
   -> ?foot_rad:float
+  -> ?foot_bury:float
+  -> ?foot_width:float
   -> ?bumpon_rad:float
   -> ?bumpon_inset:float
   -> ?bump_locs:float list
