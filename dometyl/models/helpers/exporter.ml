@@ -1,4 +1,4 @@
-open Scad_ml
+open OSCADml
 
 let () =
   let f i =
