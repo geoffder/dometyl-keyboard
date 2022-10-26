@@ -149,7 +149,7 @@ let make
         and foot = Scad.extrude ~height:thickness (Scad.polygon outline) in
         Scad.affine lift @@ Scad.difference foot [ inset ], Some (Scad.affine lift inset)
     with
-    | Poly2.(SelfIntersection _ | CrossIntersection _) ->
+    | Poly2.(InvalidPoly (`SelfIntersection _ | `CrossIntersection _)) ->
       failwith
       @@ Printf.sprintf
            "Outline of eyelet at %s contains intersections. Consider decreasing the \

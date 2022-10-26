@@ -2,8 +2,7 @@
  (name main)
  (libraries generator boards))
 
-
-; Convenience rule/alias for building and running examples (promoted to examples/scads diectory)
+; Convenience rule/alias for building and running examples (promoted to models/scads diectory)
 ; This pattern enables automatic scad re-generation on changes with `dune build -w @run`.
 
 (rule

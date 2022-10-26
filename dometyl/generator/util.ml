@@ -68,9 +68,6 @@ let fill_points ?(init = []) ~n a b =
     in
     loop (a :: init) 1 )
 
-(* TODO: should probably add transform/row pruning and validation functions to
-   scad_ml, this simple check is actually quite effective for avoiding mesh
-   self-intersection. *)
 let prune_transforms ?(min_dist = 0.05) ~shape = function
   | [] -> []
   | [ m ] -> [ 0, m ]
