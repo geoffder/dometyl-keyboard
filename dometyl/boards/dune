@@ -1,4 +1,0 @@
-(library
- (name boards)
- (public_name dometyl.boards)
- (libraries generator OCADml OSCADml))

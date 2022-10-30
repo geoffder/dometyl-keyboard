@@ -1,4 +1,0 @@
-(library
- (name dometyl)
- (public_name dometyl)
- (libraries generator boards))

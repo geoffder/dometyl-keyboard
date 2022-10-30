@@ -1,6 +1,0 @@
-(library
- (name generator)
- (public_name dometyl.generator)
- (libraries OCADml OSCADml)
- (preprocess
-  (pps ppx_deriving_cad)))

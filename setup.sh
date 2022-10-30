@@ -5,7 +5,7 @@ set -e
 
 # move to location of this script
 base_dir="$( dirname "${BASH_SOURCE[0]}" )"
-cd "$base_dir/dometyl"
+cd "$base_dir"
 
 # auto-confirm opam prompts unless operating under cygwin
 os=$(uname -s)
@@ -17,11 +17,6 @@ fi
 
 # install project dependencies
 $opam_exec install ./dometyl.opam --deps-only --with-doc
-
-# vendor the OCADml libraries
-git clone https://github.com/OCADml/OCADml
-git clone https://github.com/OCADml/OSCADml
-git clone https://github.com/OCADml/ppx_deriving_cad
 
 # install opam dev depenencies
 $opam_exec install \

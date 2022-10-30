@@ -1,0 +1,25 @@
+(library
+ (name dometyl)
+ (public_name dometyl)
+ (libraries OCADml OSCADml)
+ (preprocess
+  (pps ppx_deriving_cad)))
+
+; (rule
+;  (alias models)
+;  (deps
+;   (glob_files assets/*)))
+
+; (data_only_dirs assets)
+
+; (install
+;  (dirs assets)
+;  (section lib))
+
+; (subdir
+;  assets
+;  (subdir
+;   caps
+;   (install
+;    (dirs MT3)
+;    (section share))))
