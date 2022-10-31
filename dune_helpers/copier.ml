@@ -35,7 +35,6 @@ let () =
   for i = 2 to Array.length Sys.argv - 1 do
     let name = Filename.basename Sys.argv.(i)
     and dirs = Filename.(String.(split_on_char (get dir_sep 0) (dirname Sys.argv.(i)))) in
-    (* drop the top-level directory, replaced by provided dest *)
-    let path = Printf.sprintf "%s/%s" (mkdirs dest (List.tl dirs)) name in
+    let path = Printf.sprintf "%s/%s" (mkdirs dest dirs) name in
     ignore @@ copy Sys.argv.(i) path
   done

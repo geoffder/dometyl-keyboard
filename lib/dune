@@ -5,23 +5,6 @@
  (preprocess
   (pps ppx_deriving_cad)))
 
-(rule
- (alias install)
- (deps
-  (:copier "../dune_helpers/copier.exe")
-  (:stls
-   (glob_files_rec *.stl)))
- (targets
-  (dir "stls"))
- (action
-  (run %{copier} "stls" %{stls})))
-
-(install
- (dirs stls)
- (section
-  (site
-   (dometyl imports))))
-
 (generate_sites_module
  (module DuneSites)
  (sites dometyl))
