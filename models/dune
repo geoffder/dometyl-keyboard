@@ -10,7 +10,7 @@
  (deps
   (package dometyl)
   (sandbox always)
-  (:runner "helpers/runner.exe")
+  (:runner "../dune_helpers/runner.exe")
   (:scads
    (glob_files "*.exe")))
  (targets
@@ -21,13 +21,17 @@
    "scads"
    (run %{runner} %{scads}))))
 
+; (run runner %{scads}))))
+
+; (run runner %{scads}))))
+
 ; Export scad examples to stl.
 
 (rule
  (alias export_models)
  (deps
   (sandbox always)
-  (:exporter "helpers/exporter.exe")
+  (:exporter "../dune_helpers/exporter.exe")
   (:scads
    (glob_files "scads/*.scad")))
  (targets

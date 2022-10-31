@@ -1,25 +1,27 @@
 (library
  (name dometyl)
  (public_name dometyl)
- (libraries OCADml OSCADml)
+ (libraries OCADml OSCADml dune-site)
  (preprocess
   (pps ppx_deriving_cad)))
 
-; (rule
-;  (alias models)
-;  (deps
-;   (glob_files assets/*)))
+(rule
+ (alias install)
+ (deps
+  (:copier "../dune_helpers/copier.exe")
+  (:stls
+   (glob_files_rec *.stl)))
+ (targets
+  (dir "stls"))
+ (action
+  (run %{copier} "stls" %{stls})))
 
-; (data_only_dirs assets)
+(install
+ (dirs stls)
+ (section
+  (site
+   (dometyl imports))))
 
-; (install
-;  (dirs assets)
-;  (section lib))
-
-; (subdir
-;  assets
-;  (subdir
-;   caps
-;   (install
-;    (dirs MT3)
-;    (section share))))
+(generate_sites_module
+ (module DuneSites)
+ (sites dometyl))

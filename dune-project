@@ -2,6 +2,8 @@
 
 (using directory-targets 0.1)
 
+(using dune_site 0.1)
+
 (name dometyl)
 
 (generate_opam_files true)
@@ -17,6 +19,8 @@
 
 (package
  (name dometyl)
+ (sites
+  (share imports))
  (synopsis "Ergonomic keyboard generator")
  (description
   "DSL to generate OpenSCAD models of concave split ergonomic keyboards.")
