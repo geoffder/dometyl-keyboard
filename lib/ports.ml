@@ -104,7 +104,9 @@ let place_tray
   Scad.zrot z_rot scad |> Scad.translate (v3 x y 0.)
 
 let carbonfet_stl micro =
-  let import s = Scad.import3 (Printf.sprintf "../things/holders/carbonfet/%s.stl" s) in
+  let import s =
+    Scad.import3 @@ Printf.sprintf "%s/stls/mcu_holders/carbonfet/%s.stl" Util.imports s
+  in
   Scad.color Color.FireBrick
   @@
   if micro

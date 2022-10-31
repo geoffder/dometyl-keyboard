@@ -3,7 +3,9 @@ open OSCADml
 
 (* https://grabcad.com/library/kailh-1350-socket-2 *)
 let kailh_socket =
-  Scad.import3 "../things/switches/choc_hotswap_socket.stl"
+  Util.imports
+  |> Printf.sprintf "%s/stls/sockets/choc_hotswap.stl"
+  |> Scad.import3
   |> Scad.translate (v3 7. 0. 0.)
   |> Scad.rotate Float.(v3 (pi /. 2.) 0. pi)
   |> Scad.translate (v3 2.0 3.7 (-3.5))
@@ -11,7 +13,9 @@ let kailh_socket =
 
 (* https://grabcad.com/library/kailh-low-profile-mechanical-keyboard-switch-1 *)
 let switch =
-  Scad.import3 "../things/switches/kailh_choc.stl"
+  Util.imports
+  |> Printf.sprintf "%s/stls/switches/kailh_choc.stl"
+  |> Scad.import3
   |> Scad.rotate Float.(v3 (pi /. 2.) 0. (pi /. 2.))
   |> Scad.translate (v3 0. 0. 0.4)
   |> Scad.color ~alpha:0.5 Color.SkyBlue

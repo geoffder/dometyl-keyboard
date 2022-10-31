@@ -30,6 +30,7 @@
 (rule
  (alias export_models)
  (deps
+  (package dometyl)
   (sandbox always)
   (:exporter "../dune_helpers/exporter.exe")
   (:scads
