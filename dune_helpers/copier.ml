@@ -34,7 +34,7 @@ let () =
   if not @@ Sys.file_exists dest then Sys.mkdir dest 0o777;
   for i = 2 to Array.length Sys.argv - 1 do
     let name = Filename.basename Sys.argv.(i)
-    and dirs = String.split_on_char (String.get Filename.dir_sep 0) Sys.argv.(i) in
+    and dirs = Filename.(String.(split_on_char (get dir_sep 0) (dirname Sys.argv.(i)))) in
     (* drop the top-level directory, replaced by provided dest *)
     let path = Printf.sprintf "%s/%s" (mkdirs dest (List.tl dirs)) name in
     ignore @@ copy Sys.argv.(i) path

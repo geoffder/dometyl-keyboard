@@ -1,22 +1,7 @@
 open OCADml
 open OSCADml
 
-(* TODO: This is an awful hack, also it lacks windows compatibility. Once it is
-    possible to install directories of files
-    (soon: https://github.com/ocaml/dune/pull/6139), should install the stl
-    assets used by the generator, and have the models rule depend on @install *)
-let path n =
-  let cwd = Sys.getcwd () in
-  let parts = String.split_on_char (String.get Filename.dir_sep 0) cwd in
-  let rec loop acc = function
-    | hd :: tl ->
-      let acc = Printf.sprintf "%s%s%s" acc hd Filename.dir_sep in
-      if String.equal hd "dometyl-keyboard" then acc else loop acc tl
-    | _ -> failwith "dometyl-keyboard expected in path"
-  in
-  let path = loop "" parts in
-  Printf.sprintf "%slib/assets/caps/%s" path n
-
+let path n = Printf.sprintf "%s/stls/caps/%s" Util.imports n
 let color = Scad.color Color.DarkSlateBlue
 
 module SA = struct

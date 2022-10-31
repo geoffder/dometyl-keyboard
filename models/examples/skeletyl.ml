@@ -123,9 +123,10 @@ let bottom case =
   in
   Bottom.make ~bump_locs case
 
-(* TODO: fix path to skeletyl (moving to use @install of assets) *)
 let bastard_skelly =
-  Scad.import3 "../things/others/bastardkb_skeletyl_v3_v5.stl"
+  Util.imports
+  |> Printf.sprintf "%s/stls/other_dactyls/bastardkb_skeletyl_v3_v5.stl"
+  |> Scad.import3
   |> Scad.translate (v3 87. 0. 25.)
   |> Scad.xrot (Float.pi /. 2.)
   |> Scad.translate (v3 0. (-2.) 8.)
