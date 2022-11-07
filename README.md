@@ -47,9 +47,6 @@ an environment set up, including the package manager
 of course also want [OpenSCAD](https://openscad.org/) to preview/render/export
 the generated models (see [OpenSCAD configuration](#openscad-configuration) for tips).
 
-As you are reading the readme of the #revamp fork at the moment, make sure that
-you are in the correct branch before proceeding (`git switch revamp`).
-
 After installing `opam`, and confirming that you are in this branch, you can run
 the [setup.sh](setup.sh) script for convenience, or follow the instructions
 under the [opam dependencies](#opam-dependencies) sub-section.
@@ -59,23 +56,15 @@ All dependencies are available from the opam package manager including the build
 system [dune](https://github.com/ocaml/dune), and of course
 [OCADml](https://github.com/OCADml/OCADml),
 [OSCADml](https://github.com/OCADml/OSCADml)
-and [ppx_deriving_scad](https://github.com/OCADml/ppx_deriving_cad) for the
+and [ppx_deriving_cad](https://github.com/OCADml/ppx_deriving_cad) for the
 modelling. I'd also recommend that you pick up the listed dev tools (which
 you'll want to get the corresponding packages/plugins for in your editor of
 choice).
 
 **Required:**
-From inside [dometyl](dometyl):
+From this folder (repo root):
 * `opam install . --deps-only --with-doc`
-* `git clone https://github.com/OCADml/OCADml`
-* `git clone https://github.com/OCADml/OSCADml`
-* `git clone https://github.com/OCADml/ppx_deriving_cad`
 * `dune build`
-Optionally, if you'd like to be able to use the scad libraries in other
-contexts, you can run `opam install ./OCADml.opam` inside the `OCADml`
-repository (and similar for `OCADml` and `ppx_deriving_cad`) to install it
-(/them) in the current opam compiler switch, otherwise `dune` will take care of
-building everything on its own.
 
 **Highly recommended for dev experience:**
 * `opam install merlin ocp-indent ocaml-lsp-server ocamlformat ocamlformat-rpc`
