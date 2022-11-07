@@ -1,6 +1,6 @@
 # Dometyl Keyboard
 
-![Splaytyl Build](things/boards/splaytyl/images/splaytyl_both.jpeg)
+![Splaytyl Build](things/legacy/splaytyl/images/splaytyl_both.jpeg)
 
 ## Another Dactyl inspired keyboard. Supporting MX, Choc, and rubber domes.
 This is a library for generating paramaterized split-hand, concave, columnar,
@@ -29,12 +29,12 @@ but then you would be wrong! One need simply glue magnets to sliders, and glue
 [hall-effect sensors](https://www.diodes.com/assets/Datasheets/AH3572.pdf) into
 a case, and *voila* the rubber dometyl is born.
 
-![niztyl - gone topless](things/boards/niztyl/images/topless.jpg)
+![niztyl - gone topless](things/legacy/niztyl/images/topless.jpg)
 
 The relevant code for generating the required keyhole can be found in the [Niz
-module](dometyl/generator/niz.ml), the first example of a board
-configuration using them [here](dometyl/boards/niztyl.ml), and the build
-showcase for it [here](things/boards/niztyl).
+module](lib/niz.ml), the first example of a board
+configuration using them [here](models/examples/niztyl.ml), and the build
+showcase for it [here](things/legacy/niztyl).
 
 Of course, if you aren't an insane person, the dometyl generator also supports
 more civilized Mx and Choc switch options.
@@ -95,14 +95,14 @@ Online documentation is available
 be filling in over time.
 
 ## Usage
-1. Make a new `.ml` file in the [boards library](dometyl/boards), maybe
+1. Make a new `.ml` file in [models](models), maybe
    starting with a copy of and existing one and and modifying it to suit your
    preferences / fit your hand.
-2. Modify [main.ml](dometyl/models/main.ml), adding lines to generate and write
+2. Modify [main.ml](models/main.ml), adding lines to generate and write
    your case models/parts to file with `Scad.to_file`.
-3. Run your [main.ml](dometyl/models/main.ml) with `dune build @models` from the [dometyl](dometyl)
+3. Run your [main.ml](models/main.ml) with `dune build @models` from the [dometyl](dometyl)
    project folder. Any `.scad` files produced will then appear in the
-   [models](dometyl/models/scads) directory. For a more fluid experience, you
+   [models](models/scads) directory. For a more fluid experience, you
    can install `fswatch` (cross-platform) or `inotify` (GNU/linux) on your
    system, and use `dune build -w @models` to automatically build and execute on
    file changes.
@@ -114,8 +114,8 @@ be filling in over time.
 `dune build @export_models` is also made available for convenient batch `stl`
 export. When run, this rule will call out to the `openscad` cli (assumed to be
 installed on your system) to asynchronously export *all* of the `scad` files in
-[models](dometyl/models/scads) directory to `stl` models in the
-[models](dometyl/models/stls) directory at once.
+[models](models/scads) directory to `stl` models in the
+[models](models/stls) directory at once.
 
 **Note:**
 - Enabling `fast-csg` and the like is not currently supported by the `OSCADml`
@@ -127,26 +127,26 @@ installed on your system) to asynchronously export *all* of the `scad` files in
  pass via the GUI.
 
 ## Example Output
-* An ugly [recreation](dometyl/boards/skeletyl.ml) (yellow) of the
+* An ugly [recreation](models/examples/skeletyl.ml) (yellow) of the
   [BastardKB Skeletyl](https://github.com/Bastardkb/Skeletyl) (purple).
-  ![bk skeletyl comparison](images/bk_skeletyl_mimic.png)
+  ![bk skeletyl comparison](assets/images/bk_skeletyl_mimic.png)
   This configuration can be a good place to start if what you are looking for is
   minor tweaks to the "standard" curvatures and offsets (or you want hotswap
   sockets).
 * Configurable heat-set insert screw holes, magnet insets, or bumpon feet can be
   placed at the base of walls of your choosing ![splaytyl bumpon
-  view](images/splaytyl_bumpon.png)
+  view](assets/images/splaytyl_bumpon.png)
 * Base plates and configurable tents can be generated to fit your case, using
   either screws (into brass insets in the case), or magnets for mounting.
-  ![splaytyl bottom plate](images/splaytyl_bottom_plate.png)
-  ![splaytyl tent](images/splaytyl_tent.png)
+  ![splaytyl bottom plate](assets/images/splaytyl_bottom_plate.png)
+  ![splaytyl tent](assets/images/splaytyl_tent.png)
 
 ## Builds / STLs
-There is a showcase of finished builds and some example STLs [here](things/boards), including some
+There is a showcase of finished builds and some example STLs [here](things), including some
 pictures, bills of materials, and notes. If you've designed and built a board
 with the dometyl generator, and you are happy with it, please consider contributing the
-configuration to the [boards library](dometyl/boards), and adding a folder
-to the [boards showcase](things/boards).
+configuration to the [models](models) directory, and adding a folder
+to the [boards showcase](things).
 
 ## MCU / TRRS jack holders
 * A few solutions for MCU (elite-C and pro-micro currently) and TRRS jack
@@ -159,7 +159,7 @@ to the [boards showcase](things/boards).
   [carbonfet](https://github.com/carbonfet/dactyl-manuform) (non-reversible,
   elite-C and pro-micro). Eventually a more tailored tray holder that should be
   available, but these existing stls can get the job done today.
-  ![derek holder with reset button](images/deractyl_elite_w_reset_button.png)
+  ![derek holder with reset button](assets/images/deractyl_elite_w_reset_button.png)
   ![derek holder inside view](images/deractyl_elite-c_underside.png)
 * Second, the [BastardKB shield
   pcb](https://github.com/Bastardkb/Elite-C-holder) used in the
@@ -167,12 +167,12 @@ to the [boards showcase](things/boards).
   boards) is supported as well. In addition to making the required insets/holes
   in the case, the included helper functions will place configurable eyelets for
   heatset inserts for mounting. ![BK shield
-  side-view](images/bk_shield_demo_side_view.png) ![BK shield
-  under-view](images/bk_shield_demo_under_view.png)
+  side-view](assets/images/bk_shield_demo_side_view.png) ![BK shield
+  under-view](assets/images/bk_shield_demo_under_view.png)
   Some time ago, I ordered way too many of these off of JLCPCB, so if you are in
   NA, something could likely be arranged! Alternatively, if would like to use
   this mounting method rather than one of the trays, and you don't want get PCBs
-  made, there is an [stl](things/holders/bastardkb/printable_shield_right.stl)
+  made, there is an [stl](assets/mcu_holders/bastardkb/printable_shield_right.stl)
   available which you can print and solder your components around / glue to.
 * When using one of the trays, be mindful that the rails/slots are cut nicely in
   the wall, and for an option that cuts ports into the wall, be sure that they
@@ -182,9 +182,9 @@ to the [boards showcase](things/boards).
   chosen mounting method.
 
 ## The Hand
-![Hand](images/hand_example.png)
+![Hand](assets/images/hand_example.png)
 There is an as yet undocumented (and subject to evolution) [Hand
-module](dometyl/generator/hand.ml) available to play around with. One can
+module](lib/hand.ml) available to play around with. One can
 generate hand from knuckle (base of proximal bones, or the meta-carpal for the
 thumb) offset coordinates and bone lengths, then pose it with the available
 flexion/extension/abduction/adduction/etc functions, and place it over the home
