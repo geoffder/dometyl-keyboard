@@ -1,0 +1,58 @@
+ {0 Dometyl}
+
+{%html: <img src="../assets/splaytyl_with_caps.png" style="width:125mm;" /> %}
+
+{1:guides Guides}
+
+In addition to the example configs found in the
+{{:https://github.com/geoffder/dometyl-keyboard} dometyl repo}, there are
+guides available that go into a bit more detail:
+
+- {{!page-"walkthrough"} {b basic walkthrough}}
+
+{1:api API}
+
+{!module-Dometyl} -- top level library interface
+
+{2 Top-level parts}
+- {{!Dometyl.Case} [Case]} -- keyboard case generation (sub-part builders as input)
+- {{!Dometyl.Bottom} [Bottom]} -- bottom plate generation given a {{!Dometyl.Case.t} [Case.t]}
+- {{!Dometyl.Tent} [Tent]} -- tenting base generation given a {{!Dometyl.Case.t} [Case.t]}
+
+{2 Keywell}
+- {{!Dometyl.Plate} [Plate]} -- key plate generation (body columns + thumb cluster)
+- {{!Dometyl.Curvature} [Curvature]} -- describing distributions of key along columns
+- {{!Dometyl.Column} [Column]} -- a group of {{!Dometyl.Key.t} [Key.t]}
+- {{!Dometyl.Columns} [Columns]} -- collections of {{!Dometyl.Column.t} [Column.t]}
+- {{!Dometyl.Bridge} [Bridge]} -- bridging gaps between {{!Dometyl.Key.t}
+    [Key.t]}s and {{!Dometyl.Column.t} [Column.t]}s
+
+{2 Keyholes}
+- {{!Dometyl.Key} [Key]} -- a generic keyhole
+- {{!Dometyl.Mx} [Mx]} -- specialized mx keyhole with optional hotswap sockets
+- {{!Dometyl.Choc} [Choc]} -- specialized choc keyhole with optional hotswap sockets
+- {{!Dometyl.Niz} [Niz]} -- specialized niz rubber dome keyholes
+- {{!Dometyl.Sensor} [Sensor]} -- sensor cutouts (for niz keyholes in particular)
+
+{2 Walls}
+- {{!Dometyl.Walls} [Walls]} -- generation of collections of walls for {{!Dometyl.Plate.t} [Plate.t]}
+- {{!Dometyl.Wall} [Wall]} -- individual walls from {{!Dometyl.Key.t} [Key.t]} side faces to ground
+- {{!Dometyl.Connect} [Connect]} -- connecting up walls to form the outer
+    perimeter of the {{!Dometyl.Case.t} [Case.t]}
+- {{!Dometyl.Eyelet} [Eyelet]} -- heatset insert, magnet, and bumpon placement
+
+{2 MCU mounting and port placement}
+- {{!Dometyl.Ports} [Ports]} -- MCU holders and cutting TRS jack and USB cutouts
+- {{!Dometyl.BastardShield} [BastardShield]} -- BK elite-C shield specific
+    mounting solutions
+
+{2 Visualization aids}
+- {{!Dometyl.Caps} [Caps]} -- import and prep of keycap models for visualizing spacing
+- {{!Dometyl.Hand} [Hand]} -- customizable hand model to help with keywell design
+
+{2 Utilities and miscelaneous types}
+- {{!Dometyl.IMap} [IMap]} -- maps with integer keys
+- {{!Dometyl.Util} [Util]} -- various basic utility functions
+- {{!Dometyl.Syntax} [Syntax]} -- let binding operators for [Option.t] (and compose)
+- {{!Dometyl.Idx} [Idx]} -- index type allowing specification of first/last element
+- {{!Dometyl.Points} [Points]} -- coordinates for (roughly) rectangular faces

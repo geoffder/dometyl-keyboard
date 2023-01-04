@@ -1,0 +1,10 @@
+(library
+ (name dometyl)
+ (public_name dometyl)
+ (libraries OCADml OSCADml dune-site)
+ (preprocess
+  (pps ppx_deriving_cad)))
+
+(generate_sites_module
+ (module DuneSites)
+ (sites dometyl))

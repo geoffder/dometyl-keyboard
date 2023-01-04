@@ -1,5 +1,0 @@
-(library
- (name generator)
- (public_name dometyl.generator)
- (libraries scad_ml base stdio)
- (preprocess (pps ppx_jane ppx_deriving_scad)))

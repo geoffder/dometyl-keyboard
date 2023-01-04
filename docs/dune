@@ -1,0 +1,74 @@
+(documentation)
+
+(executables
+ (names walkthrough)
+ (libraries OSCADml dometyl))
+
+(rule
+ (alias doc)
+ (deps
+  (:copier "helpers/copier.exe")
+  (:img
+   (glob_files assets/*.png)
+   (glob_files assets/*.jpg)))
+ (action
+  (run %{copier} "../_doc/_html/assets" %{img})))
+
+; Convenience rule/alias for building and running examples (promoted to examples/scads diectory)
+; This pattern enables automatic scad re-generation on changes with `dune build -w @run`.
+
+(rule
+ (alias doc)
+ (deps
+  (sandbox always)
+  (:runner "helpers/runner.exe")
+  (:scads
+   (glob_files "*.exe")))
+ (targets
+  (dir "scads"))
+ (mode promote)
+ (action
+  (chdir
+   "scads"
+   (run %{runner} %{scads}))))
+
+; Export scad examples to png.
+
+(rule
+ (alias snap_examples)
+ (deps
+  (sandbox always)
+  (:exporter "helpers/snapper.exe")
+  (:scads
+   (glob_files "scads/*.scad")))
+ (targets
+  (dir "pngs"))
+ (mode promote)
+ (action
+  (chdir
+   "pngs"
+   (run %{exporter} %{scads}))))
+
+(rule
+ (alias doc)
+ (deps
+  (:copier "helpers/copier.exe")
+  (:img
+   (glob_files pngs/*.png)))
+ (action
+  (run %{copier} "../_doc/_html/assets" %{img})))
+
+(rule
+ (alias doc)
+ (deps
+  (sandbox always)
+  (:doccer "helpers/doccer.exe")
+  (:ml
+   (glob_files "*.ml")))
+ (targets
+  (dir "guides"))
+ (mode promote)
+ (action
+  (chdir
+   "guides"
+   (run %{doccer} %{ml}))))

@@ -1,0 +1,3 @@
+(executables
+ (names copier doccer snapper runner)
+ (libraries unix threads OSCADml))
