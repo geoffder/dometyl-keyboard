@@ -12,17 +12,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Use OCaml 4.13.x
+      - name: Use OCaml 4.14.x
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: 4.13.x
+          ocaml-compiler: 4.14.x
 
       - name: Install dependencies
         run: opam install ./dometyl --deps-only --with-doc
-
-      - name: Copy main.ml
-        working-directory: ./dometyl/bin
-        run: cp main.ml.example main.ml
 
       - name: Build docs
         working-directory: ./dometyl
