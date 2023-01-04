@@ -17,12 +17,20 @@ jobs:
         with:
           ocaml-compiler: 4.14.x
 
-      - name: Install dependencies
-        run: opam install ./dometyl --deps-only --with-doc
+      - name: Install xvfb and openscad
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          sudo apt-get install openscad
 
-      - name: Build docs
-        working-directory: ./dometyl
-        run: opam exec -- dune build @doc
+      - name: Install dependencies
+        run: opam install . --deps-only --with-doc
+
+      - name: Build docs (with help of dummy X server for snapshots)
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          opam exec -- dune build @doc
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
