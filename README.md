@@ -78,10 +78,9 @@ the `Features` tab in `Edit/Preferences` and check the following:
 The newly added `fast-csg` and related features speed up rendering considerably,
 making the development cycle much more pleasant
 
-## Organization
-Documentation is available
-[online](https://geoffder.github.io/dometyl-keyboard/dometyl/Dometyl/index.html), and will
-be filling in over time.
+## Documentation
+API documentation and usage guides are available
+[online](https://geoffder.github.io/dometyl-keyboard/dometyl/index.html).
 
 ## Usage
 1. Make a new `.ml` file in [models](models), maybe
