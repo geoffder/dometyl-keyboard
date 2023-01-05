@@ -75,8 +75,5 @@ let digest src =
   close_out oc
 
 let () =
-  let oc = open_out "dune" in
-  output_string oc "(documentation (package dometyl))";
-  close_out oc;
   let f i = digest Sys.argv.(i + 1) in
   List.init (Array.length Sys.argv - 1) (Thread.create f) |> List.iter Thread.join

@@ -59,16 +59,13 @@
   (run %{copier} "../_doc/_html/assets" %{img})))
 
 (rule
- (alias doc)
+ (alias guides)
  (deps
   (sandbox always)
   (:doccer "helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
- (targets
-  (dir "guides"))
+ (targets "walkthrough.mld")
  (mode promote)
  (action
-  (chdir
-   "guides"
-   (run %{doccer} %{ml}))))
+  (run %{doccer} %{ml})))
