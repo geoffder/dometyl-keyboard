@@ -9,8 +9,9 @@ license: "AGPL-3.0-or-later"
 homepage: "https://github.com/geoffder/dometyl-keyboard"
 bug-reports: "https://github.com/geoffder/dometyl-keyboard/issues"
 depends: [
-  "dune" {>= "3.5"}
   "ocaml" {>= "4.14.0"}
+  "dune" {>= "3.5"}
+  "dune-site"
   "OCADml" {>= "0.2.0"}
   "OSCADml" {>= "0.1.1"}
   "ppx_deriving_cad" {>= "0.1.0"}

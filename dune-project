@@ -27,6 +27,8 @@
  (depends
   (ocaml
    (>= 4.14.0))
+  dune
+  dune-site
   (OCADml
    (>= 0.2.0))
   (OSCADml
