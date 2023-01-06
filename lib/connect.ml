@@ -232,12 +232,36 @@ let join_walls
     (w1 : Wall.t)
     (w2 : Wall.t)
   =
-  let outward = outward_sign w1 w2 > 0.
-  and edges drawer frac =
+  let corner =
+    Math.approx
+      (V3.angle (Wall.start_direction w1) (Wall.start_direction w2))
+      (Float.pi /. 2.)
+  and outward = outward_sign w1 w2 > 0. in
+  let edges w drawer frac =
     let f = Path3.deduplicate_consecutive ~keep:`FirstAndEnds ~eq:(V3.approx ~eps:1e-1) in
     let bot = f (drawer (`B frac))
     and top = f (drawer (`T frac)) in
-    bot, top
+    if not corner
+    then bot, top
+    else (
+      (* HACK: this trick is intended to avoid issues with roundovers and
+            corner joins where the side face walls are sunk into the key to
+            cover the roundover, causing intersections in the mesh. If the
+            start of the wall is inset, cut off a corresponding amount of the
+            edge such that the join starts further out. *)
+      let n = (Key.Faces.face w.Wall.key.faces w.side).normal
+      and diff = V3.(sub (List.hd bot) w.key.origin) in
+      let dist = V3.norm @@ V3.smul diff (V3.dot (V3.normalize diff) n)
+      and outer =
+        match w.side with
+        | `East | `West -> w.key.config.outer_w /. 2.
+        | _ -> w.key.config.outer_h /. 2.
+      in
+      if dist < outer
+      then
+        ( snd @@ Path3.split ~distance:(`Abs (outer -. dist)) bot
+        , snd @@ Path3.split ~distance:(`Abs (outer -. dist)) top )
+      else bot, top )
   and profs l1 r1 l2 r2 =
     let subdiv =
       let n =
@@ -257,15 +281,14 @@ let join_walls
     Util.fold_left4 f (0., (hd l1, hd r1, hd l2, hd r2)) (tl l1) (tl r1) (tl l2) (tl r2)
   in
   let sharp, (far_ap, ap, bp, far_bp) =
-    let a = edges w1.bounds_drawer 1.
-    and b = edges w2.bounds_drawer 0. in
-    let far_a = edges w1.bounds_drawer 0.
-    and far_b = edges w2.bounds_drawer 1. in
+    let a = edges w1 w1.bounds_drawer 1.
+    and b = edges w2 w2.bounds_drawer 0. in
+    let far_a = edges w1 w1.bounds_drawer 0.
+    and far_b = edges w2 w2.bounds_drawer 1. in
     sharpest (profs far_a a b far_b)
   in
   let a_frac', a_frac, b_frac, b_frac' =
-    let dir_angle = V3.angle (Wall.start_direction w1) (Wall.start_direction w2) in
-    if sharp > max_angle && not (Math.approx dir_angle (Float.pi /. 2.))
+    if sharp > max_angle && not corner
     then (
       (* use law of sines to compute shift required along the inner wall to
            bring the sharpest edge angle down to the max_angle *)
@@ -281,16 +304,16 @@ let join_walls
       else 0.97, 0.995, 1. -. frac, 1. -. frac +. 0.02 )
     else 0.97, 0.99, 0.01, 0.03
   in
-  let ((a_bot, a_top) as a) = edges w1.bounds_drawer a_frac
-  and ((_, a'_top) as a') = edges w1.drawer a_frac'
-  and ((_, b'_top) as b') = edges w2.drawer b_frac'
-  and ((b_bot, b_top) as b) = edges w2.bounds_drawer b_frac in
+  let ((a_bot, a_top) as a) = edges w1 w1.bounds_drawer a_frac
+  and ((_, a'_top) as a') = edges w1 w1.drawer a_frac'
+  and ((_, b'_top) as b') = edges w2 w2.drawer b_frac'
+  and ((b_bot, b_top) as b) = edges w2 w2.bounds_drawer b_frac in
   let tri =
     if gap_fill && sharp > max_angle
     then (
       let bot, top, bot', top', far_top' =
-        let a_bot, a_top = edges w1.bounds_drawer (a_frac -. 0.001)
-        and b_bot, b_top = edges w2.bounds_drawer (b_frac +. 0.001) in
+        let a_bot, a_top = edges w1 w1.bounds_drawer (a_frac -. 0.001)
+        and b_bot, b_top = edges w2 w2.bounds_drawer (b_frac +. 0.001) in
         if outward
         then List.(hd b_bot, hd b_top, hd a_bot, hd a_top, hd a'_top)
         else List.(hd a_bot, hd a_top, hd b_bot, hd b_top, hd b'_top)
