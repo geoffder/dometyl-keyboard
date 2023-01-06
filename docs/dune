@@ -7,7 +7,7 @@
 (rule
  (alias doc)
  (deps
-  (:copier "helpers/copier.exe")
+  (:copier "../dune_helpers/copier.exe")
   (:img
    (glob_files assets/*.png)
    (glob_files assets/*.jpg)))
@@ -21,7 +21,7 @@
  (alias doc)
  (deps
   (sandbox always)
-  (:runner "helpers/runner.exe")
+  (:runner "../dune_helpers/runner.exe")
   (:scads
    (glob_files "*.exe")))
  (targets
@@ -38,7 +38,7 @@
  (alias snap_examples)
  (deps
   (sandbox always)
-  (:exporter "helpers/snapper.exe")
+  (:exporter "../dune_helpers/snapper.exe")
   (:scads
    (glob_files "scads/*.scad")))
  (targets
@@ -52,7 +52,7 @@
 (rule
  (alias doc)
  (deps
-  (:copier "helpers/copier.exe")
+  (:copier "../dune_helpers/copier.exe")
   (:img
    (glob_files pngs/*.png)))
  (action
@@ -62,7 +62,7 @@
  (alias guides)
  (deps
   (sandbox always)
-  (:doccer "helpers/doccer.exe")
+  (:doccer "../dune_helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
  (targets "walkthrough.mld")
