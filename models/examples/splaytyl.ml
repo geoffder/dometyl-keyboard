@@ -44,7 +44,7 @@ let plate_builder =
     ~n_body_cols:5
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(v3 (-13.) (-41.) 10.)
+    ~thumb_offset:(v3 (-13.) (-41.) 11.)
     ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.))
     ~rotate_thumb_clips:false
     ~caps:Caps.Matty3.row
