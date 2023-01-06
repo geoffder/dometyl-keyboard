@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>walkthrough (dometyl.walkthrough)</title><link rel="stylesheet" href="../odoc.css"/><meta charset="utf-8"/><meta name="generator" content="odoc 2.2.0"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="index.html">Up</a> – <a href="index.html">dometyl</a> &#x00BB; walkthrough</nav><header class="odoc-preamble"><h1 id="basic-usage-walkthrough"><a href="#basic-usage-walkthrough" class="anchor"></a>Basic Usage Walkthrough</h1><pre class="language-ocaml"><code>open OCADml
 open OSCADml
-open Dometyl</code></pre><p>First, lets make our keyhole early as we'll need it for viewing intermediary results in this walkthrough. Here we define an mx keyhole with bezier roundovers on the sides, with a minimum <code>clearance</code> of <code>2.</code> from the table (to give space for wiring etc above the base plate).</p><pre class="language-ocaml"><code>let keyhole =
+open Dometyl</code></pre><p>First, lets make our keyhole early as we'll need it for viewing intermediary results in this walkthrough. Here we define an mx keyhole with bezier roundovers on the sides, with a minimum <code>clearance</code> of <code>2.</code> from the table (to give space for wiring etc below the switch plate).</p><pre class="language-ocaml"><code>let keyhole =
   Mx.make_hole
     ~clearance:2.
     ~corner:(Path3.Round.bez (`Cut 0.5)) (* roundover cut in from corner *)
     ~fn:16 (* number of points in the bezier rounded corners *)
-    ()</code></pre><p>We can write our keyhole to an OpenSCAD script by first obtaining the <code>Scad.t</code>, then using <code>OCADml.Scad.to_file</code>. Doing this can be a quick way to get a better look at individual pieces of our models, so we'll be doing it at steps throughout this guide, though it isn't required for the usual keyboard generation config workflow.</p><pre class="language-ocaml"><code>let () = Scad.to_file &quot;keyhole.scad&quot; @@ Key.to_scad keyhole</code></pre>
+    ()</code></pre><p>We can write our keyhole to an OpenSCAD script by first obtaining the <code>Scad.t</code>, then using <code>OCADml.Scad.to_file</code>. Doing this can be a quick way to get a better look at individual pieces of our models, so we'll be doing it at steps throughout this guide (though doing so is not required for the usual keyboard generation config workflow).</p><pre class="language-ocaml"><code>let () = Scad.to_file &quot;keyhole.scad&quot; @@ Key.to_scad keyhole</code></pre>
 <p style="text-align:center;">
 <img src="../assets/keyhole.png" style="width:150mm;"/>
-</p> <p>Next, we'll describe how we would like our keyholes to be arranged into columns to form our switch plate. The <a href="Dometyl/Plate/Lookups/index.html#val-body"><code>Plate.Lookups.body</code></a> constructor takes a set of lookup functions from column index to values governing the construction and placement of each of the columns independently.</p><p><code>~offset</code> allows us to set the xyz offset of our columns, particular mind paid to y and z stagger, which helps adjust column placement to the lenghts of our fingers:</p><pre class="language-ocaml"><code>let offset = function
+</p> <p>Next, we'll describe how we would like our keyholes to be arranged into columns to form the switch plate. The <a href="Dometyl/Plate/Lookups/index.html#val-body"><code>Plate.Lookups.body</code></a> constructor takes a set of lookup functions from column indices to values governing the construction and placement of each of the columns independently.</p><p><code>~offset</code> allows us to set the xyz offset of our columns, particular mind paid to y and z stagger, which helps adjust column placement to the lenghts of our fingers:</p><pre class="language-ocaml"><code>let offset = function
   | 2 -&gt; v3 0. 3.5 (-5.) (* middle *)
   | 3 -&gt; v3 1. (-2.5) 0.5 (* ring *)
   | i when i &gt;= 4 -&gt; v3 0.5 (-18.) 8.5 (* pinky *)
@@ -44,13 +44,12 @@ let centre _ = 1.</code></pre><p>Finally, we'll construct our <code>body_lookups
   in
   Plate.Lookups.thumb ~curve ()</code></pre><p>Now with our <code>body_lookups</code> and <code>thumb_lookups</code> complete, we'll finish off our plate specification with some of the more tersely defined parameters of <a href="Dometyl/Plate/index.html#val-make"><code>Plate.make</code></a>.</p><pre class="language-ocaml"><code>let plate_builder =
   Plate.make
-    ~n_body_cols:5
+    ~n_body_cols:5 (* number of columns *)
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(v3 (-13.) (-41.) 10.)
-    ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.))
-    ~rotate_thumb_clips:false
-    ~caps:Caps.Matty3.row
+    ~thumb_offset:(v3 (-13.) (-41.) 10.) (* translation *)
+    ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.)) (* rotation *)
+    ~caps:Caps.Matty3.row (* strictly for visualizing *)
     ~thumb_caps:Caps.MT3.(fun i -&gt; if i = 1 then space_1_25u else space_1u)</code></pre><p>This <code>plate_builder</code> is left as a closure, since our <a href="Dometyl/Key/index.html#type-t"><code>Key.t</code></a> will be passed to it within the <a href="Dometyl/Case/index.html#val-make"><code>Case.make</code></a> constructor, but we can take a peak at our efforts so far by applying it ourselves.</p><pre class="language-ocaml"><code>let switch_plate = plate_builder keyhole
 let () = Scad.to_file ~incl:true &quot;switch_plate.scad&quot; @@ Plate.to_scad switch_plate</code></pre>
 <p style="text-align:center;">
@@ -88,7 +87,7 @@ let () = Scad.to_file ~incl:true &quot;walls.scad&quot; (Walls.to_scad walls)</c
     ~corner:(Path3.Round.bez (`Joint 2.)) (* top corner roundovers *)
     ~corner_fn:16 (* roundover resolution *)
     ~north_joins:(fun i -&gt; i &lt; 2) (* fully join walls until the middle finger *)
-    ~south_joins:(Fun.const false)
+    ~south_joins:(fun _ -&gt; false)
 
 let connections = base_connector walls
 let () = Scad.to_file ~incl:true &quot;connections.scad&quot; (Connect.to_scad connections)</code></pre>
