@@ -63,7 +63,7 @@ let make ?(join_ax = `NS) ~n_keys ~curve ~caps key =
       get `East >> Key.Face.translate (V3.neg s), get `West >> Key.Face.translate s
   in
   let join_keys (a : Key.t) (b : Key.t) =
-    Scad.of_mesh @@ Mesh.hull (List.rev_append (get_start a).path (get_dest b).path)
+    Scad.of_mesh @@ Mesh.hull (List.rev_append (get_dest b).path (get_start a).path)
   in
   let keys = List.fold_left place_key IMap.empty (List.init n_keys Fun.id) in
   let joins =
