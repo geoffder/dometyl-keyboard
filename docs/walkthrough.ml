@@ -7,7 +7,7 @@ open Dometyl
 (** First, lets make our keyhole early as we'll need it for viewing
     intermediary results in this walkthrough. Here we define an mx keyhole with
     bezier roundovers on the sides, with a minimum [clearance] of [2.] from the
-    table (to give space for wiring etc above the base plate). *)
+    table (to give space for wiring etc below the switch plate). *)
 
 let keyhole =
   Mx.make_hole
@@ -19,8 +19,8 @@ let keyhole =
 (** We can write our keyhole to an OpenSCAD script by first obtaining the
     [Scad.t], then using [OCADml.Scad.to_file]. Doing this can be a quick way
     to get a better look at individual pieces of our models, so we'll be doing
-    it at steps throughout this guide, though it isn't required for the usual
-    keyboard generation config workflow. *)
+    it at steps throughout this guide (though doing so is not required for the usual
+    keyboard generation config workflow). *)
 
 let () = Scad.to_file "keyhole.scad" @@ Key.to_scad keyhole
 
@@ -31,9 +31,9 @@ let () = Scad.to_file "keyhole.scad" @@ Key.to_scad keyhole
     *)
 
 (** Next, we'll describe how we would like our keyholes to be arranged into
-    columns to form our switch plate. The {{!Dometyl.Plate.Lookups.body}
+    columns to form the switch plate. The {{!Dometyl.Plate.Lookups.body}
     [Plate.Lookups.body]} constructor takes a set of lookup functions from
-    column index to values governing the construction and placement of each of
+    column indices to values governing the construction and placement of each of
     the columns independently.
 
     [~offset] allows us to set the xyz offset of our columns, particular
@@ -141,13 +141,12 @@ let thumb_lookups =
 
 let plate_builder =
   Plate.make
-    ~n_body_cols:5
+    ~n_body_cols:5 (* number of columns *)
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(v3 (-13.) (-41.) 10.)
-    ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.))
-    ~rotate_thumb_clips:false
-    ~caps:Caps.Matty3.row
+    ~thumb_offset:(v3 (-13.) (-41.) 10.) (* translation *)
+    ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.)) (* rotation *)
+    ~caps:Caps.Matty3.row (* strictly for visualizing *)
     ~thumb_caps:Caps.MT3.(fun i -> if i = 1 then space_1_25u else space_1u)
 
 (** This [plate_builder] is left as a closure, since our {{!Dometyl.Key.t}
@@ -239,7 +238,7 @@ let base_connector =
     ~corner:(Path3.Round.bez (`Joint 2.)) (* top corner roundovers *)
     ~corner_fn:16 (* roundover resolution *)
     ~north_joins:(fun i -> i < 2) (* fully join walls until the middle finger *)
-    ~south_joins:(Fun.const false)
+    ~south_joins:(fun _ -> false)
 
 let connections = base_connector walls
 let () = Scad.to_file ~incl:true "connections.scad" (Connect.to_scad connections)
