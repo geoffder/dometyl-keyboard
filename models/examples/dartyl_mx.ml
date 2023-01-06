@@ -36,6 +36,7 @@ let wall_builder plate =
 let base_connector =
   Connect.skeleton
     ~height:6.
+    ~tight_threshold:4.3 (* HACK: lowered to avoid thin east thumb link *)
     ~thumb_height:9.5
     ~north_joins:(fun i -> i < 2)
     ~close_thumb:true
@@ -54,7 +55,9 @@ let body_lookups =
     | 0 ->
       Curvature.(
         curve ~well:(well ~radius:48.5 (Float.pi /. 5.95) ~tilt:(Float.pi /. 5.)) ())
-    | _ -> Curvature.(curve ~well:(well ~radius:48. (Float.pi /. 6.1)) ())
+    | _ ->
+      Curvature.(
+        curve ~well:(well ~radius:48. ~tilt:(Float.pi /. 15.) (Float.pi /. 6.1)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -23.

@@ -64,6 +64,9 @@ let fillet ~d ~h rows =
   in
   List.map2 f rel_dists rows
 
+(* TODO: revisit tight_threshold and tight_d. Perhaps giving more power in the
+    meantime with tight_size such that edge cases can be tweaked around.
+    See dartyl_mx for a case where too low d causes a bad connection. *)
 let spline_base
     ?(height = 11.)
     ?(d = 1.)
