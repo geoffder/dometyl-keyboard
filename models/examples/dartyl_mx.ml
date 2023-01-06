@@ -8,13 +8,16 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
-          ~n_steps:(`Flat 4)
+          ~n_steps:(`PerZ 1.)
+          ~d2:8.
           ~north_clearance:2.19
           ~south_clearance:2.19
           ~side_clearance:2.19
           ~west_lookup:(fun i -> i = 0)
           ~north_lookup:(fun _ -> true)
           ~south_lookup:(fun i -> i <> 0)
+          ~scale:(v2 0.8 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           plate
     ; thumb =
         auto_thumb
@@ -22,19 +25,22 @@ let wall_builder plate =
           ~south_lookup:(fun _ -> true)
           ~north_clearance:0.5
           ~south_clearance:0.5
-          ~side_clearance:0.5 (* ~d1:3. *)
-          ~d2:4.75
+          ~side_clearance:0.5
+          ~d2:6.
           ~n_steps:(`Flat 15)
+          ~scale:(v2 0.7 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           plate
     }
 
 let base_connector =
   Connect.skeleton
-    ~height:4.
+    ~height:6.
     ~thumb_height:9.5
     ~north_joins:(fun i -> i < 2)
     ~close_thumb:true
     ~south_joins:(fun _ -> false)
+    ~corner:(Path3.Round.chamf (`Cut 0.5))
 
 let body_lookups =
   let offset = function
@@ -48,9 +54,7 @@ let body_lookups =
     | 0 ->
       Curvature.(
         curve ~well:(well ~radius:48.5 (Float.pi /. 5.95) ~tilt:(Float.pi /. 5.)) ())
-    | _ ->
-      Curvature.(
-        curve ~well:(well ~radius:48. (Float.pi /. 6.1) ~tilt:(Float.pi /. 15.)) ())
+    | _ -> Curvature.(curve ~well:(well ~radius:48. (Float.pi /. 6.1)) ())
   and swing = function
     | 2 -> Float.pi /. -48.
     | 3 -> Float.pi /. -23.
@@ -88,7 +92,14 @@ let bumpon =
   { Eyelet.bumpon_config with outer_rad = (2. /. 2.) +. 1.; inner_rad = 2. /. 2. }
 
 let build ?hotswap () =
-  let keyhole = Mx.make_hole ~clearance:1.5 ~thickness:4.88 ?hotswap () in
+  let keyhole =
+    Mx.make_hole
+      ~clearance:1.5
+      ~thickness:4.88
+      ?hotswap
+      ~corner:(Path3.Round.chamf (`Cut 0.5))
+      ()
+  in
   let plate_builder =
     Plate.make
       ~n_body_cols:5
