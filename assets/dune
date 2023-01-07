@@ -7,7 +7,7 @@
  (targets
   (dir "stls"))
  (action
-  (run %{copier} "stls" "basename" %{stls})))
+  (run %{copier} "stls" "--basename" %{stls})))
 
 (install
  (dirs stls)

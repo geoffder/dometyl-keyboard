@@ -35,7 +35,9 @@ let () =
   for i = 3 to Array.length Sys.argv - 1 do
     let name = Filename.basename Sys.argv.(i) in
     let dir =
-      if Sys.argv.(2) = "basename"
+      (* HACK: indecisive on whether dropping the directories is always the way
+           to go in this repo, so using this hard "flag" arg for now. *)
+      if Sys.argv.(2) = "--basename"
       then dest
       else
         Filename.(String.(split_on_char (get dir_sep 0) (dirname Sys.argv.(i))))

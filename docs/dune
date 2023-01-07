@@ -1,3 +1,5 @@
+(include_subdirs unqualified)
+
 (documentation)
 
 (executables
@@ -12,7 +14,7 @@
    (glob_files assets/*.png)
    (glob_files assets/*.jpg)))
  (action
-  (run %{copier} "../_doc/_html/assets" "basename" %{img})))
+  (run %{copier} "../_doc/_html/assets" "--basename" %{img})))
 
 ; Convenience rule/alias for building and running examples (promoted to examples/scads diectory)
 ; This pattern enables automatic scad re-generation on changes with `dune build -w @run`.
@@ -56,16 +58,19 @@
   (:img
    (glob_files pngs/*.png)))
  (action
-  (run %{copier} "../_doc/_html/assets" "basename" %{img})))
+  (run %{copier} "../_doc/_html/assets" "--basename" %{img})))
 
 (rule
- (alias guides)
+ (alias doc)
  (deps
   (sandbox always)
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
- (targets "walkthrough.mld")
+ (targets
+  (dir "guides"))
  (mode promote)
  (action
-  (run %{doccer} %{ml})))
+  (chdir
+   "guides"
+   (run %{doccer} %{ml}))))
