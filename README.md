@@ -1,6 +1,6 @@
 # Dometyl Keyboard
 
-![Splaytyl Build](things/legacy/splaytyl/images/splaytyl_both.jpeg)
+![Splaytyl Build](things/splaytyl/images/splaytyl_both.jpeg)
 
 ## Another Dactyl inspired keyboard. Supporting MX, Choc, and even rubber domes.
 This is a library for generating paramaterized split-hand, concave, columnar,
@@ -29,7 +29,7 @@ but then you would be wrong! One need simply glue magnets to sliders, and glue
 [hall-effect sensors](https://www.diodes.com/assets/Datasheets/AH3572.pdf) into
 a case, and *voila* the rubber dometyl is born.
 
-![niztyl - gone topless](things/legacy/niztyl/images/topless.jpg)
+![niztyl - gone topless](things/niztyl/images/topless.jpg)
 
 The relevant code for generating the required keyhole can be found in the [Niz
 module](lib/niz.ml), the first example of a board
@@ -147,8 +147,6 @@ to the [boards showcase](things).
   [carbonfet](https://github.com/carbonfet/dactyl-manuform) (non-reversible,
   elite-C and pro-micro). Eventually a more tailored tray holder that should be
   available, but these existing stls can get the job done today.
-  ![derek holder with reset button](assets/images/deractyl_elite_w_reset_button.png)
-  ![derek holder inside view](images/deractyl_elite-c_underside.png)
 * Second, the [BastardKB shield
   pcb](https://github.com/Bastardkb/Elite-C-holder) used in the
   [Skeletyl](https://github.com/Bastardkb/Skeletyl) (as well Quentin's other
