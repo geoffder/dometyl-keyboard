@@ -1,6 +1,8 @@
-(documentation)
+(documentation
+ (package dometyl))
 
 (executables
+ (public_names dometyl.walkthrough)
  (names walkthrough)
  (libraries OSCADml dometyl))
 
