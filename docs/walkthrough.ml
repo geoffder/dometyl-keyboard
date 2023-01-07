@@ -155,7 +155,7 @@ let plate_builder =
     ourselves. *)
 
 let switch_plate = plate_builder keyhole
-let () = Scad.to_file ~incl:true "switch_plate.scad" @@ Plate.to_scad switch_plate
+let () = Scad.to_file "switch_plate.scad" @@ Plate.to_scad switch_plate
 
 (** {%html:
     <p style="text-align:center;">
@@ -211,7 +211,7 @@ let wall_builder plate =
     are without any pesky context to block the view. *)
 
 let walls = wall_builder switch_plate
-let () = Scad.to_file ~incl:true "walls.scad" (Walls.to_scad walls)
+let () = Scad.to_file "walls.scad" (Walls.to_scad walls)
 
 (** {%html:
     <p style="text-align:center;">
@@ -241,7 +241,7 @@ let base_connector =
     ~south_joins:(fun _ -> false)
 
 let connections = base_connector walls
-let () = Scad.to_file ~incl:true "connections.scad" (Connect.to_scad connections)
+let () = Scad.to_file "connections.scad" (Connect.to_scad connections)
 
 (** {%html:
     <p style="text-align:center;">
@@ -266,7 +266,7 @@ let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
 let () =
-  Scad.to_file ~incl:true "plate_glue.scad"
+  Scad.to_file "plate_glue.scad"
   @@ Scad.add (Plate.to_scad switch_plate) (plate_welder switch_plate)
 
 (** {%html:
@@ -341,10 +341,7 @@ let bottom =
 (** Let's take a look at it rotated around so that we can see the more interesting side. *)
 
 let () =
-  Scad.to_file
-    ~incl:true
-    "right_base_plate.scad"
-    (Scad.zrot Float.pi @@ Scad.xrot Float.pi bottom)
+  Scad.to_file "right_base_plate.scad" (Scad.zrot Float.pi @@ Scad.xrot Float.pi bottom)
 
 (** {%html:
     <p style="text-align:center;">
@@ -356,7 +353,7 @@ let () =
    {{!Dometyl.Tent} [Tent]} module. *)
 
 let whiffle_tent = Tent.make ~style:(Tent.prison ()) case
-let () = Scad.to_file ~incl:true "right_tent.scad" whiffle_tent
+let () = Scad.to_file "right_tent.scad" whiffle_tent
 
 (** {%html:
     <p style="text-align:center;">

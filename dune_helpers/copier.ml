@@ -32,9 +32,14 @@ let mkdirs root dirs =
 let () =
   let dest = Sys.argv.(1) in
   if not @@ Sys.file_exists dest then Sys.mkdir dest 0o777;
-  for i = 2 to Array.length Sys.argv - 1 do
-    let name = Filename.basename Sys.argv.(i)
-    and dirs = Filename.(String.(split_on_char (get dir_sep 0) (dirname Sys.argv.(i)))) in
-    let path = Printf.sprintf "%s/%s" (mkdirs dest dirs) name in
-    ignore @@ copy Sys.argv.(i) path
+  for i = 3 to Array.length Sys.argv - 1 do
+    let name = Filename.basename Sys.argv.(i) in
+    let dir =
+      if Sys.argv.(2) = "basename"
+      then dest
+      else
+        Filename.(String.(split_on_char (get dir_sep 0) (dirname Sys.argv.(i))))
+        |> mkdirs dest
+    in
+    ignore @@ copy Sys.argv.(i) (Printf.sprintf "%s/%s" dir name)
   done
