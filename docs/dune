@@ -5,7 +5,7 @@
  (libraries OSCADml dometyl))
 
 (rule
- ; (alias doc)
+ (alias guides)
  (deps
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
@@ -15,13 +15,8 @@
  (action
   (run %{doccer} %{ml})))
 
-(alias
- (name doc)
- (deps
-  (glob_files "*.mld")))
-
 (rule
- (alias doc)
+ (alias guides)
  (deps
   (:runner "../dune_helpers/runner.exe")
   (:scads
@@ -35,7 +30,7 @@
    (run %{runner} %{scads}))))
 
 (rule
- (alias doc)
+ (alias guides)
  (deps
   (:exporter "../dune_helpers/snapper.exe")
   (:scads
@@ -49,7 +44,7 @@
    (run %{exporter} %{scads}))))
 
 (rule
- (alias doc)
+ (alias guides)
  (deps
   (:copier "../dune_helpers/copier.exe")
   (:img
@@ -61,6 +56,11 @@
   (progn
    (run %{copier} "odoc-assets" "--basename" %{img})
    (run %{copier} "../_doc/_html/dometyl/_assets" "--basename" %{img}))))
+
+(alias
+ (name doc)
+ (deps
+  (alias guides)))
 
 (install
  (files
