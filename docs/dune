@@ -5,39 +5,36 @@
  (libraries OSCADml dometyl))
 
 (rule
- (alias guides)
+ ; (alias guides)
  (deps
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
  (targets "walkthrough.mld")
- ; (mode promote)
  (action
   (run %{doccer} %{ml})))
 
 (rule
- (alias guides)
+ ; (alias guides)
  (deps
   (:runner "../dune_helpers/runner.exe")
   (:scads
    (glob_files "*.exe")))
  (targets
   (dir "scads"))
- ; (mode promote)
  (action
   (chdir
    "scads"
    (run %{runner} %{scads}))))
 
 (rule
- (alias guides)
+ ; (alias guides)
  (deps
   (:exporter "../dune_helpers/snapper.exe")
   (:scads
    (glob_files "scads/*.scad")))
  (targets
   (dir "pngs"))
- ; (mode promote)
  (action
   (chdir
    "pngs"
