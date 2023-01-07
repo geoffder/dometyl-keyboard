@@ -40,6 +40,7 @@
  (alias doc)
  (deps
   (:copier "../dune_helpers/copier.exe")
+  "pngs"
   (:img
    (glob_files assets/*)
    (glob_files pngs/*)))
