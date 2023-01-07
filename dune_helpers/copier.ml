@@ -19,7 +19,7 @@ let mkdirs root dirs =
   let rec loop path = function
     | [] -> path
     | hd :: tl ->
-      let path = Printf.sprintf "%s%s%s" path Filename.dir_sep hd in
+      let path = Filename.concat path hd in
       if Sys.file_exists path
       then loop path tl
       else begin
@@ -31,7 +31,7 @@ let mkdirs root dirs =
 
 let () =
   let dest = Sys.argv.(1) in
-  if not @@ Sys.file_exists dest then Sys.mkdir dest 0o777;
+  Filename.(String.(split_on_char (get dir_sep 0) dest)) |> mkdirs "" |> ignore;
   for i = 3 to Array.length Sys.argv - 1 do
     let name = Filename.basename Sys.argv.(i) in
     let dir =

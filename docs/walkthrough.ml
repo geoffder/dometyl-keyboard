@@ -26,7 +26,7 @@ let () = Scad.to_file "keyhole.scad" @@ Key.to_scad keyhole
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/keyhole.png" style="width:150mm;"/>
+    <img src="_assets/keyhole.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -82,7 +82,7 @@ let () =
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/column_keys.png" style="width:150mm;"/>
+    <img src="_assets/column_keys.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -159,7 +159,7 @@ let () = Scad.to_file "switch_plate.scad" @@ Plate.to_scad switch_plate
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/switch_plate.png" style="width:150mm;"/>
+    <img src="_assets/switch_plate.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -215,7 +215,7 @@ let () = Scad.to_file "walls.scad" (Walls.to_scad walls)
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/walls.png" style="width:150mm;"/>
+    <img src="_assets/walls.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -245,7 +245,7 @@ let () = Scad.to_file "connections.scad" (Connect.to_scad connections)
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/connections.png" style="width:150mm;"/>
+    <img src="_assets/connections.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -271,7 +271,7 @@ let () =
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/plate_glue.png" style="width:150mm;"/>
+    <img src="_assets/plate_glue.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -310,7 +310,7 @@ let () = Scad.to_file "right_case.scad" (Case.to_scad case)
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/right_case.png" style="width:150mm;"/>
+    <img src="_assets/right_case.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -345,7 +345,7 @@ let () =
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/right_base_plate.png" style="width:150mm;"/>
+    <img src="_assets/right_base_plate.png" style="width:150mm;"/>
     </p> %}
     *)
 
@@ -357,6 +357,6 @@ let () = Scad.to_file "right_tent.scad" whiffle_tent
 
 (** {%html:
     <p style="text-align:center;">
-    <img src="../assets/right_tent.png" style="width:150mm;"/>
+    <img src="_assets/right_tent.png" style="width:150mm;"/>
     </p> %}
     *)

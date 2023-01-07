@@ -1,23 +1,8 @@
-(include_subdirs unqualified)
-
 (documentation)
 
 (executables
  (names walkthrough)
  (libraries OSCADml dometyl))
-
-(rule
- (alias doc)
- (deps
-  (:copier "../dune_helpers/copier.exe")
-  (:img
-   (glob_files assets/*.png)
-   (glob_files assets/*.jpg)))
- (action
-  (run %{copier} "../_doc/_html/assets" "--basename" %{img})))
-
-; Convenience rule/alias for building and running examples (promoted to examples/scads diectory)
-; This pattern enables automatic scad re-generation on changes with `dune build -w @run`.
 
 (rule
  (alias doc)
@@ -37,9 +22,9 @@
 ; Export scad examples to png.
 
 (rule
- (alias snap_examples)
+ (alias doc)
  (deps
-  (sandbox always)
+  ; (sandbox always)
   (:exporter "../dune_helpers/snapper.exe")
   (:scads
    (glob_files "scads/*.scad")))
@@ -56,9 +41,22 @@
  (deps
   (:copier "../dune_helpers/copier.exe")
   (:img
-   (glob_files pngs/*.png)))
+   (glob_files assets/*)
+   (glob_files pngs/*)))
+ (targets
+  (dir "odoc-assets"))
  (action
-  (run %{copier} "../_doc/_html/assets" "--basename" %{img})))
+  (run %{copier} "odoc-assets" "--basename" %{img})))
+
+(rule
+ (alias doc)
+ (deps
+  (:copier "../dune_helpers/copier.exe")
+  (:img
+   (glob_files odoc-assets/*)
+   (glob_files odoc-assets/*)))
+ (action
+  (run %{copier} "../_doc/_html/dometyl/_assets" "--basename" %{img})))
 
 (rule
  (alias doc)
@@ -67,10 +65,12 @@
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
- (targets
-  (dir "guides"))
+ (targets "walkthrough.mld")
  (mode promote)
  (action
-  (chdir
-   "guides"
-   (run %{doccer} %{ml}))))
+  (run %{doccer} %{ml})))
+
+(install
+ (files
+  (glob_files odoc-assets/*))
+ (section doc))
