@@ -16,10 +16,10 @@ let to_file = Scad.to_file ~incl:true
    left cases directly here as well. *)
 
 let splaytyl_right = Splaytyl.build ~hotswap:`South ()
-let splaytyl_left = Splaytyl.build ~right_hand:false ~hotswap:`South ()
+let splaytyl_left = Splaytyl.build ~hotswap:`South ~right_hand:false ()
 
 let () =
   to_file "splaytyl_right" (Case.to_scad ~show_caps:false splaytyl_right);
   to_file "splaytyl_left" (Case.to_scad splaytyl_left);
-  to_file "bottom_plate_right" (Bottom.make splaytyl_right);
+  to_file "bottom_plate_right" (Splaytyl.bottom @@ splaytyl_right);
   to_file "tent_right" (Tent.make splaytyl_right)
