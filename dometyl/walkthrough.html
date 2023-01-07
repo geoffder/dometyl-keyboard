@@ -51,7 +51,7 @@ let centre _ = 1.</code></pre><p>Finally, we'll construct our <code>body_lookups
     ~thumb_angle:Float.(v3 (pi /. 40.) (pi /. -14.) (pi /. 24.)) (* rotation *)
     ~caps:Caps.Matty3.row (* strictly for visualizing *)
     ~thumb_caps:Caps.MT3.(fun i -&gt; if i = 1 then space_1_25u else space_1u)</code></pre><p>This <code>plate_builder</code> is left as a closure, since our <a href="Dometyl/Key/index.html#type-t"><code>Key.t</code></a> will be passed to it within the <a href="Dometyl/Case/index.html#val-make"><code>Case.make</code></a> constructor, but we can take a peak at our efforts so far by applying it ourselves.</p><pre class="language-ocaml"><code>let switch_plate = plate_builder keyhole
-let () = Scad.to_file ~incl:true &quot;switch_plate.scad&quot; @@ Plate.to_scad switch_plate</code></pre>
+let () = Scad.to_file &quot;switch_plate.scad&quot; @@ Plate.to_scad switch_plate</code></pre>
 <p style="text-align:center;">
 <img src="../assets/switch_plate.png" style="width:150mm;"/>
 </p> <p>Note how the columns have not been connected in any way yet. We'll be adding some bridging reinforcements later when we build the rest of the case.</p><p>The next major part of our keyboard to design are the walls projecting from the keys of our switch plate to the xy-plane. The <a href="Dometyl/Walls/index.html#val-auto_body"><code>Walls.auto_body</code></a> and <a href="Dometyl/Walls/index.html#val-auto_thumb"><code>Walls.auto_thumb</code></a> helpers are provided as a means to do so automatically with defaults that should be (at least close to) adequate for typical skeletal cases. Note that our <code>body_builder</code> and <code>thumb_builder</code> functions below take a <code>Plate.t</code> as a parameter, as we'll be passing our <code>wall_builder</code> along to <a href="Dometyl/Case/index.html#val-make"><code>Case.make</code></a> much like <code>plate_builder</code>.</p><pre class="language-ocaml"><code>let body_builder plate =
@@ -76,7 +76,7 @@ let () = Scad.to_file ~incl:true &quot;switch_plate.scad&quot; @@ Plate.to_scad 
 
 let wall_builder plate =
   Walls.make ~body:(body_builder plate) ~thumb:(thumb_builder plate)</code></pre><p>We'll see the walls hooked up to the rest of the case later, so here they are without any pesky context to block the view.</p><pre class="language-ocaml"><code>let walls = wall_builder switch_plate
-let () = Scad.to_file ~incl:true &quot;walls.scad&quot; (Walls.to_scad walls)</code></pre>
+let () = Scad.to_file &quot;walls.scad&quot; (Walls.to_scad walls)</code></pre>
 <p style="text-align:center;">
 <img src="../assets/walls.png" style="width:150mm;"/>
 </p> <p>So there are walls projecting our switch plate to the ground, but we still have to &quot;wire&quot; them up to create a complete perimeter base for our case. For that, we turn to the <a href="Dometyl/Connect/index.html"><code>Connect</code></a> module, which includes the helper (in the same spirit at the <code>auto_</code> functions in <a href="Dometyl/Walls/index.html"><code>Walls</code></a>) that we'll be using for this case: <a href="Dometyl/Connect/index.html#val-skeleton"><code>Connect.skeleton</code></a>. The <code>skeleton</code> connection generator defaults to using filleted sweeps along splines running along the xy plane between neighbouring walls, with the option to specify that certain walls should instead have the gap fully closed off (see <code>close_thumb</code> and <code>_joins</code> parameters).</p><pre class="language-ocaml"><code>let base_connector =
@@ -90,14 +90,14 @@ let () = Scad.to_file ~incl:true &quot;walls.scad&quot; (Walls.to_scad walls)</c
     ~south_joins:(fun _ -&gt; false)
 
 let connections = base_connector walls
-let () = Scad.to_file ~incl:true &quot;connections.scad&quot; (Connect.to_scad connections)</code></pre>
+let () = Scad.to_file &quot;connections.scad&quot; (Connect.to_scad connections)</code></pre>
 <p style="text-align:center;">
 <img src="../assets/connections.png" style="width:150mm;"/>
 </p> <p>As mentioned earlier when we made our plate, we'd like to add some structural support between our columns as well. For that we have the <code>~plate_welder</code> parameter of <a href="Dometyl/Case/index.html#val-make"><code>Case.make</code></a> -- a function that takes a <a href="Dometyl/Plate/index.html#type-t"><code>Plate.t</code></a> as argument, and returns a <code>Scad.t</code> to add on to the plate when the case is built.</p><p>The <a href="Dometyl/Plate/index.html#val-skeleton_bridges"><code>Plate.skeleton_bridges</code></a> helper roughly mimics the pattern seen on the <a href="https://github.com/Bastardkb/Skeletyl">BastardKB Skeletyl</a>, and will often be adequate for similar designs, but here we'll add in a little extra reinforcement by using <a href="Dometyl/Bridge/index.html#val-cols"><code>Bridge.cols</code></a> to seal up between the index and middle finger columns.</p><pre class="language-ocaml"><code>let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
 let () =
-  Scad.to_file ~incl:true &quot;plate_glue.scad&quot;
+  Scad.to_file &quot;plate_glue.scad&quot;
   @@ Scad.add (Plate.to_scad switch_plate) (plate_welder switch_plate)</code></pre>
 <p style="text-align:center;">
 <img src="../assets/plate_glue.png" style="width:150mm;"/>
@@ -126,14 +126,11 @@ let () = Scad.to_file &quot;right_case.scad&quot; (Case.to_scad case)</code></pr
       ]
   in
   Bottom.make ~bump_locs case</code></pre><p>Let's take a look at it rotated around so that we can see the more interesting side.</p><pre class="language-ocaml"><code>let () =
-  Scad.to_file
-    ~incl:true
-    &quot;right_base_plate.scad&quot;
-    (Scad.zrot Float.pi @@ Scad.xrot Float.pi bottom)</code></pre>
+  Scad.to_file &quot;right_base_plate.scad&quot; (Scad.zrot Float.pi @@ Scad.xrot Float.pi bottom)</code></pre>
 <p style="text-align:center;">
 <img src="../assets/right_base_plate.png" style="width:150mm;"/>
 </p> <p>Tenting bases with bumpon feet can be similarly generated using the <a href="Dometyl/Tent/index.html"><code>Tent</code></a> module.</p><pre class="language-ocaml"><code>let whiffle_tent = Tent.make ~style:(Tent.prison ()) case
-let () = Scad.to_file ~incl:true &quot;right_tent.scad&quot; whiffle_tent</code></pre>
+let () = Scad.to_file &quot;right_tent.scad&quot; whiffle_tent</code></pre>
 <p style="text-align:center;">
 <img src="../assets/right_tent.png" style="width:150mm;"/>
 </p> </header><div class="odoc-content"></div></body></html>
