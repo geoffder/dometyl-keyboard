@@ -11,7 +11,7 @@
   (:ml
    (glob_files "*.ml")))
  (targets "walkthrough.mld")
- (mode promote)
+ ; (mode promote)
  (action
   (run %{doccer} %{ml})))
 
@@ -23,7 +23,7 @@
    (glob_files "*.exe")))
  (targets
   (dir "scads"))
- (mode promote)
+ ; (mode promote)
  (action
   (chdir
    "scads"
@@ -37,7 +37,7 @@
    (glob_files "scads/*.scad")))
  (targets
   (dir "pngs"))
- (mode promote)
+ ; (mode promote)
  (action
   (chdir
    "pngs"
