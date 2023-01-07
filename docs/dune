@@ -22,7 +22,7 @@
 ; Export scad examples to png.
 
 (rule
- (alias doc)
+ (alias snaps)
  (deps
   ; (sandbox always)
   (:exporter "../dune_helpers/snapper.exe")
@@ -39,8 +39,8 @@
 (rule
  (alias doc)
  (deps
+  (alias snaps)
   (:copier "../dune_helpers/copier.exe")
-  "pngs"
   (:img
    (glob_files assets/*)
    (glob_files pngs/*)))
