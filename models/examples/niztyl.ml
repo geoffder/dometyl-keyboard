@@ -49,7 +49,7 @@ let plate_builder =
     ~spacing:0.
     ~body_lookups
     ~thumb_lookups
-    ~thumb_offset:(v3 (-15.) (-44.) 8.5)
+    ~thumb_offset:(v3 (-15.) (-44.) 10.)
     ~thumb_angle:Float.(v3 (pi /. 60.) (pi /. -14.) (pi /. 12.))
     ~caps:Caps.Matty3.row
     ~thumb_caps:Caps.MT3.thumb_1u
@@ -58,37 +58,41 @@ let wall_builder plate =
   Walls.
     { body =
         auto_body
+          ~d1:(`Abs 16.)
+          ~d2:10.
           ~west_lookup:(fun _ -> true)
-          ~east_lookup:(fun _ -> true )
-            (* ~d1:2. *)
-            (* ~d2:5. *)
-          ~n_steps:(`Flat 3)
-          ~north_clearance:2.5
-          ~south_clearance:2.5
-          ~side_clearance:1.5
+          ~east_lookup:(fun _ -> true)
+          ~n_steps:(`PerZ 1.5)
+          ~scale:(v2 0.6 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           plate
     ; thumb =
         auto_thumb
+          ~d1:(`Abs 16.)
+          ~d2:8.
           ~south_lookup:(fun _ -> true)
           ~east_lookup:(fun _ -> false)
           ~west_lookup:(fun _ -> true)
-          ~n_steps:(`Flat 3)
-          ~north_clearance:3.
-          ~south_clearance:3.
-          ~side_clearance:3.
+          ~n_steps:(`Flat 20)
+          ~scale:(v2 0.4 0.9)
+          ~scale_ez:(v2 0.42 1., v2 1. 1.)
           plate
     }
 
-let base_connector = Connect.closed
+let base_connector walls = Connect.closed ~corner:(Path3.Round.chamf (`Cut 0.5)) walls
 let plate_welder = Plate.column_joins
-let ports_cutter = BastardShield.(cutter ~x_off:3. ~y_off:(-1.4) (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:1. (make ()))
 
 let build ?right_hand ?(empty = false) () =
   (* NOTE: It is strongly advised to use screws with heatset inserts rather than
    magnets when doing a hall-effect rubber dome build to avoid interference. *)
   let eyelets = Case.eyelets ~config:Eyelet.m4_config () in
   (* use empty for quicker preview *)
-  let hole = if empty then Niz.make_empty_hole () else Niz.make_hole () in
+  let hole =
+    if empty
+    then Niz.make_empty_hole ~corner:(Path3.Round.chamf (`Cut 0.5)) ()
+    else Niz.make_hole ~corner:(Path3.Round.chamf (`Cut 0.5)) ()
+  in
   Case.make
     ?right_hand
     ~eyelets
@@ -100,5 +104,18 @@ let build ?right_hand ?(empty = false) () =
     hole
 
 let fastener = Eyelet.screw_fastener ~clearance:6. () (* countersunk M4 *)
-let bottom case = Bottom.make ~fastener case
+
+let bottom case =
+  let bump_locs =
+    Bottom.
+      [ thumb ~loc:(v2 0.5 0.2) Last First
+      ; thumb ~loc:(v2 0.7 0.) Last Last
+      ; body ~loc:(v2 0. 1.) First Last
+      ; body ~loc:(v2 0.5 1.2) (Idx 3) Last
+      ; body ~loc:(v2 0.9 0.8) Last Last
+      ; body ~loc:(v2 0.8 0.) Last First
+      ]
+  in
+  Bottom.make ~bump_locs case
+
 let tent ?(degrees = 30.) case = Tent.make ~fastener ~degrees case

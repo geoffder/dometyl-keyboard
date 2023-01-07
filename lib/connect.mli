@@ -12,6 +12,9 @@ type t =
 
 type config
 
+(** An empty connection (shapeless with empty paths) *)
+val empty : t
+
 (** [clockwise_union ts]
 
     Create a union of [ts]. They should be provided in clockwise

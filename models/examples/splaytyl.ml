@@ -88,7 +88,7 @@ let base_connector =
 let plate_welder plate =
   Scad.union [ Plate.skeleton_bridges plate; Bridge.cols ~columns:plate.body 1 2 ]
 
-let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:0. (make ()))
+let ports_cutter = BastardShield.(cutter ~x_off:0. ~y_off:0.5 (make ()))
 
 let build ?right_hand ?hotswap () =
   (* let eyelets = Case.eyelets ~config:Eyelet.magnet_6x3_config () in *)

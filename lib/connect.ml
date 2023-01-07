@@ -9,6 +9,8 @@ type t =
   }
 [@@deriving cad]
 
+let empty = { scad = Scad.empty3; outline = []; inline = [] }
+
 let clockwise_union ts =
   let collect ~init line = List.fold_left (fun ps p -> p :: ps) init line in
   let f (scads, out_pts, in_pts) { scad; outline; inline } =

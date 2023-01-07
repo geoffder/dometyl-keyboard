@@ -85,7 +85,7 @@ let base_connector =
     ~corner:(Path3.Round.chamf (`Cut 0.5))
     ~north_joins:(Fun.const true)
 
-let ports_cutter = BastardShield.(cutter (make ()))
+let ports_cutter = BastardShield.(cutter ~y_off:0.5 (make ()))
 
 let build ?right_hand ?hotswap () =
   let keyhole =

@@ -5,7 +5,7 @@ module Bottom = struct
   let w = 17.5
   let h = 17.5
   let thickness = 4.
-  let bulge_thickness = 0.5
+  let bulge_thickness = 0.6
   let bulge_length = 6.5
   let bulge_height = 3.2
   let ellipse_offset = -0.25
@@ -39,13 +39,15 @@ module Bottom = struct
           ]
       ; Scad.ytrans ((h /. 2.) +. (bulge_thickness /. 2.)) bulge
       ; Scad.ytrans ((h /. -2.) -. (bulge_thickness /. 2.) +. 0.001) bulge
+      ; Scad.ytrans ((h /. 2.) +. (bulge_thickness /. 2.)) bulge
+      ; Scad.ytrans ((h /. -2.) -. (bulge_thickness /. 2.) +. 0.001) bulge
       ]
 
   let scad =
     let bulges =
       let b = Scad.extrude ~height:bulge_height bulge in
-      [ Scad.translate (v3 (bulge_length /. -2.) ((h /. 2.) -. 0.1) 0.) b
-      ; Scad.translate (v3 (bulge_length /. -2.) ((h /. -2.) +. 0.1) 0.) b
+      [ Scad.translate (v3 0. ((h /. 2.) -. 0.1) 0.) b
+      ; Scad.translate (v3 0. ((h /. -2.) +. 0.1) 0.) b
       ]
     in
     Scad.difference
@@ -193,7 +195,7 @@ let hole_of_config
       Scad.cube (v3 outer_w outer_h (base_thickness +. 0.001))
       |> Scad.translate (v3 (outer_w /. -2.) (outer_h /. -2.) (dome_z -. base_thickness))
     in
-    Scad.difference slab [ sensor_cutter ~z:dome_z sensor_depth ]
+    Scad.difference slab [ sensor_cutter ~z:(dome_z +. 0.01) (sensor_depth +. 0.01) ]
   and pillars =
     let cyl = Scad.extrude ~height:dome_thickness Bottom.ellipse in
     Scad.(

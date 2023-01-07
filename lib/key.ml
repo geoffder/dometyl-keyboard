@@ -92,7 +92,7 @@ let make
     | None -> sq
   in
   let hole =
-    let outer = Scad.of_mesh @@ Mesh.of_rows [ front; Path3.ytrans outer_h front ]
+    let outer = Scad.of_mesh @@ Mesh.of_rows [ Path3.ytrans outer_h front; front ]
     and inner = Scad.cube ~center:true (v3 inner_w inner_h (thickness +. 0.1)) in
     clip @@ Scad.sub outer inner
   in

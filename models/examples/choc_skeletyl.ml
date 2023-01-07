@@ -94,10 +94,26 @@ let ports_cutter = BastardShield.(cutter ~x_off:(-2.) ~z_off:1.5 (make ()))
 let build ?right_hand ?hotswap () =
   let keyhole =
     Choc.make_hole ~clearance:0. ~corner:(Path3.Round.chamf (`Cut 0.5)) ?hotswap ()
-  and eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 } in
+  and eyelet_config = Eyelet.{ bumpon_config with hole = inset 0.8 }
+  and wall_locs =
+    Eyelet.(
+      Idx.
+        [ Body (`W, First)
+        ; Body (`N, Idx 2)
+        ; Body (`N, Last)
+        ; Body (`S, Last)
+        ; Body (`S, Idx 2)
+        ; Thumb (`N, First)
+        ; Thumb (`S, Last)
+        ])
+  and free_locs =
+    [ `U 0.08 ]
+    (* NOTE: likely not enough room to cram in one under the index, but
+        might be a bit rocky without getting something in there *)
+  in
   Case.make
     ?right_hand
-    ~eyelets:(Case.eyelets ~config:eyelet_config ())
+    ~eyelets:(Case.eyelets ~config:eyelet_config ~free_locs ~wall_locs ())
     ~plate_builder
     ~plate_welder
     ~wall_builder
