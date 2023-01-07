@@ -114,10 +114,10 @@ let bottom ?fastener case =
     Bottom.
       [ thumb ~loc:(v2 0.5 0.2) Last First
       ; thumb ~loc:(v2 0.7 0.) Last Last
-      ; body ~loc:(v2 0. 1.) First Last
-      ; body ~loc:(v2 0.5 1.2) (Idx 3) Last
-      ; body ~loc:(v2 0.9 0.8) Last Last
-      ; body ~loc:(v2 0.8 0.) Last First
+      ; body ~loc:(v2 0. 1.2) First Last (* top index *)
+      ; body ~loc:(v2 0.5 1.3) (Idx 3) Last (* top ring *)
+      ; body ~loc:(v2 0.9 0.8) Last Last (* top pinky *)
+      ; body ~loc:(v2 0.7 (-0.3)) Last First (* bottom pinky *)
       ]
   in
   Bottom.make ?fastener ~bump_locs case
