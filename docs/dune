@@ -5,6 +5,7 @@
  (libraries OSCADml dometyl))
 
 (rule
+ (alias doc)
  (deps
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
@@ -14,6 +15,7 @@
   (run %{doccer} %{ml})))
 
 (rule
+ (alias doc)
  (deps
   (:runner "../dune_helpers/runner.exe")
   (:scads
@@ -26,6 +28,7 @@
    (run %{runner} %{scads}))))
 
 (rule
+ (alias doc)
  (deps
   (:exporter "../dune_helpers/snapper.exe")
   (:scads
@@ -38,6 +41,7 @@
    (run %{exporter} %{scads}))))
 
 (rule
+ (alias doc)
  (deps
   (:copier "../dune_helpers/copier.exe")
   (:img
