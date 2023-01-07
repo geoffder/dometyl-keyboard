@@ -5,9 +5,24 @@
  (libraries OSCADml dometyl))
 
 (rule
+ ; (alias doc)
+ (deps
+  (:doccer "../dune_helpers/doccer.exe")
+  (:ml
+   (glob_files "*.ml")))
+ (targets "walkthrough.mld")
+ (mode promote)
+ (action
+  (run %{doccer} %{ml})))
+
+(alias
+ (name doc)
+ (deps
+  (glob_files "*.mld")))
+
+(rule
  (alias doc)
  (deps
-  (sandbox always)
   (:runner "../dune_helpers/runner.exe")
   (:scads
    (glob_files "*.exe")))
@@ -19,12 +34,9 @@
    "scads"
    (run %{runner} %{scads}))))
 
-; Export scad examples to png.
-
 (rule
- (alias snaps)
+ (alias doc)
  (deps
-  ; (sandbox always)
   (:exporter "../dune_helpers/snapper.exe")
   (:scads
    (glob_files "scads/*.scad")))
@@ -39,7 +51,6 @@
 (rule
  (alias doc)
  (deps
-  (alias snaps)
   (:copier "../dune_helpers/copier.exe")
   (:img
    (glob_files assets/*)
@@ -47,27 +58,9 @@
  (targets
   (dir "odoc-assets"))
  (action
-  (run %{copier} "odoc-assets" "--basename" %{img})))
-
-(rule
- (alias doc)
- (deps
-  (:copier "../dune_helpers/copier.exe")
-  (:img
-   (glob_files odoc-assets/*)))
- (action
-  (run %{copier} "../_doc/_html/dometyl/_assets" "--basename" %{img})))
-
-(rule
- (alias doc)
- (deps
-  (:doccer "../dune_helpers/doccer.exe")
-  (:ml
-   (glob_files "*.ml")))
- (targets "walkthrough.mld")
- (mode promote)
- (action
-  (run %{doccer} %{ml})))
+  (progn
+   (run %{copier} "odoc-assets" "--basename" %{img})
+   (run %{copier} "../_doc/_html/dometyl/_assets" "--basename" %{img}))))
 
 (install
  (files
