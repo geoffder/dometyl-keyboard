@@ -53,7 +53,6 @@
  (deps
   (:copier "../dune_helpers/copier.exe")
   (:img
-   (glob_files odoc-assets/*)
    (glob_files odoc-assets/*)))
  (action
   (run %{copier} "../_doc/_html/dometyl/_assets" "--basename" %{img})))
@@ -61,7 +60,6 @@
 (rule
  (alias doc)
  (deps
-  (sandbox always)
   (:doccer "../dune_helpers/doccer.exe")
   (:ml
    (glob_files "*.ml")))
