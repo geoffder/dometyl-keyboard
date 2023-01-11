@@ -70,7 +70,7 @@ let pcb thickness =
   |> Scad.extrude ~height:thickness
   |> Scad.color ~alpha:0.5 Color.Crimson
 
-let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
+let make ?(inset_depth = 2.5) ?(thickness = 1.) ?(trrs = true) () =
   let jack_radius = 2.49
   and jack_width = 6.2
   and usb_height = 3.6
@@ -80,10 +80,13 @@ let make ?(inset_depth = 2.5) ?(thickness = 1.) () =
   and dist = 15.925 in
   let jack_x_off = (jack_width /. 2.) +. 1.5 in
   let jack =
-    Scad.cylinder ~center:true ~fn:16 ~height:20. jack_radius
-    |> Scad.xrot (Float.pi /. 2.)
-    |> Scad.translate (v3 jack_x_off 0. 4.5)
-    |> Scad.color ~alpha:0.5 Color.Silver
+    if trrs
+    then
+      Scad.cylinder ~center:true ~fn:16 ~height:20. jack_radius
+      |> Scad.xrot (Float.pi /. 2.)
+      |> Scad.translate (v3 jack_x_off 0. 4.5)
+      |> Scad.color ~alpha:0.5 Color.Silver
+    else Scad.empty3
   and usb =
     let rad = usb_height /. 2. in
     let cyl =

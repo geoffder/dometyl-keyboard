@@ -11,7 +11,7 @@ type t =
 
 val print_pcb : ?right_hand:bool -> float -> Scad.d3
 val pcb : float -> Scad.d3
-val make : ?inset_depth:float -> ?thickness:float -> unit -> t
+val make : ?inset_depth:float -> ?thickness:float -> ?trrs:bool -> unit -> t
 val screws : t -> Scad.d3
 
 val place
