@@ -3,7 +3,7 @@ let bytes = Bytes.create sz
 
 let copy src dest =
   let src = Unix.openfile src [ O_RDONLY ] 0
-  and dest = Unix.openfile dest [ O_WRONLY; O_CREAT; O_TRUNC ] 0o777 in
+  and dest = Unix.openfile dest [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644 in
   let rec loop () =
     match Unix.read src bytes 0 sz with
     | 0 -> ()
