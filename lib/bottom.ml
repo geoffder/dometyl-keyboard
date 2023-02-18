@@ -15,8 +15,8 @@ let locate (key : Key.t) = function
   | Some (loc : v2) ->
     let xaxis = key.faces.east.normal
     and yaxis = key.faces.north.normal in
-    let xshift = V3.(xaxis *$ (key.config.outer_w *. (loc.x -. 0.5)))
-    and yshift = V3.(yaxis *$ (key.config.outer_h *. (loc.y -. 0.5))) in
+    let xshift = V3.(xaxis *$ (key.config.outer_w *. (V2.x loc -. 0.5)))
+    and yshift = V3.(yaxis *$ (key.config.outer_h *. (V2.y loc -. 0.5))) in
     V3.(to_v2 @@ (key.origin +@ xshift +@ yshift))
   | None -> V2.of_v3 key.origin
 

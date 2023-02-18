@@ -102,8 +102,8 @@ let prison_shell
         Easing.make (v2 d 1.) (v2 d 1.)
   in
   let prune (acc, last) row =
-    let min_z = (Path3.bbox last).min.z in
-    let valid = List.for_all (fun p -> p.z > min_z) row in
+    let min_z = Box3.minz (Path3.bbox last) in
+    let valid = List.for_all (fun p -> V3.z p > min_z) row in
     if valid then row :: acc, row else acc, last
   and rounder out_edge in_edge =
     match corner with
@@ -116,7 +116,7 @@ let prison_shell
   in
   let pillar i =
     let u = (pillar_step *. Float.of_int i) +. phase_shift in
-    let z = (cont_outer u).z in
+    let z = V3.z (cont_outer u) in
     let slices = slices z
     and t_outer = t_outer z
     and t_outer' = t_outer' z in
@@ -162,7 +162,7 @@ let prison_shell
     |> Mesh.skin ~slices:(`Flat 0)
     |> Scad.of_mesh
   in
-  let z = (Path3.bbox top_outer).min.z in
+  let z = Box3.minz (Path3.bbox top_outer) in
   let bot =
     let outer = Mesh.skin_between ~slices:1 bot_outer (Path3.ztrans z bot_outer)
     and inner =
@@ -226,8 +226,7 @@ let make
     (case : Case.t)
   =
   let bb_pinky, rot_sign =
-    let V3.{ min = { x = bb_left; _ }; max = { x = bb_right; _ } } =
-      Path3.bbox case.connections.outline
+    let bb = Path3.bbox case.connections.outline
     and pinky_home =
       let n = case.plate.config.n_body_cols - 1 in
       (Columns.key_exn
@@ -236,6 +235,8 @@ let make
          (Int.of_float @@ case.plate.config.body_centres n) )
         .origin
     in
+    let bb_left = Box3.minx bb
+    and bb_right = Box3.maxx bb in
     if V3.(norm (pinky_home -@ v3 bb_right 0. 0.))
        < V3.(norm (pinky_home -@ v3 bb_left 0. 0.))
     then bb_right, 1.
@@ -297,7 +298,7 @@ let make
     | Magnet { rad; thickness } -> magnetize rad thickness (thickness +. 1.4)
   in
   (* raise top above the feet or the tilted eyelets (avoid clipping) *)
-  let rise = Float.max foot_thickness (V3.rotate rot (v3 0. 0. hole_height)).z in
+  let rise = Float.max foot_thickness V3.(z @@ rotate rot (v 0. 0. hole_height)) in
   let place_scad s = Scad.ztrans rise @@ Scad.rotate ~about rot s
   and place_v3 p = V3.ztrans rise @@ V3.rotate ~about rot (V3.of_v2 p) in
   let eyelets =
@@ -318,8 +319,8 @@ let make
   in
   let outer = List.map place_v3 outline
   and inner = List.map place_v3 inline in
-  let outer' = List.map (fun { x; y; z = _ } -> v3 x y 0.) outer
-  and inner' = List.map (fun { x; y; z = _ } -> v3 x y 0.) inner in
+  let outer' = List.map V3.projection outer
+  and inner' = List.map V3.projection inner in
   let shell = shell_of_style style outer' inner' outer inner in
   let feet, final_cuts =
     let f (bumps, insets) loc =

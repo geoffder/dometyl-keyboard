@@ -46,13 +46,14 @@ let of_ccw_path = function
 let overlapping_bounds a b =
   let a = Path3.bbox (to_cw_path a)
   and b = Path3.bbox (to_cw_path b) in
-  match V3.bbox_intersect a b with
-  | Some inter ->
-    let area_inter = V3.bbox_area inter
-    and area_a = (a.max.x -. a.min.x) *. (a.max.y -. a.min.y)
-    and area_b = (b.max.x -. b.min.x) *. (b.max.y -. b.min.y) in
-    area_inter /. (area_a +. area_b -. area_inter)
-  | None -> 0.
+  let i = Box3.inter a b in
+  if Box3.is_empty i
+  then 0.
+  else (
+    let area_i = Box3.((maxx i -. minx i) *. (maxy i -. miny i))
+    and area_a = Box3.((maxx a -. minx a) *. (maxy a -. miny a))
+    and area_b = Box3.((maxx b -. minx b) *. (maxy b -. miny b)) in
+    area_i /. (area_a +. area_b -. area_i) )
 
 let get t = function
   | `TL -> t.top_left

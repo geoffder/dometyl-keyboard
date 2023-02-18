@@ -108,8 +108,8 @@ let make
   and p1' = proj p1
   and p2' = proj p2
   and hole_offset' = proj hole_offset in
-  let l = V2.(hole_centre' +@ (v2 normal.y (-.normal.x) *$ outer_rad))
-  and r = V2.(hole_centre' -@ (v2 normal.y (-.normal.x) *$ outer_rad)) in
+  let l = V2.(hole_centre' +@ (v2 (V3.y normal) (-.V3.x normal) *$ outer_rad))
+  and r = V2.(hole_centre' -@ (v2 (V3.y normal) (-.V3.x normal) *$ outer_rad)) in
   let outer = List.tl @@ Path2.arc_about_centre ~dir:`CW ~centre:hole_centre' ~fn l r
   and inner = List.rev_map (V2.add hole_centre') @@ Path2.circle ~fn inner_rad in
   let outline =

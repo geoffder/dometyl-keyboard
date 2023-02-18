@@ -30,8 +30,8 @@
   dune
   dune-site
   (OCADml
-   (= 0.2.2))
+   (>= 0.3.2))
   (OSCADml
-   (= 0.1.1))
+   (>= 0.2.0))
   (ppx_deriving_cad
-   (= 0.1.0))))
+   (>= 0.2.0))))

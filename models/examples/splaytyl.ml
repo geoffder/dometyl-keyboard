@@ -20,7 +20,7 @@ let body_lookups =
       Curvature.(curve ~well:(well ~radius:37. (Float.pi /. 4.25)) ())
     | i when i = 0 ->
       Curvature.(
-        curve ~well:(well ~tilt:(Float.pi /. 7.5) ~radius:46. (Float.pi /. 5.95)) ())
+        curve ~well:(well ~tilt:(Float.pi /. 7.5) ~radius:46. (Float.pi /. 5.95)) () )
     | _ -> Curvature.(curve ~well:(well ~radius:46.5 (Float.pi /. 6.1)) ())
   and splay = function
     | i when i = 3 -> Float.pi /. -25. (* ring *)
@@ -35,7 +35,7 @@ let thumb_lookups =
       curve
         ~fan:(fan ~radius:70. ~tilt:(Float.pi /. 48.) (Float.pi /. 9.))
         ~well:(well ~radius:47. (Float.pi /. 7.5))
-        ())
+        () )
   in
   Plate.Lookups.thumb ~curve ()
 

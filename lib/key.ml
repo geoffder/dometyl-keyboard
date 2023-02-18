@@ -111,7 +111,7 @@ let make
         let a, _, b, _ =
           List.fold_left f (s0, V3.distance s0.a s0.b, s1, V3.distance s1.a s1.b) segs
         in
-        if a.a.z > 0. then a, b else b, a
+        if V3.z a.a > 0. then a, b else b, a
       | _ -> failwith "unreachable"
     in
     let south =

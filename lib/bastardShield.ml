@@ -125,9 +125,9 @@ let place
   =
   let left_foot = (IMap.find 0 north).foot
   and right_foot = (IMap.find 1 north).foot in
-  let x = left_foot.bot_left.x +. x_off
+  let x = V3.x left_foot.bot_left +. x_off
   and y =
-    let inner (ps : Points.t) = V3.(get_y ps.bot_left +. get_y ps.bot_right) /. 2. in
+    let inner (ps : Points.t) = V3.(y ps.bot_left +. y ps.bot_right) /. 2. in
     y_off +. ((inner left_foot +. inner right_foot) /. 2.)
   in
   zrot z_rot t |> translate (v3 x y z_off)
@@ -141,9 +141,9 @@ let eyelets
     { screw_l; screw_r; thickness; _ }
   =
   let build p =
-    Eyelet.place ?width ~bury ~config ~inline ~outline (`Loc { p with z = 0. })
+    Eyelet.place ?width ~bury ~config ~inline ~outline (`Loc V3.(v (x p) (y p) 0.))
     |> Eyelet.to_scad
-    |> Scad.ztrans (p.z +. thickness +. z_off)
+    |> Scad.ztrans (V3.z p +. thickness +. z_off)
   in
   Scad.union [ build screw_l; build screw_r ]
 

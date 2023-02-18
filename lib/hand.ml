@@ -217,15 +217,15 @@ let make ?(carpal_len = 58.) ?(knuckle_rad = 5.) (fingers : Fingers.t) (thumb : 
     |> Scad.rotate (v3 0. (Float.pi /. 2.) 0.)
     |> Scad.translate thumb.bones.prox.base
   in
-  let { x = mid_x; y = mid_y; z = _ } = fingers.middle.prox.base
+  let mid = fingers.middle.prox.base
   and z =
     Fingers.fold
-      (fun m a -> Float.min m (V3.get_z a.prox.base))
-      (V3.get_z thumb.bones.prox.base)
+      (fun m a -> Float.min m (V3.z a.prox.base))
+      (V3.z thumb.bones.prox.base)
       fingers
   in
-  let heading = V3.normalize (v3 0. mid_y (-.z))
-  and origin = v3 mid_x thumb.bones.prox.base.y z in
+  let heading = V3.normalize (v3 0. (V3.y mid) (-.z))
+  and origin = v3 (V3.x mid) (V3.y thumb.bones.prox.base) z in
   { fingers
   ; thumb
   ; carpals

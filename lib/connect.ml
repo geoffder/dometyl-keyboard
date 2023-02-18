@@ -58,7 +58,7 @@ let fillet ~d ~h rows =
     let h =
       match h with
       | `Rel h -> h
-      | `Abs h -> h /. (Path3.bbox (List.hd rows)).max.z
+      | `Abs h -> h /. (Box3.maxz @@ Path3.bbox (List.hd rows))
     in
     fun u row ->
       let u = if u > 0.5 then 1. -. u else u in
@@ -164,7 +164,7 @@ let spline_base
   let align_q = Quaternion.align dir2 dir1 in
   let b' = Path3.quaternion align_q b' in
   let ang = V3.angle (V3.neg dir1) V3.(p3 -@ p0) *. outward_sign w1 w2 in
-  let dist = V2.(distance (v p0.x p0.y) (v p3.x p3.y)) in
+  let dist = V2.distance V3.(v2 (x p0) (y p0)) V3.(v2 (x p3) (y p3)) in
   let ang_ratio = dist /. Float.abs ang /. Float.pi in
   let step = 1. /. Float.of_int fn in
   let transition i = List.map2 (fun a b -> V3.lerp a b (Float.of_int i *. step)) a' b' in

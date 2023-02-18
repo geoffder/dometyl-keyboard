@@ -168,7 +168,7 @@ let make
     let lift =
       let lowest_z =
         let face_low ({ points = ps; _ } : Key.Face.t) =
-          Points.fold (fun m p -> Float.min m (V3.get_z p)) Float.max_float ps
+          Points.fold (fun m p -> Float.min m (V3.z p)) Float.max_float ps
         in
         let key_low ({ faces = fs; _ } : Key.t) =
           Key.Faces.fold (fun m face -> Float.min m (face_low face)) Float.max_float fs

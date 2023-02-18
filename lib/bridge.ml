@@ -50,7 +50,7 @@ let keys
     Scad.union [ Scad.hull [ in_b; out_b ]; out_a ]
   and face1 = Key.Faces.face k1.faces start
   and face2 = Key.Faces.face k2.faces dest in
-  if V3.get_z face1.points.centre > V3.get_z face2.points.centre
+  if V3.z face1.points.centre > V3.z face2.points.centre
   then aux (start, k1) (dest, k2)
   else aux (dest, k2) (start, k1)
 
@@ -110,11 +110,11 @@ let cols
       let w_z =
         let last_c = (Key.Faces.face w_last.faces start).points.centre
         and next_c = (Key.Faces.face w_next.faces start).points.centre in
-        V3.(get_z @@ mid last_c next_c)
+        V3.(z @@ mid last_c next_c)
       and e_z =
         let last_c = (Key.Faces.face e_last.faces dest).points.centre
         and next_c = (Key.Faces.face e_next.faces dest).points.centre in
-        V3.(get_z @@ mid last_c next_c)
+        V3.(z @@ mid last_c next_c)
       in
       if w_z > e_z
       then huller ~low_west:false e_set w_set :: hulls

@@ -33,9 +33,7 @@ let make
   =
   let left_foot = (IMap.find 0 north).foot
   and right_foot = (IMap.find 1 north).foot in
-  let inner_y (foot : Points.t) =
-    V3.(get_y foot.bot_left +. get_y foot.bot_right) /. 2.
-  in
+  let inner_y (foot : Points.t) = V3.(y foot.bot_left +. y foot.bot_right) /. 2. in
   let jack =
     Scad.cylinder ~center:true ~fn:16 ~height:20. jack_radius |> Scad.xrot (Float.pi /. 2.)
   and usb =
@@ -53,7 +51,7 @@ let make
     and below = Float.max ((usb_height /. 2.) +. board_thickness) jack_radius in
     let h = jack_radius +. below
     and len (foot : Points.t) =
-      (V3.(get_y foot.top_left +. get_y foot.top_right) /. 2.) -. inner_y foot
+      (V3.(y foot.top_left +. y foot.top_right) /. 2.) -. inner_y foot
     in
     let left =
       let l = len left_foot in
@@ -76,8 +74,7 @@ let make
   in
   let cutout =
     Scad.union [ jack; usb; inset ]
-    |> Scad.translate
-         V3.(v3 (get_x left_foot.bot_left +. x_off) (inner_y left_foot) z_off)
+    |> Scad.translate V3.(v3 (x left_foot.bot_left +. x_off) (inner_y left_foot) z_off)
   in
   { plus = None; minus = Some cutout }
 
@@ -92,11 +89,11 @@ let place_tray
   and right = IMap.find_opt 1 north in
   let x =
     match left, right with
-    | Some w, _ | None, Some w -> V3.get_x w.foot.bot_left +. x_off
+    | Some w, _ | None, Some w -> V3.x w.foot.bot_left +. x_off
     | None, None -> 0.
   and y =
     let outer =
-      let f (ps : Points.t) = V3.(get_y ps.top_left +. get_y ps.top_right) /. 2. in
+      let f (ps : Points.t) = V3.(y ps.top_left +. y ps.top_right) /. 2. in
       value_map_opt ~default:0. (fun w -> f w.Wall.foot)
     in
     y_off +. ((outer left +. outer right) /. 2.)
