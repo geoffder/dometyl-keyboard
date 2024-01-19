@@ -7,7 +7,7 @@ open! Examples
     for OpenSCAD editor related performance reasons. This will generate an
     additional file prefixed with "incl_" that contains the actual model, while
     the script with the given base name simply <include>'s it. *)
-let to_file = Scad.to_file ~incl:true
+let to_file name scad = Scad.to_file ~incl:true (name ^ ".scad") scad
 
 (* NOTE: If you aren't using hotswap holders, you can simply mirror the generated case stl,
    but if you are, you will need to make a left-hand case like so. The bottom plate and
